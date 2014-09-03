@@ -1,0 +1,8 @@
+[package]
+
+name = "xpath"
+version = "0.0.1"
+authors = ["Jake Goulding <jake.goulding@gmail.com>"]
+
+[dependencies.document]
+path = "../document"
