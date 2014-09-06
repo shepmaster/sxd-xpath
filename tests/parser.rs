@@ -337,6 +337,30 @@ fn string_literal() {
 }
 
 #[test]
+fn predicate_accepts_any_expression() {
+    let setup = Setup::new();
+    let tokens = tokens![
+        token::String("*".to_string()),
+        token::LeftBracket,
+        token::Function("true".to_string()),
+        token::LeftParen,
+        token::RightParen,
+        token::Or,
+        token::Function("false".to_string()),
+        token::LeftParen,
+        token::RightParen,
+        token::RightBracket
+    ];
+
+    let expr = setup.parse(tokens);
+
+    let first = setup.add_child(&setup.top_node, "first");
+    let second = setup.add_child(&setup.top_node, "second");
+
+    assert_eq!(Nodes(nodeset![first, second]), setup.evaluate_on(expr, setup.top_node.clone()));
+}
+
+#[test]
 fn true_function_predicate_selects_all_nodes() {
     let setup = Setup::new();
     let tokens = tokens![
@@ -404,6 +428,27 @@ fn functions_accept_arguments() {
         token::Function("not".to_string()),
         token::LeftParen,
         token::Function("true".to_string()),
+        token::LeftParen,
+        token::RightParen,
+        token::RightParen,
+    ];
+
+    let expr = setup.parse(tokens);
+
+    assert_eq!(Boolean(false), setup.evaluate(expr));
+}
+
+#[test]
+fn functions_accept_any_expression_as_an_argument() {
+    let setup = Setup::new();
+    let tokens = tokens![
+        token::Function("not".to_string()),
+        token::LeftParen,
+        token::Function("true".to_string()),
+        token::LeftParen,
+        token::RightParen,
+        token::Or,
+        token::Function("false".to_string()),
         token::LeftParen,
         token::RightParen,
         token::RightParen,

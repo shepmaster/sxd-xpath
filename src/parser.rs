@@ -285,8 +285,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
 
             try!(source.consume(&token::LeftParen));
             while ! source.next_token_is(&token::RightParen) {
-                // TODO: this should be the top-level expression
-                let arg = try!(self.parse_primary_expression(source));
+                let arg = try!(self.parse_expression(source));
                 match arg {
                     Some(arg) => arguments.push(arg),
                     None => break,
@@ -315,8 +314,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
         if source.next_token_is(&token::LeftBracket) {
             try!(source.consume(&token::LeftBracket));
 
-            // TODO: This should be the top-level expression
-            match try!(self.parse_primary_expression(source)) {
+            match try!(self.parse_expression(source)) {
                 Some(predicate) => {
                     try!(source.consume(&token::RightBracket));
                     Ok(Some(predicate))
@@ -534,14 +532,17 @@ impl<I : Iterator<TokenResult>> XPathParser {
         parser.parse(source, |source| self.parse_equality_expression(source))
     }
 
-    fn parse_or_expression(&self, source: TokenSource<I>) -> ParseResult
-    {
+    fn parse_or_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
             BinaryRule { token: token::Or, builder: ExpressionOr::new }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_and_expression(source))
+    }
+
+    fn parse_expression(&self, source: TokenSource<I>) -> ParseResult {
+        self.parse_or_expression(source)
     }
 
     pub fn parse(&self, source: I) -> ParseResult {
