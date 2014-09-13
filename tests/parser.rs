@@ -144,7 +144,7 @@ fn parses_string_as_child() {
 
     let hello = setup.add_child(&setup.top_node, "hello");
 
-    assert_eq!(Nodes(nodeset![hello]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![hello]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn parses_two_strings_as_grandchild() {
     let hello = setup.add_child(&setup.top_node, "hello");
     let world = setup.add_child(&hello, "world");
 
-    assert_eq!(Nodes(nodeset![world]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![world]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -175,7 +175,7 @@ fn parses_self_axis() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn parses_parent_axis() {
     let expr = setup.parse(tokens);
 
     let hello = setup.add_child(&setup.top_node, "hello");
-    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(expr, hello));
+    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(&*expr, hello));
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn parses_descendant_axis() {
     let one = setup.add_child(&setup.top_node, "one");
     let two = setup.add_child(&one, "two");
 
-    assert_eq!(Nodes(nodeset![two]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![two]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn parses_descendant_or_self_axis() {
     let one = setup.add_child(&setup.top_node, "one");
     let two = setup.add_child(&one, "two");
 
-    assert_eq!(Nodes(nodeset![one.clone(), two]), setup.evaluate_on(expr, one));
+    assert_eq!(Nodes(nodeset![one.clone(), two]), setup.evaluate_on(&*expr, one));
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn parses_attribute_axis() {
     let one = setup.add_child(&setup.top_node, "one");
     let attr = setup.add_attribute(one.clone(), "hello", "world");
 
-    assert_eq!(Nodes(nodeset![attr]), setup.evaluate_on(expr, one));
+    assert_eq!(Nodes(nodeset![attr]), setup.evaluate_on(&*expr, one));
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn parses_child_with_same_name_as_an_axis() {
     let expr = setup.parse(tokens);
 
     let element = setup.add_child(&setup.top_node, "self");
-    assert_eq!(Nodes(nodeset![element]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![element]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -269,7 +269,7 @@ fn parses_node_node_test() {
     let one = setup.add_child(&setup.top_node, "one");
     let two = setup.add_child(&one, "two");
 
-    assert_eq!(Nodes(nodeset![two]), setup.evaluate_on(expr, one));
+    assert_eq!(Nodes(nodeset![two]), setup.evaluate_on(&*expr, one));
 }
 
 #[test]
@@ -286,7 +286,7 @@ fn parses_text_node_test() {
     let one = setup.add_child(&setup.top_node, "one");
     let text = setup.add_text(one.clone(), "text");
 
-    assert_eq!(Nodes(nodeset![text]), setup.evaluate_on(expr, one));
+    assert_eq!(Nodes(nodeset![text]), setup.evaluate_on(&*expr, one));
 }
 
 #[test]
@@ -305,7 +305,7 @@ fn parses_axis_and_node_test() {
     let one = setup.add_child(&setup.top_node, "one");
     let text = setup.add_text(one, "text");
 
-    assert_eq!(Nodes(nodeset![text.clone()]), setup.evaluate_on(expr, text));
+    assert_eq!(Nodes(nodeset![text.clone()]), setup.evaluate_on(&*expr, text));
 }
 
 #[test]
@@ -323,7 +323,7 @@ fn numeric_predicate_selects_indexed_node() {
     setup.add_child(&setup.top_node, "first");
     let second = setup.add_child(&setup.top_node, "second");
 
-    assert_eq!(Nodes(nodeset![second]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![second]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -333,7 +333,7 @@ fn string_literal() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(String("string".to_string()), setup.evaluate(expr));
+    assert_eq!(String("string".to_string()), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -357,7 +357,7 @@ fn predicate_accepts_any_expression() {
     let first = setup.add_child(&setup.top_node, "first");
     let second = setup.add_child(&setup.top_node, "second");
 
-    assert_eq!(Nodes(nodeset![first, second]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![first, second]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -377,7 +377,7 @@ fn true_function_predicate_selects_all_nodes() {
     let first = setup.add_child(&setup.top_node, "first");
     let second = setup.add_child(&setup.top_node, "second");
 
-    assert_eq!(Nodes(nodeset![first, second]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![first, second]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -397,7 +397,7 @@ fn false_function_predicate_selects_no_nodes() {
     setup.add_child(&setup.top_node, "first");
     setup.add_child(&setup.top_node, "second");
 
-    assert_eq!(Nodes(nodeset![]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -418,7 +418,7 @@ fn multiple_predicates() {
     setup.add_child(&setup.top_node, "first");
     let second = setup.add_child(&setup.top_node, "second");
 
-    assert_eq!(Nodes(nodeset![second]), setup.evaluate_on(expr, setup.top_node.clone()));
+    assert_eq!(Nodes(nodeset![second]), setup.evaluate_on(&*expr, setup.top_node.clone()));
 }
 
 #[test]
@@ -435,7 +435,7 @@ fn functions_accept_arguments() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -456,7 +456,7 @@ fn functions_accept_any_expression_as_an_argument() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -466,7 +466,7 @@ fn numeric_literal() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(3.2), setup.evaluate(expr));
+    assert_approx_eq!(Number(3.2), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -480,7 +480,7 @@ fn addition_of_two_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(3.3), setup.evaluate(expr));
+    assert_approx_eq!(Number(3.3), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -496,7 +496,7 @@ fn addition_of_multiple_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(6.6), setup.evaluate(expr));
+    assert_approx_eq!(Number(6.6), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -510,7 +510,7 @@ fn subtraction_of_two_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(-1.1), setup.evaluate(expr));
+    assert_approx_eq!(Number(-1.1), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -526,7 +526,7 @@ fn additive_expression_is_left_associative() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(-4.4), setup.evaluate(expr));
+    assert_approx_eq!(Number(-4.4), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -540,7 +540,7 @@ fn multiplication_of_two_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(2.42), setup.evaluate(expr));
+    assert_approx_eq!(Number(2.42), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -554,7 +554,7 @@ fn division_of_two_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(71.0), setup.evaluate(expr));
+    assert_approx_eq!(Number(71.0), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -568,7 +568,7 @@ fn remainder_of_two_numbers() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(1.1), setup.evaluate(expr));
+    assert_approx_eq!(Number(1.1), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -581,7 +581,7 @@ fn unary_negation() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(-7.2), setup.evaluate(expr));
+    assert_approx_eq!(Number(-7.2), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -596,7 +596,7 @@ fn repeated_unary_negation() {
 
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(-7.2), setup.evaluate(expr));
+    assert_approx_eq!(Number(-7.2), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -610,7 +610,7 @@ fn top_level_function_call() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(true), setup.evaluate(expr));
+    assert_eq!(Boolean(true), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -628,7 +628,7 @@ fn or_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(true), setup.evaluate(expr));
+    assert_eq!(Boolean(true), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -642,7 +642,7 @@ fn and_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -656,7 +656,7 @@ fn equality_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -670,7 +670,7 @@ fn inequality_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -684,7 +684,7 @@ fn less_than_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -698,7 +698,7 @@ fn less_than_or_equal_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(true), setup.evaluate(expr));
+    assert_eq!(Boolean(true), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -712,7 +712,7 @@ fn greater_than_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(false), setup.evaluate(expr));
+    assert_eq!(Boolean(false), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -726,7 +726,7 @@ fn greater_than_or_equal_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Boolean(true), setup.evaluate(expr));
+    assert_eq!(Boolean(true), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -740,7 +740,7 @@ fn variable_reference() {
     setup.add_var("variable-name", Number(12.3));
     let expr = setup.parse(tokens);
 
-    assert_approx_eq!(Number(12.3), setup.evaluate(expr));
+    assert_approx_eq!(Number(12.3), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -762,7 +762,7 @@ fn filter_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![]), setup.evaluate(expr));
+    assert_eq!(Nodes(nodeset![]), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -783,7 +783,7 @@ fn filter_expression_and_relative_path() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![child]), setup.evaluate(expr));
+    assert_eq!(Nodes(nodeset![child]), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -807,7 +807,7 @@ fn union_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![node1, node2]), setup.evaluate(expr));
+    assert_eq!(Nodes(nodeset![node1, node2]), setup.evaluate(&*expr));
 }
 
 #[test]
@@ -822,7 +822,7 @@ fn absolute_path_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![setup.doc.root()]), setup.evaluate_on(expr, node2));
+    assert_eq!(Nodes(nodeset![setup.doc.root()]), setup.evaluate_on(&*expr, node2));
 }
 
 #[test]
@@ -838,7 +838,7 @@ fn absolute_path_with_child_expression() {
 
     let expr = setup.parse(tokens);
 
-    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(expr, node2));
+    assert_eq!(Nodes(nodeset![setup.top_node.clone()]), setup.evaluate_on(&*expr, node2));
 }
 
 #[test]

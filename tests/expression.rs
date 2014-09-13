@@ -180,6 +180,7 @@ fn expression_function_evaluates_input_arguments() {
     assert_eq!(res, String("the function ran".to_string()));
 }
 
+#[ignore]
 #[test]
 fn expression_function_unknown_function_is_reported_as_an_error() {
     let setup = Setup::new();

@@ -331,7 +331,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
 
         let node_test = match try!(self.parse_node_test(source)) {
             Some(test) => Some(test),
-            None => try!(self.default_node_test(source, axis)),
+            None => try!(self.default_node_test(source, &*axis)),
         };
 
         match node_test {

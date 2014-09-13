@@ -338,7 +338,7 @@ impl ExpressionStep {
 impl XPathExpression for ExpressionStep {
     fn evaluate(&self, context: &XPathEvaluationContext) -> XPathValue {
         let mut result = Nodeset::new();
-        self.axis.select_nodes(context, self.node_test, & mut result);
+        self.axis.select_nodes(context, &*self.node_test, & mut result);
         Nodes(result)
     }
 }
