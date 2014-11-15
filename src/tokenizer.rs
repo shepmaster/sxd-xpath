@@ -272,7 +272,7 @@ impl XPathTokenizer {
             let substr = self.xpath.substr(current_start, offset);
             match from_str(substr.as_slice()) {
                 Some(value) => Ok(token::Number(value)),
-                None => fail!("Not really a number!")
+                None => panic!("Not really a number!")
             }
         } else {
             let mut offset = self.start;
@@ -470,7 +470,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDeabbreviator
 
         match self.buffer.remove(0) {
             Some(t) => Some(Ok(t)),
-            None => fail!("No tokens left to return"), // Can't happen, we always add one
+            None => panic!("No tokens left to return"), // Can't happen, we always add one
         }
     }
 }

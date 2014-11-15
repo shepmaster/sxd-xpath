@@ -25,7 +25,7 @@ fn all_tokens_raw<I: Iterator<TokenResult>>(mut tokenizer: I) -> Result<Vec<XPat
 fn all_tokens<I: Iterator<TokenResult>>(tokenizer: I) -> Vec<XPathToken> {
     match all_tokens_raw(tokenizer) {
         Ok(toks) => toks,
-        Err(msg) => fail!(msg),
+        Err(msg) => panic!(msg),
     }
 }
 

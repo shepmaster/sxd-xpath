@@ -55,7 +55,7 @@ impl ApproxEq for XPathValue {
     fn is_approx_eq(&self, other: &XPathValue) -> bool {
         match (self, other) {
             (&Number(ref x), &Number(ref y)) => x.is_approx_eq(y),
-            _ => fail!("It's nonsensical to compare these quantities"),
+            _ => panic!("It's nonsensical to compare these quantities"),
         }
     }
 }

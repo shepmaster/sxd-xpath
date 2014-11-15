@@ -34,7 +34,7 @@ struct FailExpression;
 
 impl XPathExpression for FailExpression {
     fn evaluate(&self, _: &XPathEvaluationContext) -> XPathValue {
-        fail!("Should never be called");
+        panic!("Should never be called");
     }
 }
 

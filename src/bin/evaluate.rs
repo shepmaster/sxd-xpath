@@ -26,8 +26,8 @@ fn main() {
     let factory = XPathFactory::new();
 
     let expr = match factory.build(xpath_str.as_slice()) {
-        Err(x) => fail!("Unable to compile XPath: {}", x),
-        Ok(None) => fail!("Unable to compile XPath"),
+        Err(x) => panic!("Unable to compile XPath: {}", x),
+        Ok(None) => panic!("Unable to compile XPath"),
         Ok(Some(x)) => x,
     };
 
@@ -38,17 +38,17 @@ fn main() {
 
     let data = match file.read_to_end() {
         Ok(x) => x,
-        Err(x) => fail!("Can't read: {}", x),
+        Err(x) => panic!("Can't read: {}", x),
     };
 
     let data = match String::from_utf8(data) {
         Ok(x) => x,
-        Err(x) => fail!("Unable to convert to UTF-8: {}", x),
+        Err(x) => panic!("Unable to convert to UTF-8: {}", x),
     };
 
     let d = match p.parse(data.as_slice()) {
         Ok(d) => d,
-        Err(point) => fail!("Unable to parse: {}", pretty_error(data.as_slice(), point)),
+        Err(point) => panic!("Unable to parse: {}", pretty_error(data.as_slice(), point)),
     };
 
     let mut functions = HashMap::new();

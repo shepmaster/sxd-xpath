@@ -54,7 +54,7 @@ impl XPathValue {
     pub fn nodeset(&self) -> Nodeset {
         match *self {
             Nodes(ref ns) => ns.clone(),
-            _ => fail!("Did not evaluate to a nodeset!"),
+            _ => panic!("Did not evaluate to a nodeset!"),
         }
     }
 }

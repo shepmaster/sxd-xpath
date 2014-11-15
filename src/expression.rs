@@ -110,7 +110,7 @@ impl XPathExpression for ExpressionFunction {
 
                 fun.evaluate(context, args)
             },
-            None => fail!("throw UnknownXPathFunctionException(_name)"),
+            None => panic!("throw UnknownXPathFunctionException(_name)"),
         }
     }
 }
@@ -367,7 +367,7 @@ impl XPathExpression for ExpressionVariable {
     fn evaluate(&self, context: &XPathEvaluationContext) -> XPathValue {
         match context.value_of(self.name.as_slice()) {
             Some(v) => v.clone(),
-            None => fail!("throw UnknownVariableException(_name)"),
+            None => panic!("throw UnknownVariableException(_name)"),
         }
     }
 }
