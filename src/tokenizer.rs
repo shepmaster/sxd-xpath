@@ -379,7 +379,7 @@ impl<T, I: Iterator<T>> XPathTokenDisambiguator<T, I> {
     }
 }
 
-static node_test_names : [&'static str, .. 4] =
+static NODE_TEST_NAMES : [&'static str, .. 4] =
     [ "comment", "text", "processing-instruction", "node" ];
 
 impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDisambiguator<TokenResult, I> {
@@ -389,7 +389,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDisambiguator
 
         match (token, next) {
             (Some(Ok(token::String(val))), Some(&Ok(token::LeftParen))) => {
-                if node_test_names.contains(&val.as_slice()) {
+                if NODE_TEST_NAMES.contains(&val.as_slice()) {
                     Some(Ok(token::NodeTest(val)))
                 } else {
                     Some(Ok(token::Function(val)))
