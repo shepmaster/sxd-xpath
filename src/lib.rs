@@ -4,6 +4,7 @@
 extern crate document;
 
 use std::collections::HashMap;
+use std::string;
 
 use document::{Any,ToAny};
 use document::{Nodeset};
@@ -23,7 +24,7 @@ pub mod tokenizer;
 pub enum XPathValue {
     Boolean(bool),
     Number(f64),
-    String(String),
+    String(string::String),
     Nodes(Nodeset), // rename as Nodeset
 }
 
@@ -44,7 +45,7 @@ impl XPathValue {
         }
     }
 
-    pub fn string(&self) -> String {
+    pub fn string(&self) -> string::String {
         match *self {
             String(ref val) => val.clone(),
             _ => "Unimplemented".to_string(),
@@ -66,8 +67,8 @@ pub trait XPathFunction {
 }
 
 type BoxFunc = Box<XPathFunction + 'static>;
-pub type Functions = HashMap<String, BoxFunc>;
-pub type Variables = HashMap<String, XPathValue>;
+pub type Functions = HashMap<string::String, BoxFunc>;
+pub type Variables = HashMap<string::String, XPathValue>;
 
 pub struct XPathEvaluationContext<'a> {
     node: Any,

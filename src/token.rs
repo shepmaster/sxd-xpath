@@ -1,3 +1,5 @@
+use std::string;
+
 #[deriving(PartialEq,Show,Clone)]
 pub enum XPathToken {
     And,
@@ -14,7 +16,7 @@ pub enum XPathToken {
     LeftParen,
     LessThan,
     LessThanOrEqual,
-    Literal(String),
+    Literal(string::String),
     MinusSign,
     Multiply,
     NotEqual,
@@ -23,17 +25,17 @@ pub enum XPathToken {
     ParentNode,
     Pipe,
     PlusSign,
-    PrefixedName(String, String),
+    PrefixedName(string::String, string::String),
     Remainder,
     RightBracket,
     RightParen,
     Slash,
-    String(String),
+    String(string::String),
 
     // Specializations
-    Axis(String),
-    Function(String),
-    NodeTest(String),
+    Axis(string::String),
+    Function(string::String),
+    NodeTest(string::String),
 }
 
 impl XPathToken {

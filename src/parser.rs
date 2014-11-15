@@ -1,4 +1,5 @@
 use std::iter::Peekable;
+use std::string;
 
 use super::{String,Number};
 use super::token;
@@ -53,8 +54,8 @@ impl XPathParser {
 pub enum ParseErr {
     EmptyPredicate,
     ExtraUnparsedTokens,
-    InvalidNodeTest(String),
-    InvalidXPathAxis(String),
+    InvalidNodeTest(string::String),
+    InvalidXPathAxis(string::String),
     RanOutOfInput,
     RightHandSideExpressionMissing,
     TokenizerError(TokenizerErr),
