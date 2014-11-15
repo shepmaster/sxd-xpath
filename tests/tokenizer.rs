@@ -398,7 +398,7 @@ fn disambiguates_node_test_functions() {
             Ok(token::LeftParen),
         );
 
-        let disambig = XPathTokenDisambiguator::new(input_tokens.move_iter());
+        let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(disambig),
                    vec!(token::NodeTest(name.to_string()),
@@ -413,7 +413,7 @@ fn name_followed_by_left_paren_becomes_function_name() {
         Ok(token::LeftParen),
      );
 
-    let disambig = XPathTokenDisambiguator::new(input_tokens.move_iter());
+    let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(disambig),
                vec!(token::Function("test".to_string()),
@@ -427,7 +427,7 @@ fn name_followed_by_double_colon_becomes_axis_name() {
         Ok(token::DoubleColon),
     );
 
-    let disambig = XPathTokenDisambiguator::new(input_tokens.move_iter());
+    let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(disambig),
                vec!(token::Axis("test".to_string()),
@@ -437,9 +437,9 @@ fn name_followed_by_double_colon_becomes_axis_name() {
 #[test]
 fn converts_at_sign_to_attribute_axis() {
     let input_tokens: Vec<TokenResult> = vec!(Ok(token::AtSign));
-    // let iter: &Iterator<TokenResult> = &input_tokens.move_iter();
+    // let iter: &Iterator<TokenResult> = &input_tokens.into_iter();
 
-    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.move_iter());
+    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.into_iter());
     // let a: () = deabbrv.next();
     // println!("{}",a );
 
@@ -451,7 +451,7 @@ fn converts_at_sign_to_attribute_axis() {
 fn converts_double_slash_to_descendant_or_self() {
     let input_tokens: Vec<TokenResult> = vec!(Ok(token::DoubleSlash));
 
-    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.move_iter());
+    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(deabbrv), vec!(token::Slash,
                                          token::String("descendant-or-self".to_string()),
@@ -466,7 +466,7 @@ fn converts_double_slash_to_descendant_or_self() {
 fn converts_current_node_to_self_node() {
     let input_tokens: Vec<TokenResult> = vec!(Ok(token::CurrentNode));
 
-    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.move_iter());
+    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(deabbrv), vec!(token::String("self".to_string()),
                                          token::DoubleColon,
@@ -479,7 +479,7 @@ fn converts_current_node_to_self_node() {
 fn converts_parent_node_to_parent_node() {
     let input_tokens: Vec<TokenResult> = vec!(Ok(token::ParentNode));
 
-    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.move_iter());
+    let deabbrv = XPathTokenDeabbreviator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(deabbrv), vec!(token::String("parent".to_string()),
                                          token::DoubleColon,

@@ -115,7 +115,7 @@ impl Setup {
     }
 
     fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
-        self.parser.parse(tokens.move_iter())
+        self.parser.parse(tokens.into_iter())
     }
 
     fn parse(&self, tokens: Vec<TokenResult>) -> SubExpression {
@@ -875,7 +875,7 @@ fn unexpected_token_is_reported_as_an_error() {
         token::RightParen
     ];
 
-    let res = setup.parser.parse(tokens.move_iter());
+    let res = setup.parser.parse(tokens.into_iter());
     assert_eq!(Some(UnexpectedToken(token::RightParen)), res.err());
 }
 
@@ -898,7 +898,7 @@ fn unary_operator_without_right_hand_side_is_reported_as_an_error() {
         token::MinusSign,
     ];
 
-    let res = setup.parser.parse(tokens.move_iter());
+    let res = setup.parser.parse(tokens.into_iter());
     assert_eq!(Some(RightHandSideExpressionMissing), res.err());
 }
 

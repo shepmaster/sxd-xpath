@@ -186,7 +186,7 @@ fn first_matching_rule
      source: TokenSource<I>)
      -> ParseResult
 {
-    for child_parse in child_parses.mut_iter() {
+    for child_parse in child_parses.iter_mut() {
         let expr = try!((*child_parse)(source));
         if expr.is_some() {
             return Ok(expr);
@@ -356,7 +356,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
         }
 
         let wrap = |expr, pred| ExpressionPredicate::new(expr, pred);
-        Ok(predicates.move_iter().fold(node_selecting_expr, wrap))
+        Ok(predicates.into_iter().fold(node_selecting_expr, wrap))
     }
 
     fn parse_relative_location_path_raw(&self,
