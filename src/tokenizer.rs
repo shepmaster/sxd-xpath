@@ -227,7 +227,7 @@ impl XPathTokenizer {
     fn raw_next_token(& mut self) -> TokenResult {
         match self.xpath.safe_substr(self.start, self.start + 2) {
             Some(first_two) => {
-                match self.two_char_tokens().find(&first_two) {
+                match self.two_char_tokens().get(&first_two) {
                     Some(token) => {
                         self.start += 2;
                         return Ok(token.clone());
@@ -240,7 +240,7 @@ impl XPathTokenizer {
 
         let c = self.xpath.char_at(self.start);
 
-        match self.single_char_tokens().find(&c) {
+        match self.single_char_tokens().get(&c) {
             Some(token) => {
                 self.start += 1;
                 return Ok(token.clone());

@@ -114,11 +114,11 @@ impl<'a> XPathEvaluationContext<'a> {
     }
 
     fn function_for_name(&self, name: &str) -> Option<& 'a BoxFunc> {
-        self.functions.find(&name.to_string())
+        self.functions.get(&name.to_string())
     }
 
     fn value_of(&self, name: &str) -> Option<&XPathValue> {
-        self.variables.find(&name.to_string())
+        self.variables.get(&name.to_string())
     }
 }
 
