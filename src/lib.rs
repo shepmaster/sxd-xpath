@@ -5,6 +5,7 @@ extern crate document;
 
 use std::collections::HashMap;
 use std::string;
+use std::num::Float;
 
 use document::{Any,ToAny};
 use document::{Nodeset};

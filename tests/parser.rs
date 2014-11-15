@@ -6,6 +6,7 @@ extern crate document;
 extern crate xpath;
 
 use std::collections::HashMap;
+use std::num::Float;
 
 use document::{Document,Element,Attribute,Text,ToAny};
 
