@@ -2,7 +2,7 @@ extern crate document;
 extern crate xpath;
 
 use std::cmp::min;
-use std::collections::hashmap::HashMap;
+use std::collections::HashMap;
 use std::io::File;
 
 use document::ToAny;

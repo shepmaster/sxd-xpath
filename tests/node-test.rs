@@ -4,7 +4,7 @@
 extern crate document;
 extern crate xpath;
 
-use std::collections::hashmap::HashMap;
+use std::collections::HashMap;
 
 use document::{Document,Element,Attribute,Nodeset};
 use document::{ToAny};

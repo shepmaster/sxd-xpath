@@ -1,4 +1,4 @@
-use std::collections::hashmap::HashMap;
+use std::collections::HashMap;
 use std::char::is_digit;
 
 use super::token;
