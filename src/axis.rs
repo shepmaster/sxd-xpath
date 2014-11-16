@@ -1,24 +1,24 @@
 extern crate document;
 
-use document::Nodeset;
-use document::ElementAny;
+use document::nodeset::Nodeset;
+use document::dom4::ElementNode;
 
 use super::XPathEvaluationContext;
 use super::node_test::XPathNodeTest;
 
 pub enum PrincipalNodeType {
-  Attribute,
-  Element,
+    Attribute,
+    Element,
 }
 
 /// A directed traversal of Nodes.
 pub trait XPathAxis {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset);
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>);
 
     /// Describes what node type is naturally selected by this axis.
     fn principal_node_type(&self) -> PrincipalNodeType {
@@ -31,15 +31,15 @@ pub type SubAxis = Box<XPathAxis + 'static>;
 pub struct AxisAttribute;
 
 impl XPathAxis for AxisAttribute {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
-        let n = &context.node;
+        let n = context.node;
 
         match n {
-            &ElementAny(ref e) =>
+            ElementNode(ref e) =>
                 for attr in e.attributes().iter() {
                     let mut attr_context = context.new_context_for(1);
                     attr_context.next(attr.clone());
@@ -58,12 +58,12 @@ impl XPathAxis for AxisAttribute {
 pub struct AxisChild;
 
 impl XPathAxis for AxisChild {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
-        let n = &context.node;
+        let n = context.node;
 
         for child in n.children().iter() {
             let mut child_context = context.new_context_for(1);
@@ -77,12 +77,12 @@ impl XPathAxis for AxisChild {
 pub struct AxisDescendant;
 
 impl XPathAxis for AxisDescendant {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
-        let n = &context.node;
+        let n = context.node;
 
         for child in n.children().iter() {
             let mut child_context = context.new_context_for(1);
@@ -103,10 +103,10 @@ impl AxisDescendantOrSelf {
 }
 
 impl XPathAxis for AxisDescendantOrSelf {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);
         self.descendant.select_nodes(context, node_test, result);
@@ -116,12 +116,12 @@ impl XPathAxis for AxisDescendantOrSelf {
 pub struct AxisParent;
 
 impl XPathAxis for AxisParent {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
-        let n = &context.node;
+        let n = context.node;
 
         match n.parent() {
             Some(p) => {
@@ -137,10 +137,10 @@ impl XPathAxis for AxisParent {
 pub struct AxisSelf;
 
 impl XPathAxis for AxisSelf {
-    fn select_nodes(&self,
-                    context:   &XPathEvaluationContext,
-                    node_test: &XPathNodeTest,
-                    result:    &mut Nodeset)
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &XPathEvaluationContext<'a, 'd>,
+                            node_test: &XPathNodeTest,
+                            result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);
     }

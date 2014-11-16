@@ -5,7 +5,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::io::File;
 
-use document::ToAny;
+use document::dom4::ToNode;
 use document::parser::Parser;
 
 use xpath::{XPathEvaluationContext,XPathFactory};
@@ -36,28 +36,25 @@ fn main() {
     let path = Path::new(filename);
     let mut file = File::open(&path);
 
-    let data = match file.read_to_end() {
+    let data = match file.read_to_string() {
         Ok(x) => x,
         Err(x) => panic!("Can't read: {}", x),
     };
 
-    let data = match String::from_utf8(data) {
-        Ok(x) => x,
-        Err(x) => panic!("Unable to convert to UTF-8: {}", x),
-    };
-
-    let d = match p.parse(data.as_slice()) {
+    let package = match p.parse(data.as_slice()) {
         Ok(d) => d,
         Err(point) => panic!("Unable to parse: {}", pretty_error(data.as_slice(), point)),
     };
 
+    let d = package.as_document();
+
     let mut functions = HashMap::new();
     xpath::function::register_core_functions(& mut functions);
     let variables = HashMap::new();
-    let mut context = XPathEvaluationContext::new(d.root().to_any(),
+    let mut context = XPathEvaluationContext::new(d.root().to_node(),
                                                   &functions,
                                                   &variables);
-    context.next(d.root().to_any());
+    context.next(d.root().to_node());
 
     let res = expr.evaluate(&context);
 

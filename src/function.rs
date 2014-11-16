@@ -6,9 +6,9 @@ use super::{XPathValue,Boolean};
 struct True;
 
 impl XPathFunction for True {
-    fn evaluate(&self,
-                _context: &XPathEvaluationContext,
-                _args: Vec<XPathValue>) -> XPathValue
+    fn evaluate<'a, 'd>(&self,
+                        _context: &XPathEvaluationContext<'a, 'd>,
+                        _args: Vec<XPathValue<'d>>) -> XPathValue<'d>
     {
         Boolean(true)
     }
@@ -17,9 +17,9 @@ impl XPathFunction for True {
 struct False;
 
 impl XPathFunction for False {
-    fn evaluate(&self,
-                _context: &XPathEvaluationContext,
-                _args: Vec<XPathValue>) -> XPathValue
+    fn evaluate<'a, 'd>(&self,
+                        _context: &XPathEvaluationContext<'a, 'd>,
+                        _args: Vec<XPathValue<'d>>) -> XPathValue<'d>
     {
         Boolean(false)
     }
@@ -28,9 +28,9 @@ impl XPathFunction for False {
 struct Not;
 
 impl XPathFunction for Not {
-    fn evaluate(&self,
-                _context: &XPathEvaluationContext,
-                args: Vec<XPathValue>) -> XPathValue
+    fn evaluate<'a, 'd>(&self,
+                        _context: &XPathEvaluationContext<'a, 'd>,
+                        args: Vec<XPathValue<'d>>) -> XPathValue<'d>
     {
         // TODO: verify arguments
         let arg = &args[0];

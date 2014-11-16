@@ -6,8 +6,9 @@ extern crate xpath;
 
 use std::collections::HashMap;
 
-use document::{Document,Element,Attribute,Nodeset};
-use document::{ToAny};
+use document::Package;
+use document::nodeset::Nodeset;
+use document::dom4::{Document,Element,Attribute};
 
 use xpath::XPathEvaluationContext;
 use xpath::{Functions,Variables};
@@ -15,45 +16,43 @@ use xpath::{Functions,Variables};
 use xpath::node_test::XPathNodeTest;
 use xpath::node_test::{NodeTestAttribute, NodeTestElement};
 
-struct Setup {
-    doc: Document,
-    element: Element,
+struct Setup<'d> {
+    doc: Document<'d>,
     functions: Functions,
-    variables: Variables,
+    variables: Variables<'d>,
 }
 
-impl Setup {
-    fn new() -> Setup {
-        let d = Document::new();
-        let e = d.new_element("element".to_string());
+impl<'d> Setup<'d> {
+    fn new(package: &'d Package) -> Setup {
         Setup {
-            doc: d,
-            element: e,
+            doc: package.as_document(),
             functions: HashMap::new(),
             variables: HashMap::new(),
         }
     }
 
-    fn context_for_attribute<'a>(&'a self, name: &str, val: &str)
-                                 -> (Attribute, XPathEvaluationContext<'a>)
+    fn context_for_attribute(&'d self, name: &str, val: &str)
+                             -> (Attribute<'d>, XPathEvaluationContext<'d, 'd>)
     {
-        let a = self.element.set_attribute(name.to_string(), val.to_string());
-        let c = XPathEvaluationContext::new(a.to_any(), &self.functions, &self.variables);
+        let e = self.doc.create_element("element");
+        let a = e.set_attribute_value(name, val);
+        let c = XPathEvaluationContext::new(a, &self.functions, &self.variables);
         (a, c)
     }
 
-    fn context_for_element<'a>(&'a self, name: &str)
-                               -> (Element, XPathEvaluationContext<'a>)
+    fn context_for_element(&'d self, name: &str)
+                           -> (Element<'d>, XPathEvaluationContext<'d, 'd>)
     {
-        let e = self.doc.new_element(name.to_string());
-        let c = XPathEvaluationContext::new(e.to_any(), &self.functions, &self.variables);
+        let e = self.doc.create_element(name);
+        let c = XPathEvaluationContext::new(e, &self.functions, &self.variables);
         (e, c)
     }
 }
 
 #[test]
 fn attribute_test_selects_attributes_with_matching_names() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (attribute, context) = setup.context_for_attribute("hello", "world");
     let mut result = Nodeset::new();
 
@@ -65,7 +64,8 @@ fn attribute_test_selects_attributes_with_matching_names() {
 
 #[test]
 fn attribute_test_does_not_select_other_names() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (_, context) = setup.context_for_attribute("goodbye", "world");
     let mut result = Nodeset::new();
 
@@ -77,7 +77,8 @@ fn attribute_test_does_not_select_other_names() {
 
 #[test]
 fn attribute_test_supports_a_wildcard_match() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (attribute, context) = setup.context_for_attribute("whatever", "value");
     let mut result = Nodeset::new();
 
@@ -89,7 +90,8 @@ fn attribute_test_supports_a_wildcard_match() {
 
 #[test]
 fn element_test_selects_nodes_with_matching_names() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (element, context) = setup.context_for_element("hello");
     let mut result = Nodeset::new();
 
@@ -101,7 +103,8 @@ fn element_test_selects_nodes_with_matching_names() {
 
 #[test]
 fn element_test_does_not_select_other_names() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (_, context) = setup.context_for_element("goodbye");
     let mut result = Nodeset::new();
 
@@ -113,7 +116,8 @@ fn element_test_does_not_select_other_names() {
 
 #[test]
 fn element_test_supports_a_wildcard_match() {
-    let setup = Setup::new();
+    let package = Package::new();
+    let setup = Setup::new(&package);
     let (element, context) = setup.context_for_element("hello");
     let mut result = Nodeset::new();
 

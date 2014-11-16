@@ -15,6 +15,7 @@ use super::axis::{
     AxisParent,
     AxisSelf,
 };
+use super::expression;
 use super::expression::SubExpression;
 use super::expression::{
     ExpressionAnd,
@@ -263,7 +264,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
     fn parse_string_literal(&self, source: TokenSource<I>) -> ParseResult {
         if next_token_is!(source, token::Literal) {
             let value = consume_value!(source, token::Literal);
-            Ok(Some(box ExpressionLiteral { value: String(value) } as SubExpression))
+            Ok(Some(box ExpressionLiteral { value: expression::StringLiteral(value) } as SubExpression))
         } else {
             Ok(None)
         }
@@ -272,7 +273,7 @@ impl<I : Iterator<TokenResult>> XPathParser {
     fn parse_numeric_literal(&self, source: TokenSource<I>) -> ParseResult {
         if next_token_is!(source, token::Number) {
             let value = consume_value!(source, token::Number);
-            Ok(Some(box ExpressionLiteral { value: Number(value) } as SubExpression))
+            Ok(Some(box ExpressionLiteral { value: expression::NumberLiteral(value) } as SubExpression))
         } else {
             Ok(None)
         }

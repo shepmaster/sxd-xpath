@@ -1,10 +1,10 @@
-use document::Nodeset;
-use document::{AttributeAny,ElementAny,TextAny};
+use document::nodeset::Nodeset;
+use document::dom4::{AttributeNode,ElementNode,TextNode};
 
 use super::XPathEvaluationContext;
 
 pub trait XPathNodeTest {
-    fn test(&self, context: &XPathEvaluationContext, result: &mut Nodeset);
+    fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
 pub type SubNodeTest = Box<XPathNodeTest + 'static>;
@@ -14,10 +14,10 @@ pub struct NodeTestAttribute {
 }
 
 impl XPathNodeTest for NodeTestAttribute {
-    fn test(&self, context: &XPathEvaluationContext, result: &mut Nodeset) {
+    fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         match context.node {
-            AttributeAny(ref a) =>
-                if self.name.as_slice() == "*" || a.name() == self.name {
+            AttributeNode(ref a) =>
+                if self.name.as_slice() == "*" || a.name() == self.name.as_slice() {
                     result.add(context.node.clone());
                 },
             _ => {}
@@ -30,9 +30,9 @@ pub struct NodeTestElement {
 }
 
 impl XPathNodeTest for NodeTestElement {
-    fn test(&self, context: &XPathEvaluationContext, result: &mut Nodeset) {
+    fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         match context.node {
-            ElementAny(ref e) =>
+            ElementNode(ref e) =>
                 // TODO: redo namespaces!
                 // if (_name.has_prefix() != e->qname().has_namespace()) return;
 
@@ -43,7 +43,7 @@ impl XPathNodeTest for NodeTestElement {
                 //     if (*prefix_uri != e->qname().namespace_uri()) return;
                 // }
 
-                if self.name.as_slice() == "*" || e.name() == self.name {
+                if self.name.as_slice() == "*" || e.name() == self.name.as_slice() {
                     result.add(context.node.clone());
                 },
             _ => {},
@@ -54,7 +54,7 @@ impl XPathNodeTest for NodeTestElement {
 pub struct NodeTestNode;
 
 impl XPathNodeTest for NodeTestNode {
-    fn test(&self, context: &XPathEvaluationContext, result: &mut Nodeset) {
+    fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         result.add(context.node.clone());
     }
 }
@@ -62,9 +62,9 @@ impl XPathNodeTest for NodeTestNode {
 pub struct NodeTestText;
 
 impl XPathNodeTest for NodeTestText {
-    fn test(&self, context: &XPathEvaluationContext, result: &mut Nodeset) {
+    fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         match context.node {
-            TextAny(_) => result.add(context.node.clone()),
+            TextNode(_) => result.add(context.node.clone()),
             _ => {},
         }
     }
