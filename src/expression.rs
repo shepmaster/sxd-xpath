@@ -45,8 +45,8 @@ pub struct ExpressionContextNode;
 impl XPathExpression for ExpressionContextNode {
     fn evaluate<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>) -> XPathValue<'d> {
         let mut result = Nodeset::new();
-        result.add(context.node().clone());
-        Nodes(result.clone())
+        result.add(context.node);
+        Nodes(result)
     }
 }
 
@@ -224,7 +224,7 @@ impl XPathExpression for ExpressionPath {
             let mut sub_context = context.new_context_for(result.size());
 
             for current_node in result.iter() {
-                sub_context.next(current_node.clone());
+                sub_context.next(*current_node);
                 let selected = step.evaluate(&sub_context);
                 // TODO: What if it is not a nodeset?
                 step_result.add_nodeset(&selected.nodeset());
@@ -264,12 +264,12 @@ impl XPathExpression for ExpressionPredicate {
         let mut sub_context = context.new_context_for(nodes.size());
 
         for current_node in nodes.iter() {
-            sub_context.next(current_node.clone());
+            sub_context.next(*current_node);
 
             let value = self.predicate.evaluate(&sub_context);
 
             if ExpressionPredicate::include(&value, &sub_context) {
-                selected.add(current_node.clone());
+                selected.add(*current_node);
             }
         }
 

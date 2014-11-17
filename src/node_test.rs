@@ -18,7 +18,7 @@ impl XPathNodeTest for NodeTestAttribute {
         match context.node {
             AttributeNode(ref a) =>
                 if self.name.as_slice() == "*" || a.name() == self.name.as_slice() {
-                    result.add(context.node.clone());
+                    result.add(context.node);
                 },
             _ => {}
         }
@@ -44,7 +44,7 @@ impl XPathNodeTest for NodeTestElement {
                 // }
 
                 if self.name.as_slice() == "*" || e.name() == self.name.as_slice() {
-                    result.add(context.node.clone());
+                    result.add(context.node);
                 },
             _ => {},
         }
@@ -55,7 +55,7 @@ pub struct NodeTestNode;
 
 impl XPathNodeTest for NodeTestNode {
     fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
-        result.add(context.node.clone());
+        result.add(context.node);
     }
 }
 
@@ -64,7 +64,7 @@ pub struct NodeTestText;
 impl XPathNodeTest for NodeTestText {
     fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         match context.node {
-            TextNode(_) => result.add(context.node.clone()),
+            TextNode(_) => result.add(context.node),
             _ => {},
         }
     }

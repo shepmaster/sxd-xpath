@@ -91,13 +91,9 @@ impl<'a, 'd> XPathEvaluationContext<'a, 'd> {
         }
     }
 
-    fn node(&self) -> &Node<'d> {
-        &self.node
-    }
-
     fn new_context_for(&self, _size: uint) -> XPathEvaluationContext<'a, 'd> {
         XPathEvaluationContext {
-            node: self.node.clone(),
+            node: self.node,
             functions: self.functions,
             variables: self.variables,
             position: 0,

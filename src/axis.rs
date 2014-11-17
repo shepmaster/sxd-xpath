@@ -42,7 +42,7 @@ impl XPathAxis for AxisAttribute {
             ElementNode(ref e) =>
                 for attr in e.attributes().iter() {
                     let mut attr_context = context.new_context_for(1);
-                    attr_context.next(attr.clone());
+                    attr_context.next(*attr);
 
                     node_test.test(&attr_context, result);
                 },
@@ -67,7 +67,7 @@ impl XPathAxis for AxisChild {
 
         for child in n.children().iter() {
             let mut child_context = context.new_context_for(1);
-            child_context.next(child.clone());
+            child_context.next(*child);
 
             node_test.test(&child_context, result);
         }
@@ -86,7 +86,7 @@ impl XPathAxis for AxisDescendant {
 
         for child in n.children().iter() {
             let mut child_context = context.new_context_for(1);
-            child_context.next(child.clone());
+            child_context.next(*child);
 
             node_test.test(&child_context, result);
             self.select_nodes(&child_context, node_test, result);

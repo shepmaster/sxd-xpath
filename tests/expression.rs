@@ -224,7 +224,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
     let input_node_1 = setup.doc.create_element("one");
     let input_node_2 = setup.doc.create_element("two");
     let mut input_nodeset = Nodeset::new();
-    input_nodeset.add(input_node_1.clone());
+    input_nodeset.add(input_node_1);
     input_nodeset.add(input_node_2);
 
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
