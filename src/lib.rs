@@ -42,14 +42,15 @@ impl<'d> XPathValue<'d> {
     pub fn number(&self) -> f64 {
         match *self {
             Number(val) => val,
-            _ => -42.0
+            String(ref s) => from_str(s.as_slice()).unwrap_or(Float::nan()),
+            _ => unimplemented!(),
         }
     }
 
     pub fn string(&self) -> string::String {
         match *self {
             String(ref val) => val.clone(),
-            _ => "Unimplemented".to_string(),
+            _ => unimplemented!(),
         }
     }
 
