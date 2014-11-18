@@ -1,8 +1,11 @@
+use std::collections::HashSet;
+
 use document::nodeset::Nodeset;
 
 use super::XPathEvaluationContext;
 use super::XPathValue;
 use super::{Boolean,Number,Nodes};
+use super::StringValue;
 
 use super::axis::XPathAxis;
 use super::node_test::XPathNodeTest;
@@ -61,6 +64,15 @@ impl ExpressionEqual {
         let right_val = self.right.evaluate(context);
 
         match (&left_val, &right_val) {
+            (&Nodes(ref left_nodes), &Nodes(ref right_nodes)) => {
+                fn str_vals(nodes: &Nodeset) -> HashSet<String> {
+                    nodes.iter().map(|n| n.string_value()).collect()
+                }
+
+                let left_strings = str_vals(left_nodes);
+                let right_strings = str_vals(right_nodes);
+                !left_strings.is_disjoint(&right_strings)
+            },
             (&Boolean(_), _) |
             (_, &Boolean(_)) => left_val.boolean() == right_val.boolean(),
             (&Number(_), _) |

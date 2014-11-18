@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::string;
 use std::num::Float;
 
+use document::dom4;
 use document::dom4::{Node,ToNode};
 use document::nodeset::Nodeset;
 
@@ -60,6 +61,39 @@ impl<'d> XPathValue<'d> {
         match *self {
             Nodes(ref ns) => ns.clone(),
             _ => panic!("Did not evaluate to a nodeset!"),
+        }
+    }
+}
+
+trait StringValue {
+    fn string_value(&self) -> string::String;
+}
+
+fn text_descendants_string_value(node: &Node) -> string::String {
+    fn document_order_text_nodes(node: &Node, result: &mut string::String) {
+        for child in node.children().iter() {
+            match child {
+                &dom4::ElementNode(_) => document_order_text_nodes(child, result),
+                &dom4::TextNode(n) => result.push_str(n.text()),
+                _ => {},
+            }
+        }
+    };
+
+    let mut result = string::String::new();
+    document_order_text_nodes(node, &mut result);
+    result
+}
+
+impl<'d> StringValue for Node<'d> {
+    fn string_value(&self) -> string::String {
+        match self {
+            &dom4::RootNode(_) => text_descendants_string_value(self),
+            &dom4::ElementNode(_) => text_descendants_string_value(self),
+            &dom4::AttributeNode(n) => string::String::from_str(n.value()),
+            &dom4::ProcessingInstructionNode(n) => string::String::from_str(n.value().unwrap_or("")),
+            &dom4::CommentNode(n) => string::String::from_str(n.text()),
+            &dom4::TextNode(n) => string::String::from_str(n.text()),
         }
     }
 }
@@ -136,5 +170,72 @@ impl XPathFactory {
         let disambiguator = XPathTokenDisambiguator::new(deabbreviator);
 
         self.parser.parse(disambiguator)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use document::Package;
+    use document::dom4::ToNode;
+    use super::StringValue;
+
+    #[test]
+    fn string_value_of_element_node_is_concatenation_of_descendant_text_nodes() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let element = doc.create_element("hello");
+        let child = doc.create_element("world");
+        let text1 = doc.create_text("Presenting: ");
+        let text2 = doc.create_text("Earth");
+        let text3 = doc.create_text("!");
+
+        element.append_child(text1);
+        element.append_child(child);
+        child.append_child(text2);
+        element.append_child(text3);
+
+        assert_eq!("Presenting: Earth!", element.to_node().string_value().as_slice());
+    }
+
+    #[test]
+    fn string_value_of_attribute_node_is_value() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let element = doc.create_element("hello");
+        let attribute = element.set_attribute_value("world", "Earth").to_node();
+        assert_eq!("Earth", attribute.string_value().as_slice());
+    }
+
+    #[test]
+    fn string_value_of_pi_node_is_empty_when_no_value() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let pi = doc.create_processing_instruction("hello", None).to_node();
+        assert_eq!("", pi.string_value().as_slice());
+    }
+
+    #[test]
+    fn string_value_of_pi_node_is_the_value_when_value() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let pi = doc.create_processing_instruction("hello", Some("world")).to_node();
+        assert_eq!("world", pi.string_value().as_slice());
+    }
+
+    #[test]
+    fn string_value_of_comment_node_is_the_text() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let comment = doc.create_comment("hello world").to_node();
+        assert_eq!("hello world", comment.string_value().as_slice());
+    }
+
+    #[test]
+    fn string_value_of_text_node_is_the_text() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let text = doc.create_text("hello world").to_node();
+        assert_eq!("hello world", text.string_value().as_slice());
     }
 }

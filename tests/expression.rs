@@ -97,6 +97,28 @@ fn expression_and_short_circuits_when_left_argument_is_false() {
 }
 
 #[test]
+fn expression_equal_intersects_string_values_of_two_nodesets() {
+    let package = Package::new();
+    let mut setup = Setup::new(&package);
+
+    let string_value_1 = setup.doc.create_text("same");
+    let string_value_2 = setup.doc.create_text("same");
+
+    setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1]));
+    setup.vars.insert("right".to_string(), Nodes(nodeset![string_value_2]));
+
+    let left  = box ExpressionVariable{name: "left".to_string()};
+    let right = box ExpressionVariable{name: "right".to_string()};
+
+    let expr = ExpressionEqual{left: left, right: right};
+
+    let context = setup.context();
+    let res = expr.evaluate(&context);
+
+    assert_eq!(res, Boolean(true));
+}
+
+#[test]
 fn expression_equal_compares_as_boolean_if_one_argument_is_a_boolean() {
     let package = Package::new();
     let setup = Setup::new(&package);
