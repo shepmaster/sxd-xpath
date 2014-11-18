@@ -44,9 +44,7 @@ pub struct ExpressionContextNode;
 
 impl XPathExpression for ExpressionContextNode {
     fn evaluate<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>) -> XPathValue<'d> {
-        let mut result = Nodeset::new();
-        result.add(context.node);
-        Nodes(result)
+        Nodes(nodeset![context.node])
     }
 }
 
@@ -323,11 +321,7 @@ pub struct ExpressionRootNode;
 
 impl XPathExpression for ExpressionRootNode {
     fn evaluate<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>) -> XPathValue<'d> {
-        let n = context.node;
-
-        let mut result = Nodeset::new();
-        result.add(n.document().root());
-        Nodes(result)
+        Nodes(nodeset![context.node.document().root()])
     }
 }
 

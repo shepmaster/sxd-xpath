@@ -1,3 +1,6 @@
+#![feature(phase)]
+
+#[phase(plugin, link)]
 extern crate document;
 extern crate xpath;
 
@@ -223,9 +226,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
 
     let input_node_1 = setup.doc.create_element("one");
     let input_node_2 = setup.doc.create_element("two");
-    let mut input_nodeset = Nodeset::new();
-    input_nodeset.add(input_node_1);
-    input_nodeset.add(input_node_2);
+    let input_nodeset = nodeset![input_node_1, input_node_2];
 
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
@@ -237,10 +238,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
     let context = setup.context();
     let res = expr.evaluate(&context);
 
-    let mut expected = Nodeset::new();
-    expected.add(input_node_1);
-
-    assert_eq!(res, Nodes(expected));
+    assert_eq!(res, Nodes(nodeset![input_node_1]));
 }
 
 #[test]
@@ -250,9 +248,7 @@ fn expression_step_false_predicate_selects_no_nodes() {
 
     let input_node_1 = setup.doc.create_element("one");
     let input_node_2 = setup.doc.create_element("two");
-    let mut input_nodeset = Nodeset::new();
-    input_nodeset.add(input_node_1);
-    input_nodeset.add(input_node_2);
+    let input_nodeset = nodeset![input_node_1, input_node_2];
 
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
@@ -264,8 +260,7 @@ fn expression_step_false_predicate_selects_no_nodes() {
     let context = setup.context();
     let res = expr.evaluate(&context);
 
-    let expected = Nodeset::new();
-    assert_eq!(res, Nodes(expected));
+    assert_eq!(res, Nodes(nodeset![]));
 }
 
 #[test]
@@ -293,10 +288,7 @@ fn expression_root_node_finds_the_root() {
     let context = setup.context();
     let res = expr.evaluate(&context);
 
-    let mut expected = Nodeset::new();
-    expected.add(setup.doc.root());
-
-    assert_eq!(res, Nodes(expected));
+    assert_eq!(res, Nodes(nodeset![setup.doc.root()]));
 }
 
 #[deriving(Clone)]
@@ -353,14 +345,12 @@ fn expression_union_combines_nodesets() {
     let mut setup = Setup::new(&package);
 
     let left_node = setup.doc.create_element("left");
-    let mut nodes = Nodeset::new();
-    nodes.add(left_node);
+    let nodes = nodeset![left_node];
     setup.vars.insert("left".to_string(), Nodes(nodes));
     let left = box ExpressionVariable{name: "left".to_string()};
 
     let right_node = setup.doc.create_element("right");
-    let mut nodes = Nodeset::new();
-    nodes.add(right_node);
+    let nodes = nodeset![right_node];
     setup.vars.insert("right".to_string(), Nodes(nodes));
     let right = box ExpressionVariable{name: "right".to_string()};
 
@@ -369,11 +359,7 @@ fn expression_union_combines_nodesets() {
     let context = setup.context();
     let res = expr.evaluate(&context);
 
-    let mut expected = Nodeset::new();
-    expected.add(left_node);
-    expected.add(right_node);
-
-    assert_eq!(Nodes(expected), res);
+    assert_eq!(Nodes(nodeset![left_node, right_node]), res);
 }
 
 #[test]
