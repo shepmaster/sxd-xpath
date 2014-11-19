@@ -119,6 +119,25 @@ fn expression_equal_intersects_string_values_of_two_nodesets() {
 }
 
 #[test]
+fn expression_equal_compares_number_value_of_nodeset_to_number() {
+    let package = Package::new();
+    let mut setup = Setup::new(&package);
+
+    let string_value = setup.doc.create_text("3.14");
+    setup.vars.insert("left".to_string(), Nodes(nodeset![string_value]));
+
+    let left  = box ExpressionVariable{name: "left".to_string()};
+    let right = box ExpressionLiteral{value: NumberLiteral(6.28)};
+
+    let expr = ExpressionEqual{left: left, right: right};
+
+    let context = setup.context();
+    let res = expr.evaluate(&context);
+
+    assert_eq!(res, Boolean(false));
+}
+
+#[test]
 fn expression_equal_compares_as_boolean_if_one_argument_is_a_boolean() {
     let package = Package::new();
     let setup = Setup::new(&package);

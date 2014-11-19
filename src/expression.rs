@@ -63,15 +63,28 @@ impl ExpressionEqual {
         let left_val = self.left.evaluate(context);
         let right_val = self.right.evaluate(context);
 
+        fn str_vals(nodes: &Nodeset) -> HashSet<String> {
+            nodes.iter().map(|n| n.string_value()).collect()
+        }
+
+        fn num_vals(nodes: &Nodeset) -> Vec<f64> {
+            // f64 isn't hashable...
+            nodes
+                .iter()
+                .map(|n| super::String(n.string_value()).number())
+                .collect()
+        }
+
         match (&left_val, &right_val) {
             (&Nodes(ref left_nodes), &Nodes(ref right_nodes)) => {
-                fn str_vals(nodes: &Nodeset) -> HashSet<String> {
-                    nodes.iter().map(|n| n.string_value()).collect()
-                }
-
                 let left_strings = str_vals(left_nodes);
                 let right_strings = str_vals(right_nodes);
                 !left_strings.is_disjoint(&right_strings)
+            },
+            (&Nodes(ref nodes), &Number(val)) |
+            (&Number(val), &Nodes(ref nodes)) => {
+                let numbers = num_vals(nodes);
+                numbers.iter().any(|n| *n == val)
             },
             (&Boolean(_), _) |
             (_, &Boolean(_)) => left_val.boolean() == right_val.boolean(),
