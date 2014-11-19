@@ -138,6 +138,26 @@ fn expression_equal_compares_number_value_of_nodeset_to_number() {
 }
 
 #[test]
+fn expression_equal_compares_string_value_of_nodeset_to_string() {
+    let package = Package::new();
+    let mut setup = Setup::new(&package);
+
+    let string_value_1 = setup.doc.create_text("gravy");
+    let string_value_2 = setup.doc.create_text("boat");
+    setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1, string_value_2]));
+
+    let left  = box ExpressionVariable{name: "left".to_string()};
+    let right = box ExpressionLiteral{value: StringLiteral("boat".to_string())};
+
+    let expr = ExpressionEqual{left: left, right: right};
+
+    let context = setup.context();
+    let res = expr.evaluate(&context);
+
+    assert_eq!(res, Boolean(true));
+}
+
+#[test]
 fn expression_equal_compares_as_boolean_if_one_argument_is_a_boolean() {
     let package = Package::new();
     let setup = Setup::new(&package);

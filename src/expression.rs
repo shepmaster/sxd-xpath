@@ -86,6 +86,11 @@ impl ExpressionEqual {
                 let numbers = num_vals(nodes);
                 numbers.iter().any(|n| *n == val)
             },
+            (&Nodes(ref nodes), &super::String(ref val)) |
+            (&super::String(ref val), &Nodes(ref nodes)) => {
+                let strings = str_vals(nodes);
+                strings.contains(val)
+            },
             (&Boolean(_), _) |
             (_, &Boolean(_)) => left_val.boolean() == right_val.boolean(),
             (&Number(_), _) |
