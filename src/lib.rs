@@ -1,9 +1,12 @@
 #![crate_name = "xpath"]
 #![feature(macro_rules)]
 #![feature(phase)]
+#![feature(globs)]
 
 #[phase(plugin, link)]
 extern crate document;
+
+use self::XPathValue::*;
 
 use std::collections::HashMap;
 use std::string;

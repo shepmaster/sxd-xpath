@@ -3,6 +3,8 @@ extern crate document;
 use document::nodeset::Nodeset;
 use document::dom4::ElementNode;
 
+use self::PrincipalNodeType::*;
+
 use super::XPathEvaluationContext;
 use super::node_test::XPathNodeTest;
 

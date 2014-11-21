@@ -1,7 +1,8 @@
 use super::XPathFunction;
 use super::XPathEvaluationContext;
 use super::Functions;
-use super::{XPathValue,Boolean};
+use super::XPathValue;
+use super::XPathValue::Boolean;
 
 struct True;
 

@@ -1,4 +1,5 @@
 use std::string;
+use self::XPathToken::*;
 
 #[deriving(PartialEq,Show,Clone)]
 pub enum XPathToken {

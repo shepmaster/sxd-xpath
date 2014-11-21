@@ -2,9 +2,11 @@ use std::collections::HashSet;
 
 use document::nodeset::Nodeset;
 
+use self::LiteralValue::*;
+
 use super::XPathEvaluationContext;
 use super::XPathValue;
-use super::{Boolean,Number,Nodes};
+use super::XPathValue::{Boolean,Number,Nodes};
 use super::StringValue;
 
 use super::axis::XPathAxis;
@@ -71,7 +73,7 @@ impl ExpressionEqual {
             // f64 isn't hashable...
             nodes
                 .iter()
-                .map(|n| super::String(n.string_value()).number())
+                .map(|n| XPathValue::String(n.string_value()).number())
                 .collect()
         }
 
@@ -86,8 +88,8 @@ impl ExpressionEqual {
                 let numbers = num_vals(nodes);
                 numbers.iter().any(|n| *n == val)
             },
-            (&Nodes(ref nodes), &super::String(ref val)) |
-            (&super::String(ref val), &Nodes(ref nodes)) => {
+            (&Nodes(ref nodes), &XPathValue::String(ref val)) |
+            (&XPathValue::String(ref val), &Nodes(ref nodes)) => {
                 let strings = str_vals(nodes);
                 strings.contains(val)
             },
@@ -158,7 +160,7 @@ impl XPathExpression for ExpressionLiteral {
         match &self.value {
             &BooleanLiteral(b) => Boolean(b),
             &NumberLiteral(b) => Number(b),
-            &StringLiteral(ref b) => super::String(b.clone()),
+            &StringLiteral(ref b) => XPathValue::String(b.clone()),
         }
     }
 }
