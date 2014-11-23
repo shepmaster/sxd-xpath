@@ -228,27 +228,18 @@ impl XPathTokenizer {
     }
 
     fn raw_next_token(& mut self) -> TokenResult {
-        match self.xpath.safe_substr(self.start, self.start + 2) {
-            Some(first_two) => {
-                match self.two_char_tokens().get(&first_two) {
-                    Some(token) => {
-                        self.start += 2;
-                        return Ok(token.clone());
-                    }
-                    _ => {}
-                }
-            },
-            _ => {}
+        if let Some(first_two) = self.xpath.safe_substr(self.start, self.start + 2) {
+            if let Some(token) = self.two_char_tokens().get(&first_two) {
+                self.start += 2;
+                return Ok(token.clone());
+            }
         }
 
         let c = self.xpath.char_at(self.start);
 
-        match self.single_char_tokens().get(&c) {
-            Some(token) => {
-                self.start += 1;
-                return Ok(token.clone());
-            }
-            _ => {}
+        if let Some(token) = self.single_char_tokens().get(&c) {
+            self.start += 1;
+            return Ok(token.clone());
         }
 
         for quote_char in QUOTE_CHARS.iter() {

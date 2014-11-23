@@ -37,17 +37,13 @@ impl XPathAxis for AxisAttribute {
                             node_test: &XPathNodeTest,
                             result:    &mut Nodeset<'d>)
     {
-        let n = context.node;
+        if let ElementNode(ref e) = context.node {
+            for attr in e.attributes().iter() {
+                let mut attr_context = context.new_context_for(1);
+                attr_context.next(*attr);
 
-        match n {
-            ElementNode(ref e) =>
-                for attr in e.attributes().iter() {
-                    let mut attr_context = context.new_context_for(1);
-                    attr_context.next(*attr);
-
-                    node_test.test(&attr_context, result);
-                },
-            _ => {}
+                node_test.test(&attr_context, result);
+            }
         }
     }
 
@@ -122,15 +118,10 @@ impl XPathAxis for AxisParent {
                             node_test: &XPathNodeTest,
                             result:    &mut Nodeset<'d>)
     {
-        let n = context.node;
-
-        match n.parent() {
-            Some(p) => {
-                let mut parent_context = context.new_context_for(1);
-                parent_context.next(p);
-                node_test.test(&parent_context, result);
-            },
-            None => {}
+        if let Some(p) = context.node.parent() {
+            let mut parent_context = context.new_context_for(1);
+            parent_context.next(p);
+            node_test.test(&parent_context, result);
         }
     }
 }
