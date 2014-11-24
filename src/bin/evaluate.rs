@@ -5,9 +5,9 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::io::File;
 
-use document::dom4::ToNode;
 use document::parser::Parser;
 
+use xpath::nodeset::ToNode;
 use xpath::{XPathEvaluationContext,XPathFactory};
 use xpath::expression::XPathExpression;
 

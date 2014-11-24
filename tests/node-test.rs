@@ -1,17 +1,17 @@
 #![feature(phase)]
 
-#[phase(plugin, link)]
 extern crate document;
+#[phase(plugin, link)]
 extern crate xpath;
 
 use std::collections::HashMap;
 
 use document::Package;
-use document::nodeset::Nodeset;
 use document::dom4::{Document,Element,Attribute};
 
 use xpath::XPathEvaluationContext;
 use xpath::{Functions,Variables};
+use xpath::nodeset::Nodeset;
 
 use xpath::node_test::XPathNodeTest;
 use xpath::node_test::{NodeTestAttribute, NodeTestElement};

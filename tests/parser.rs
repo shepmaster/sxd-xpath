@@ -1,19 +1,21 @@
 #![feature(phase)]
 #![feature(macro_rules)]
 
-#[phase(plugin, link)]
 extern crate document;
+#[phase(plugin, link)]
 extern crate xpath;
 
 use std::collections::HashMap;
 use std::num::Float;
 
 use document::Package;
-use document::dom4::{Document,Root,Element,Text,ToNode};
+use document::dom4::{Document,Root,Element,Text};
 
 use xpath::XPathValue::{Boolean,Number,String,Nodes};
 use xpath::{Functions,Variables};
 use xpath::{XPathValue,XPathEvaluationContext};
+
+use xpath::nodeset::ToNode;
 
 use xpath::token::XPathToken;
 use xpath::tokenizer::TokenResult;

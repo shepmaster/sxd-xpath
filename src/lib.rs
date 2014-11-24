@@ -7,18 +7,18 @@
 extern crate document;
 
 use self::XPathValue::*;
+use self::nodeset::Nodeset;
+use self::nodeset::{Node,ToNode};
 
 use std::collections::HashMap;
 use std::string;
 use std::num::Float;
 
-use document::dom4;
-use document::dom4::{Node,ToNode};
-use document::nodeset::Nodeset;
-
 use tokenizer::{XPathTokenizer,XPathTokenDeabbreviator,XPathTokenDisambiguator};
 use parser::XPathParser;
 
+pub mod macros;
+pub mod nodeset;
 pub mod axis;
 pub mod expression;
 pub mod function;
@@ -76,8 +76,8 @@ fn text_descendants_string_value(node: &Node) -> string::String {
     fn document_order_text_nodes(node: &Node, result: &mut string::String) {
         for child in node.children().iter() {
             match child {
-                &dom4::ElementNode(_) => document_order_text_nodes(child, result),
-                &dom4::TextNode(n) => result.push_str(n.text()),
+                &Node::ElementNode(_) => document_order_text_nodes(child, result),
+                &Node::TextNode(n) => result.push_str(n.text()),
                 _ => {},
             }
         }
@@ -91,12 +91,12 @@ fn text_descendants_string_value(node: &Node) -> string::String {
 impl<'d> StringValue for Node<'d> {
     fn string_value(&self) -> string::String {
         match self {
-            &dom4::RootNode(_) => text_descendants_string_value(self),
-            &dom4::ElementNode(_) => text_descendants_string_value(self),
-            &dom4::AttributeNode(n) => string::String::from_str(n.value()),
-            &dom4::ProcessingInstructionNode(n) => string::String::from_str(n.value().unwrap_or("")),
-            &dom4::CommentNode(n) => string::String::from_str(n.text()),
-            &dom4::TextNode(n) => string::String::from_str(n.text()),
+            &Node::RootNode(_) => text_descendants_string_value(self),
+            &Node::ElementNode(_) => text_descendants_string_value(self),
+            &Node::AttributeNode(n) => string::String::from_str(n.value()),
+            &Node::ProcessingInstructionNode(n) => string::String::from_str(n.value().unwrap_or("")),
+            &Node::CommentNode(n) => string::String::from_str(n.text()),
+            &Node::TextNode(n) => string::String::from_str(n.text()),
         }
     }
 }
@@ -176,10 +176,15 @@ impl XPathFactory {
     }
 }
 
+#[doc(hidden)]
+mod xpath {
+    pub use nodeset;
+}
+
 #[cfg(test)]
 mod test {
     use document::Package;
-    use document::dom4::ToNode;
+    use super::nodeset::ToNode;
     use super::StringValue;
 
     #[test]

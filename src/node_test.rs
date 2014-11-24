@@ -1,7 +1,6 @@
-use document::nodeset::Nodeset;
-use document::dom4::{AttributeNode,ElementNode,TextNode};
-
 use super::XPathEvaluationContext;
+use super::nodeset::Nodeset;
+use super::nodeset::Node::{AttributeNode,ElementNode,TextNode};
 
 pub trait XPathNodeTest {
     fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);

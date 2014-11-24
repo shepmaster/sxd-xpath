@@ -1,12 +1,11 @@
 extern crate document;
 
-use document::nodeset::Nodeset;
-use document::dom4::ElementNode;
-
 use self::PrincipalNodeType::*;
 
 use super::XPathEvaluationContext;
 use super::node_test::XPathNodeTest;
+use super::nodeset::Nodeset;
+use super::nodeset::Node::ElementNode;
 
 pub enum PrincipalNodeType {
     Attribute,

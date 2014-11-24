@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use document::nodeset::Nodeset;
+use super::nodeset::Nodeset;
 
 use self::LiteralValue::*;
 

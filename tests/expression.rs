@@ -1,7 +1,7 @@
 #![feature(phase)]
 
-#[phase(plugin, link)]
 extern crate document;
+#[phase(plugin, link)]
 extern crate xpath;
 
 use std::cell::RefCell;
@@ -10,13 +10,13 @@ use std::collections::HashMap;
 
 use document::Package;
 use document::dom4::Document;
-use document::nodeset::Nodeset;
 
 use xpath::XPathValue;
 use xpath::XPathValue::{Boolean, Number, String, Nodes};
 use xpath::{Functions,Variables};
 use xpath::XPathFunction;
 use xpath::XPathEvaluationContext;
+use xpath::nodeset::Nodeset;
 
 use xpath::expression::XPathExpression;
 use xpath::expression::{ExpressionAnd,
