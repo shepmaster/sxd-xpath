@@ -11,17 +11,17 @@ use std::num::Float;
 use document::Package;
 use document::dom4::{Document,Root,Element,Text,ToNode};
 
-use xpath::{Boolean,Number,String,Nodes};
+use xpath::XPathValue::{Boolean,Number,String,Nodes};
 use xpath::{Functions,Variables};
 use xpath::{XPathValue,XPathEvaluationContext};
 
-use xpath::token;
+use xpath::token::XPathToken;
 use xpath::tokenizer::TokenResult;
 
 use xpath::expression::{XPathExpression,SubExpression};
 
 use xpath::parser::{XPathParser,ParseResult};
-use xpath::parser::{
+use xpath::parser::ParseErr::{
     EmptyPredicate,
     ExtraUnparsedTokens,
     InvalidNodeTest,
@@ -165,7 +165,7 @@ impl<'d> Exercise<'d> {
 
 #[test]
 fn parses_string_as_child() {
-    let tokens = tokens![token::String("hello".to_string())];
+    let tokens = tokens![XPathToken::String("hello".to_string())];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -180,9 +180,9 @@ fn parses_string_as_child() {
 #[test]
 fn parses_two_strings_as_grandchild() {
     let tokens = tokens![
-        token::String("hello".to_string()),
-        token::Slash,
-        token::String("world".to_string())
+        XPathToken::String("hello".to_string()),
+        XPathToken::Slash,
+        XPathToken::String("world".to_string())
     ];
 
     let package = Package::new();
@@ -199,9 +199,9 @@ fn parses_two_strings_as_grandchild() {
 #[test]
 fn parses_self_axis() {
     let tokens = tokens![
-        token::Axis("self".to_string()),
-        token::DoubleColon,
-        token::String("the-top-node".to_string())
+        XPathToken::Axis("self".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("the-top-node".to_string())
     ];
 
     let package = Package::new();
@@ -216,9 +216,9 @@ fn parses_self_axis() {
 #[test]
 fn parses_parent_axis() {
     let tokens = tokens![
-        token::Axis("parent".to_string()),
-        token::DoubleColon,
-        token::String("the-top-node".to_string())
+        XPathToken::Axis("parent".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("the-top-node".to_string())
     ];
 
     let package = Package::new();
@@ -234,9 +234,9 @@ fn parses_parent_axis() {
 #[test]
 fn parses_descendant_axis() {
     let tokens = tokens![
-        token::Axis("descendant".to_string()),
-        token::DoubleColon,
-        token::String("two".to_string())
+        XPathToken::Axis("descendant".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("two".to_string())
     ];
 
     let package = Package::new();
@@ -253,9 +253,9 @@ fn parses_descendant_axis() {
 #[test]
 fn parses_descendant_or_self_axis() {
     let tokens = tokens![
-        token::Axis("descendant-or-self".to_string()),
-        token::DoubleColon,
-        token::String("*".to_string())
+        XPathToken::Axis("descendant-or-self".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("*".to_string())
     ];
 
     let package = Package::new();
@@ -272,9 +272,9 @@ fn parses_descendant_or_self_axis() {
 #[test]
 fn parses_attribute_axis() {
     let tokens = tokens![
-        token::Axis("attribute".to_string()),
-        token::DoubleColon,
-        token::String("*".to_string())
+        XPathToken::Axis("attribute".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("*".to_string())
     ];
 
     let package = Package::new();
@@ -290,7 +290,7 @@ fn parses_attribute_axis() {
 
 #[test]
 fn parses_child_with_same_name_as_an_axis() {
-    let tokens = tokens![token::String("self".to_string())];
+    let tokens = tokens![XPathToken::String("self".to_string())];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -305,9 +305,9 @@ fn parses_child_with_same_name_as_an_axis() {
 #[test]
 fn parses_node_node_test() {
     let tokens = tokens![
-        token::NodeTest("node".to_string()),
-        token::LeftParen,
-        token::RightParen
+        XPathToken::NodeTest("node".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen
     ];
 
     let package = Package::new();
@@ -324,9 +324,9 @@ fn parses_node_node_test() {
 #[test]
 fn parses_text_node_test() {
     let tokens = tokens![
-        token::NodeTest("text".to_string()),
-        token::LeftParen,
-        token::RightParen
+        XPathToken::NodeTest("text".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen
     ];
 
     let package = Package::new();
@@ -343,11 +343,11 @@ fn parses_text_node_test() {
 #[test]
 fn parses_axis_and_node_test() {
     let tokens = tokens![
-        token::Axis("self".to_string()),
-        token::DoubleColon,
-        token::NodeTest("text".to_string()),
-        token::LeftParen,
-        token::RightParen
+        XPathToken::Axis("self".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::NodeTest("text".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen
     ];
 
     let package = Package::new();
@@ -364,10 +364,10 @@ fn parses_axis_and_node_test() {
 #[test]
 fn numeric_predicate_selects_indexed_node() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::Number(2.0),
-        token::RightBracket
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Number(2.0),
+        XPathToken::RightBracket
     ];
 
     let package = Package::new();
@@ -383,7 +383,7 @@ fn numeric_predicate_selects_indexed_node() {
 
 #[test]
 fn string_literal() {
-    let tokens = tokens![token::Literal("string".to_string())];
+    let tokens = tokens![XPathToken::Literal("string".to_string())];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -397,16 +397,16 @@ fn string_literal() {
 #[test]
 fn predicate_accepts_any_expression() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::Or,
-        token::Function("false".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::RightBracket
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::Or,
+        XPathToken::Function("false".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::RightBracket
     ];
 
     let package = Package::new();
@@ -423,12 +423,12 @@ fn predicate_accepts_any_expression() {
 #[test]
 fn true_function_predicate_selects_all_nodes() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::RightBracket
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::RightBracket
     ];
 
     let package = Package::new();
@@ -445,12 +445,12 @@ fn true_function_predicate_selects_all_nodes() {
 #[test]
 fn false_function_predicate_selects_no_nodes() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::Function("false".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::RightBracket
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Function("false".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::RightBracket
     ];
 
     let package = Package::new();
@@ -467,13 +467,13 @@ fn false_function_predicate_selects_no_nodes() {
 #[test]
 fn multiple_predicates() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::Number(2.0),
-        token::RightBracket,
-        token::LeftBracket,
-        token::Number(1.0),
-        token::RightBracket
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Number(2.0),
+        XPathToken::RightBracket,
+        XPathToken::LeftBracket,
+        XPathToken::Number(1.0),
+        XPathToken::RightBracket
     ];
 
     let package = Package::new();
@@ -490,12 +490,12 @@ fn multiple_predicates() {
 #[test]
 fn functions_accept_arguments() {
     let tokens = tokens![
-        token::Function("not".to_string()),
-        token::LeftParen,
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::RightParen,
+        XPathToken::Function("not".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::RightParen,
     ];
 
     let package = Package::new();
@@ -510,16 +510,16 @@ fn functions_accept_arguments() {
 #[test]
 fn functions_accept_any_expression_as_an_argument() {
     let tokens = tokens![
-        token::Function("not".to_string()),
-        token::LeftParen,
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::Or,
-        token::Function("false".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::RightParen,
+        XPathToken::Function("not".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::Or,
+        XPathToken::Function("false".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::RightParen,
     ];
 
     let package = Package::new();
@@ -533,7 +533,7 @@ fn functions_accept_any_expression_as_an_argument() {
 
 #[test]
 fn numeric_literal() {
-    let tokens = tokens![token::Number(3.2)];
+    let tokens = tokens![XPathToken::Number(3.2)];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -547,9 +547,9 @@ fn numeric_literal() {
 #[test]
 fn addition_of_two_numbers() {
     let tokens = tokens![
-        token::Number(1.1),
-        token::PlusSign,
-        token::Number(2.2)
+        XPathToken::Number(1.1),
+        XPathToken::PlusSign,
+        XPathToken::Number(2.2)
     ];
 
     let package = Package::new();
@@ -564,11 +564,11 @@ fn addition_of_two_numbers() {
 #[test]
 fn addition_of_multiple_numbers() {
     let tokens = tokens![
-        token::Number(1.1),
-        token::PlusSign,
-        token::Number(2.2),
-        token::PlusSign,
-        token::Number(3.3)
+        XPathToken::Number(1.1),
+        XPathToken::PlusSign,
+        XPathToken::Number(2.2),
+        XPathToken::PlusSign,
+        XPathToken::Number(3.3)
     ];
 
     let package = Package::new();
@@ -583,9 +583,9 @@ fn addition_of_multiple_numbers() {
 #[test]
 fn subtraction_of_two_numbers() {
     let tokens = tokens![
-        token::Number(1.1),
-        token::MinusSign,
-        token::Number(2.2),
+        XPathToken::Number(1.1),
+        XPathToken::MinusSign,
+        XPathToken::Number(2.2),
     ];
 
     let package = Package::new();
@@ -600,11 +600,11 @@ fn subtraction_of_two_numbers() {
 #[test]
 fn additive_expression_is_left_associative() {
     let tokens = tokens![
-        token::Number(1.1),
-        token::MinusSign,
-        token::Number(2.2),
-        token::MinusSign,
-        token::Number(3.3),
+        XPathToken::Number(1.1),
+        XPathToken::MinusSign,
+        XPathToken::Number(2.2),
+        XPathToken::MinusSign,
+        XPathToken::Number(3.3),
     ];
 
     let package = Package::new();
@@ -619,9 +619,9 @@ fn additive_expression_is_left_associative() {
 #[test]
 fn multiplication_of_two_numbers() {
     let tokens = tokens![
-        token::Number(1.1),
-        token::Multiply,
-        token::Number(2.2),
+        XPathToken::Number(1.1),
+        XPathToken::Multiply,
+        XPathToken::Number(2.2),
     ];
 
     let package = Package::new();
@@ -636,9 +636,9 @@ fn multiplication_of_two_numbers() {
 #[test]
 fn division_of_two_numbers() {
     let tokens = tokens![
-        token::Number(7.1),
-        token::Divide,
-        token::Number(0.1),
+        XPathToken::Number(7.1),
+        XPathToken::Divide,
+        XPathToken::Number(0.1),
     ];
 
     let package = Package::new();
@@ -653,9 +653,9 @@ fn division_of_two_numbers() {
 #[test]
 fn remainder_of_two_numbers() {
     let tokens = tokens![
-        token::Number(7.1),
-        token::Remainder,
-        token::Number(3.0),
+        XPathToken::Number(7.1),
+        XPathToken::Remainder,
+        XPathToken::Number(3.0),
     ];
 
     let package = Package::new();
@@ -670,8 +670,8 @@ fn remainder_of_two_numbers() {
 #[test]
 fn unary_negation() {
     let tokens = tokens![
-        token::MinusSign,
-        token::Number(7.2),
+        XPathToken::MinusSign,
+        XPathToken::Number(7.2),
     ];
 
     let package = Package::new();
@@ -686,10 +686,10 @@ fn unary_negation() {
 #[test]
 fn repeated_unary_negation() {
     let tokens = tokens![
-        token::MinusSign,
-        token::MinusSign,
-        token::MinusSign,
-        token::Number(7.2),
+        XPathToken::MinusSign,
+        XPathToken::MinusSign,
+        XPathToken::MinusSign,
+        XPathToken::Number(7.2),
     ];
 
     let package = Package::new();
@@ -704,9 +704,9 @@ fn repeated_unary_negation() {
 #[test]
 fn top_level_function_call() {
     let tokens = tokens![
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
     ];
 
     let package = Package::new();
@@ -721,13 +721,13 @@ fn top_level_function_call() {
 #[test]
 fn or_expression() {
     let tokens = tokens![
-        token::Function("true".to_string()),
-        token::LeftParen,
-        token::RightParen,
-        token::Or,
-        token::Function("false".to_string()),
-        token::LeftParen,
-        token::RightParen,
+        XPathToken::Function("true".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
+        XPathToken::Or,
+        XPathToken::Function("false".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen,
     ];
 
     let package = Package::new();
@@ -742,9 +742,9 @@ fn or_expression() {
 #[test]
 fn and_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::And,
-        token::Number(0.0),
+        XPathToken::Number(1.2),
+        XPathToken::And,
+        XPathToken::Number(0.0),
     ];
 
     let package = Package::new();
@@ -759,9 +759,9 @@ fn and_expression() {
 #[test]
 fn equality_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::Equal,
-        token::Number(1.1),
+        XPathToken::Number(1.2),
+        XPathToken::Equal,
+        XPathToken::Number(1.1),
     ];
 
     let package = Package::new();
@@ -776,9 +776,9 @@ fn equality_expression() {
 #[test]
 fn inequality_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::NotEqual,
-        token::Number(1.2),
+        XPathToken::Number(1.2),
+        XPathToken::NotEqual,
+        XPathToken::Number(1.2),
     ];
 
     let package = Package::new();
@@ -793,9 +793,9 @@ fn inequality_expression() {
 #[test]
 fn less_than_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::LessThan,
-        token::Number(1.2),
+        XPathToken::Number(1.2),
+        XPathToken::LessThan,
+        XPathToken::Number(1.2),
     ];
 
     let package = Package::new();
@@ -810,9 +810,9 @@ fn less_than_expression() {
 #[test]
 fn less_than_or_equal_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::LessThanOrEqual,
-        token::Number(1.2),
+        XPathToken::Number(1.2),
+        XPathToken::LessThanOrEqual,
+        XPathToken::Number(1.2),
     ];
 
     let package = Package::new();
@@ -827,9 +827,9 @@ fn less_than_or_equal_expression() {
 #[test]
 fn greater_than_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::GreaterThan,
-        token::Number(1.2),
+        XPathToken::Number(1.2),
+        XPathToken::GreaterThan,
+        XPathToken::Number(1.2),
     ];
 
     let package = Package::new();
@@ -844,9 +844,9 @@ fn greater_than_expression() {
 #[test]
 fn greater_than_or_equal_expression() {
     let tokens = tokens![
-        token::Number(1.2),
-        token::GreaterThanOrEqual,
-        token::Number(1.2),
+        XPathToken::Number(1.2),
+        XPathToken::GreaterThanOrEqual,
+        XPathToken::Number(1.2),
     ];
 
     let package = Package::new();
@@ -861,8 +861,8 @@ fn greater_than_or_equal_expression() {
 #[test]
 fn variable_reference() {
     let tokens = tokens![
-        token::DollarSign,
-        token::String("variable-name".to_string()),
+        XPathToken::DollarSign,
+        XPathToken::String("variable-name".to_string()),
     ];
 
     let package = Package::new();
@@ -878,11 +878,11 @@ fn variable_reference() {
 #[test]
 fn filter_expression() {
     let tokens = tokens![
-        token::DollarSign,
-        token::String("variable".to_string()),
-        token::LeftBracket,
-        token::Number(0.0),
-        token::RightBracket,
+        XPathToken::DollarSign,
+        XPathToken::String("variable".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::Number(0.0),
+        XPathToken::RightBracket,
     ];
 
     let package = Package::new();
@@ -903,10 +903,10 @@ fn filter_expression() {
 #[test]
 fn filter_expression_and_relative_path() {
     let tokens = tokens![
-        token::DollarSign,
-        token::String("variable".to_string()),
-        token::Slash,
-        token::String("child".to_string()),
+        XPathToken::DollarSign,
+        XPathToken::String("variable".to_string()),
+        XPathToken::Slash,
+        XPathToken::String("child".to_string()),
     ];
 
     let package = Package::new();
@@ -927,11 +927,11 @@ fn filter_expression_and_relative_path() {
 #[test]
 fn union_expression() {
     let tokens = tokens![
-        token::DollarSign,
-        token::String("variable1".to_string()),
-        token::Pipe,
-        token::DollarSign,
-        token::String("variable2".to_string()),
+        XPathToken::DollarSign,
+        XPathToken::String("variable1".to_string()),
+        XPathToken::Pipe,
+        XPathToken::DollarSign,
+        XPathToken::String("variable2".to_string()),
     ];
 
     let package = Package::new();
@@ -951,7 +951,7 @@ fn union_expression() {
 #[test]
 fn absolute_path_expression() {
     let tokens = tokens![
-        token::Slash,
+        XPathToken::Slash,
     ];
 
     let package = Package::new();
@@ -968,8 +968,8 @@ fn absolute_path_expression() {
 #[test]
 fn absolute_path_with_child_expression() {
     let tokens = tokens![
-        token::Slash,
-        token::String("*".to_string()),
+        XPathToken::Slash,
+        XPathToken::String("*".to_string()),
     ];
 
     let package = Package::new();
@@ -986,9 +986,9 @@ fn absolute_path_with_child_expression() {
 #[test]
 fn unknown_axis_is_reported_as_an_error() {
     let tokens = tokens![
-        token::Axis("bad-axis".to_string()),
-        token::DoubleColon,
-        token::String("*".to_string())
+        XPathToken::Axis("bad-axis".to_string()),
+        XPathToken::DoubleColon,
+        XPathToken::String("*".to_string())
     ];
 
     let package = Package::new();
@@ -1002,9 +1002,9 @@ fn unknown_axis_is_reported_as_an_error() {
 #[test]
 fn unknown_node_test_is_reported_as_an_error() {
     let tokens = tokens![
-        token::NodeTest("bad-node-test".to_string()),
-        token::LeftParen,
-        token::RightParen
+        XPathToken::NodeTest("bad-node-test".to_string()),
+        XPathToken::LeftParen,
+        XPathToken::RightParen
     ];
 
     let package = Package::new();
@@ -1018,8 +1018,8 @@ fn unknown_node_test_is_reported_as_an_error() {
 #[test]
 fn unexpected_token_is_reported_as_an_error() {
     let tokens = tokens![
-        token::Function("does-not-matter".to_string()),
-        token::RightParen
+        XPathToken::Function("does-not-matter".to_string()),
+        XPathToken::RightParen
     ];
 
     let package = Package::new();
@@ -1027,14 +1027,14 @@ fn unexpected_token_is_reported_as_an_error() {
 
     let ex = Exercise::new(&doc);
     let res = ex.parser.parse(tokens.into_iter());
-    assert_eq!(Some(UnexpectedToken(token::RightParen)), res.err());
+    assert_eq!(Some(UnexpectedToken(XPathToken::RightParen)), res.err());
 }
 
 #[test]
 fn binary_operator_without_right_hand_side_is_reported_as_an_error() {
     let tokens = tokens![
-        token::Literal("left".to_string()),
-        token::And
+        XPathToken::Literal("left".to_string()),
+        XPathToken::And
     ];
 
     let package = Package::new();
@@ -1048,7 +1048,7 @@ fn binary_operator_without_right_hand_side_is_reported_as_an_error() {
 #[test]
 fn unary_operator_without_right_hand_side_is_reported_as_an_error() {
     let tokens = tokens![
-        token::MinusSign,
+        XPathToken::MinusSign,
     ];
 
     let package = Package::new();
@@ -1062,9 +1062,9 @@ fn unary_operator_without_right_hand_side_is_reported_as_an_error() {
 #[test]
 fn empty_predicate_is_reported_as_an_error() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::LeftBracket,
-        token::RightBracket,
+        XPathToken::String("*".to_string()),
+        XPathToken::LeftBracket,
+        XPathToken::RightBracket,
     ];
 
     let package = Package::new();
@@ -1078,8 +1078,8 @@ fn empty_predicate_is_reported_as_an_error() {
 #[test]
 fn relative_path_with_trailing_slash_is_reported_as_an_error() {
     let tokens = tokens![
-        token::String("*".to_string()),
-        token::Slash,
+        XPathToken::String("*".to_string()),
+        XPathToken::Slash,
     ];
 
     let package = Package::new();
@@ -1093,9 +1093,9 @@ fn relative_path_with_trailing_slash_is_reported_as_an_error() {
 #[test]
 fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
     let tokens = tokens![
-        token::DollarSign,
-        token::String("variable".to_string()),
-        token::Slash,
+        XPathToken::DollarSign,
+        XPathToken::String("variable".to_string()),
+        XPathToken::Slash,
     ];
 
     let package = Package::new();
@@ -1108,7 +1108,7 @@ fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
 
 #[test]
 fn running_out_of_input_is_reported_as_an_error() {
-    let tokens = tokens![token::Function("func".to_string())];
+    let tokens = tokens![XPathToken::Function("func".to_string())];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -1120,7 +1120,7 @@ fn running_out_of_input_is_reported_as_an_error() {
 
 #[test]
 fn having_extra_tokens_is_reported_as_an_error() {
-    let tokens = tokens![token::LeftBracket];
+    let tokens = tokens![XPathToken::LeftBracket];
 
     let package = Package::new();
     let doc = TestDoc(package.as_document());
@@ -1133,8 +1133,8 @@ fn having_extra_tokens_is_reported_as_an_error() {
 #[test]
 fn a_tokenizer_error_is_reported_as_an_error() {
     let tokens = vec![
-        Ok(token::Function("func".to_string())),
-        Err(xpath::tokenizer::UnableToCreateToken)
+        Ok(XPathToken::Function("func".to_string())),
+        Err(xpath::tokenizer::TokenizerErr::UnableToCreateToken)
     ];
 
     let package = Package::new();
@@ -1142,5 +1142,5 @@ fn a_tokenizer_error_is_reported_as_an_error() {
 
     let ex = Exercise::new(&doc);
     let res = ex.parse_raw(tokens);
-    assert_eq!(Some(TokenizerError(xpath::tokenizer::UnableToCreateToken)), res.err());
+    assert_eq!(Some(TokenizerError(xpath::tokenizer::TokenizerErr::UnableToCreateToken)), res.err());
 }

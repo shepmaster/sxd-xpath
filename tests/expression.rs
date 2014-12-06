@@ -13,7 +13,7 @@ use document::dom4::Document;
 use document::nodeset::Nodeset;
 
 use xpath::XPathValue;
-use xpath::{Boolean, Number, String, Nodes};
+use xpath::XPathValue::{Boolean, Number, String, Nodes};
 use xpath::{Functions,Variables};
 use xpath::XPathFunction;
 use xpath::XPathEvaluationContext;
@@ -31,7 +31,7 @@ use xpath::expression::{ExpressionAnd,
                         ExpressionStep,
                         ExpressionUnion,
                         ExpressionVariable};
-use xpath::expression::{BooleanLiteral,NumberLiteral,StringLiteral};
+use xpath::expression::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
 use xpath::axis::XPathAxis;
 use xpath::node_test::XPathNodeTest;
