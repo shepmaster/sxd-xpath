@@ -1,11 +1,17 @@
 use std::collections::HashMap;
-use std::char::is_digit;
 use std::string;
 
 use self::TokenizerErr::*;
 
 use super::token::XPathToken;
 use super::token::XPathToken::*;
+
+fn is_digit(c: char) -> bool {
+    match c {
+        '0'...'9' => true,
+        _ => false,
+    }
+}
 
 pub struct XPathTokenizer {
     xpath: XPathString,
