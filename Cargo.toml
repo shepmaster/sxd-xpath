@@ -5,4 +5,4 @@ version = "0.0.1"
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 
 [dependencies.document]
-path = "../document"
+git = "https://github.com/shepmaster/sxd-document.git"
