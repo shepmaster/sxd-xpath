@@ -355,8 +355,9 @@ impl<I : Iterator<TokenResult>> XPathParser {
             }
         }
 
-        let wrap = |expr, pred| ExpressionPredicate::new(expr, pred);
-        Ok(predicates.into_iter().fold(node_selecting_expr, wrap))
+        Ok(predicates.into_iter().fold(node_selecting_expr, |expr, pred| {
+            ExpressionPredicate::new(expr, pred)
+        }))
     }
 
     fn parse_relative_location_path_raw(&self,
