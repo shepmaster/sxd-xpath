@@ -42,6 +42,7 @@ use super::node_test::{
     NodeTestText,
 };
 
+#[allow(missing_copy_implementations)]
 pub struct XPathParser;
 
 impl XPathParser {

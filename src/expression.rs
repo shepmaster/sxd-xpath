@@ -45,6 +45,7 @@ impl XPathExpression for ExpressionAnd {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct ExpressionContextNode;
 
 impl XPathExpression for ExpressionContextNode {
@@ -349,6 +350,7 @@ impl XPathExpression for ExpressionRelational {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct ExpressionRootNode;
 
 impl XPathExpression for ExpressionRootNode {

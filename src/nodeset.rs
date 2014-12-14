@@ -38,7 +38,7 @@ macro_rules! conversion_trait(
     )
 )
 
-#[deriving(Clone,PartialEq,Show)]
+#[deriving(Clone,PartialEq,Show,Copy)]
 pub enum Node<'d> {
     RootNode(dom4::Root<'d>),
     ElementNode(dom4::Element<'d>),

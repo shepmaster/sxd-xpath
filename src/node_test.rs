@@ -46,6 +46,7 @@ impl XPathNodeTest for NodeTestElement {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct NodeTestNode;
 
 impl XPathNodeTest for NodeTestNode {
@@ -54,6 +55,7 @@ impl XPathNodeTest for NodeTestNode {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct NodeTestText;
 
 impl XPathNodeTest for NodeTestText {

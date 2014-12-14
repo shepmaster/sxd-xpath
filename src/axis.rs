@@ -7,6 +7,7 @@ use super::node_test::XPathNodeTest;
 use super::nodeset::Nodeset;
 use super::nodeset::Node::ElementNode;
 
+#[allow(missing_copy_implementations)]
 pub enum PrincipalNodeType {
     Attribute,
     Element,
@@ -29,6 +30,7 @@ pub trait XPathAxis {
 
 pub type SubAxis = Box<XPathAxis + 'static>;
 
+#[allow(missing_copy_implementations)]
 pub struct AxisAttribute;
 
 impl XPathAxis for AxisAttribute {
@@ -52,6 +54,7 @@ impl XPathAxis for AxisAttribute {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct AxisChild;
 
 impl XPathAxis for AxisChild {
@@ -71,6 +74,7 @@ impl XPathAxis for AxisChild {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct AxisDescendant;
 
 impl XPathAxis for AxisDescendant {
@@ -91,6 +95,7 @@ impl XPathAxis for AxisDescendant {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct AxisDescendantOrSelf {
     descendant: AxisDescendant,
 }
@@ -110,6 +115,7 @@ impl XPathAxis for AxisDescendantOrSelf {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct AxisParent;
 
 impl XPathAxis for AxisParent {
@@ -126,6 +132,7 @@ impl XPathAxis for AxisParent {
     }
 }
 
+#[allow(missing_copy_implementations)]
 pub struct AxisSelf;
 
 impl XPathAxis for AxisSelf {

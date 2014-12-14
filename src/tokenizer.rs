@@ -21,7 +21,7 @@ pub struct XPathTokenizer {
 
 pub type TokenResult = Result<XPathToken, TokenizerErr>;
 
-#[deriving(Show,PartialEq,Clone)]
+#[deriving(Show,PartialEq,Clone,Copy)]
 pub enum TokenizerErr {
     MissingLocalName,
     MismatchedQuoteCharacters,
