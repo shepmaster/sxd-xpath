@@ -15,7 +15,7 @@ pub struct NodeTestAttribute {
 impl XPathNodeTest for NodeTestAttribute {
     fn test<'a, 'd>(&self, context: &XPathEvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let AttributeNode(ref a) = context.node {
-            if self.name.as_slice() == "*" || a.name() == self.name.as_slice() {
+            if self.name == "*" || a.name().local_part() == self.name {
                 result.add(context.node);
             }
         }
@@ -39,7 +39,7 @@ impl XPathNodeTest for NodeTestElement {
             //     if (*prefix_uri != e->qname().namespace_uri()) return;
             // }
 
-            if self.name.as_slice() == "*" || e.name() == self.name.as_slice() {
+            if self.name == "*" || e.name().local_part() == self.name {
                 result.add(context.node);
             }
         }
