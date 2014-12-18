@@ -17,6 +17,9 @@ pub struct XPathTokenizer {
     xpath: XPathString,
     start: uint,
     prefer_recognition_of_operator_names: bool,
+    single_char_tokens: HashMap<char, XPathToken>,
+    two_char_tokens: HashMap<&'static str, XPathToken>,
+    named_operators: Vec<(&'static str, XPathToken)>,
 }
 
 pub type TokenResult = Result<XPathToken, TokenizerErr>;
@@ -167,52 +170,55 @@ static QUOTE_CHARS: [char, .. 2] =  ['\'', '\"'];
 
 impl XPathTokenizer {
     pub fn new(xpath: & str) -> XPathTokenizer {
+        let single_char_tokens = {
+            let mut m = HashMap::new();
+            m.insert('/', XPathToken::Slash);
+            m.insert('(', XPathToken::LeftParen);
+            m.insert(')', XPathToken::RightParen);
+            m.insert('[', XPathToken::LeftBracket);
+            m.insert(']', XPathToken::RightBracket);
+            m.insert('@', XPathToken::AtSign);
+            m.insert('$', XPathToken::DollarSign);
+            m.insert('+', XPathToken::PlusSign);
+            m.insert('-', XPathToken::MinusSign);
+            m.insert('|', XPathToken::Pipe);
+            m.insert('=', XPathToken::Equal);
+            m.insert('<', XPathToken::LessThan);
+            m.insert('>', XPathToken::GreaterThan);
+            m
+        };
+
+        let two_char_tokens = {
+            let mut m = HashMap::new();
+            m.insert("<=", XPathToken::LessThanOrEqual);
+            m.insert(">=", XPathToken::GreaterThanOrEqual);
+            m.insert("!=", XPathToken::NotEqual);
+            m.insert("::", XPathToken::DoubleColon);
+            m.insert("//", XPathToken::DoubleSlash);
+            m.insert("..", XPathToken::ParentNode);
+            m
+        };
+
+        let named_operators = vec![
+            ("and", XPathToken::And),
+            ("or",  XPathToken::Or),
+            ("mod", XPathToken::Remainder),
+            ("div", XPathToken::Divide),
+            ("*",   XPathToken::Multiply)
+        ];
+
         XPathTokenizer {
             xpath: XPathString::new(xpath),
             start: 0,
             prefer_recognition_of_operator_names: false,
+            single_char_tokens: single_char_tokens,
+            two_char_tokens: two_char_tokens,
+            named_operators: named_operators,
         }
     }
 
     pub fn has_more_tokens(& self) -> bool {
         self.xpath.len() > self.start
-    }
-
-    fn two_char_tokens(& self) -> HashMap<string::String, XPathToken> {
-        let mut m = HashMap::new();
-        m.insert("<=".to_string(), XPathToken::LessThanOrEqual);
-        m.insert(">=".to_string(), XPathToken::GreaterThanOrEqual);
-        m.insert("!=".to_string(), XPathToken::NotEqual);
-        m.insert("::".to_string(), XPathToken::DoubleColon);
-        m.insert("//".to_string(), XPathToken::DoubleSlash);
-        m.insert("..".to_string(), XPathToken::ParentNode);
-        m
-    }
-
-    fn single_char_tokens(&self) -> HashMap<char, XPathToken> {
-        let mut m = HashMap::new();
-        m.insert('/', XPathToken::Slash);
-        m.insert('(', XPathToken::LeftParen);
-        m.insert(')', XPathToken::RightParen);
-        m.insert('[', XPathToken::LeftBracket);
-        m.insert(']', XPathToken::RightBracket);
-        m.insert('@', XPathToken::AtSign);
-        m.insert('$', XPathToken::DollarSign);
-        m.insert('+', XPathToken::PlusSign);
-        m.insert('-', XPathToken::MinusSign);
-        m.insert('|', XPathToken::Pipe);
-        m.insert('=', XPathToken::Equal);
-        m.insert('<', XPathToken::LessThan);
-        m.insert('>', XPathToken::GreaterThan);
-        m
-    }
-
-    fn named_operators(& self) -> Vec<(& 'static str, XPathToken)> {
-        vec!(("and", XPathToken::And),
-             ("or",  XPathToken::Or),
-             ("mod", XPathToken::Remainder),
-             ("div", XPathToken::Divide),
-             ("*",   XPathToken::Multiply))
     }
 
     fn tokenize_literal(& mut self, quote_char: char) -> TokenResult {
@@ -235,7 +241,7 @@ impl XPathTokenizer {
 
     fn raw_next_token(& mut self) -> TokenResult {
         if let Some(first_two) = self.xpath.safe_substr(self.start, self.start + 2) {
-            if let Some(token) = self.two_char_tokens().get(&first_two) {
+            if let Some(token) = self.two_char_tokens.get(first_two.as_slice()) {
                 self.start += 2;
                 return Ok(token.clone());
             }
@@ -243,7 +249,7 @@ impl XPathTokenizer {
 
         let c = self.xpath.char_at(self.start);
 
-        if let Some(token) = self.single_char_tokens().get(&c) {
+        if let Some(token) = self.single_char_tokens.get(&c) {
             self.start += 1;
             return Ok(token.clone());
         }
@@ -279,7 +285,7 @@ impl XPathTokenizer {
             let current_start = self.start;
 
             if self.prefer_recognition_of_operator_names {
-                for &(ref name, ref token) in self.named_operators().iter() {
+                for &(ref name, ref token) in self.named_operators.iter() {
                     let name_chars: Vec<char> = name.chars().collect();
                     let name_chars_slice = name_chars.as_slice();
 
