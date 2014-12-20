@@ -93,7 +93,7 @@ macro_rules! consume_value(
             Some(Ok(x)) => return Err(UnexpectedToken(x)),
         }
     );
-)
+);
 
 /// Similar to `next_token_is`, but can be used when the token carries
 /// a single value
@@ -104,7 +104,7 @@ macro_rules! next_token_is(
             _ => false,
         }
     );
-)
+);
 
 impl<I : Iterator<TokenResult>> LeftAssociativeBinaryParser<I> {
     fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser<I> {
@@ -574,7 +574,7 @@ mod test {
             _temp
         });
         ($($e:expr),+,) => (tokens!($($e),+))
-    )
+    );
 
     trait ApproxEq {
         fn is_approx_eq(&self, other: &Self) -> bool;
@@ -601,7 +601,7 @@ mod test {
             assert!(a.is_approx_eq(b),
                     "{} is not approximately equal to {}", *a, *b);
         })
-    )
+    );
 
     struct TestDoc<'d>(Document<'d>);
 

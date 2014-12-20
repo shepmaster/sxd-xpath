@@ -29,14 +29,14 @@ macro_rules! binary_constructor(
             }
         }
     );
-)
+);
 
 pub struct And {
     pub left:  SubExpression,
     pub right: SubExpression,
 }
 
-binary_constructor!(And)
+binary_constructor!(And);
 
 impl Expression for And {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
@@ -59,7 +59,7 @@ pub struct Equal {
     pub right: SubExpression,
 }
 
-binary_constructor!(Equal)
+binary_constructor!(Equal);
 
 impl Equal {
     fn boolean_evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> bool {
@@ -225,7 +225,7 @@ pub struct Or {
     right: SubExpression,
 }
 
-binary_constructor!(Or)
+binary_constructor!(Or);
 
 impl Expression for Or {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
@@ -386,7 +386,7 @@ pub struct Union {
     pub right: SubExpression,
 }
 
-binary_constructor!(Union)
+binary_constructor!(Union);
 
 impl Expression for Union {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {

@@ -10,4 +10,4 @@ macro_rules! nodeset(
         _temp
     });
     ($($e:expr),+,) => (nodeset!($($e),+))
-)
+);

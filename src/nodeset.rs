@@ -14,7 +14,7 @@ macro_rules! unpack(
             }
         }
     )
-)
+);
 
 macro_rules! conversion_trait(
     ($tr_name:ident, $method:ident, $res_type:ident,
@@ -36,7 +36,7 @@ macro_rules! conversion_trait(
             }
         })*
     )
-)
+);
 
 #[deriving(Clone,PartialEq,Show,Copy)]
 pub enum Node<'d> {
@@ -48,12 +48,12 @@ pub enum Node<'d> {
     ProcessingInstructionNode(dom4::ProcessingInstruction<'d>),
 }
 
-unpack!(Node, root, RootNode, dom4::Root)
-unpack!(Node, element, ElementNode, dom4::Element)
-unpack!(Node, attribute, AttributeNode, dom4::Attribute)
-unpack!(Node, text, TextNode, dom4::Text)
-unpack!(Node, comment, CommentNode, dom4::Comment)
-unpack!(Node, processing_instruction, ProcessingInstructionNode, dom4::ProcessingInstruction)
+unpack!(Node, root, RootNode, dom4::Root);
+unpack!(Node, element, ElementNode, dom4::Element);
+unpack!(Node, attribute, AttributeNode, dom4::Attribute);
+unpack!(Node, text, TextNode, dom4::Text);
+unpack!(Node, comment, CommentNode, dom4::Comment);
+unpack!(Node, processing_instruction, ProcessingInstructionNode, dom4::ProcessingInstruction);
 
 impl<'d> Node<'d> {
     pub fn document(&self) -> &'d dom4::Document<'d> {
@@ -97,7 +97,7 @@ conversion_trait!(ToNode, to_node, Node, {
     dom4::Text => TextNode,
     dom4::Comment => CommentNode,
     dom4::ProcessingInstruction => ProcessingInstructionNode
-})
+});
 
 impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
     fn to_node(self) -> Node<'d> {
