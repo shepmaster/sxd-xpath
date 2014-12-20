@@ -1,8 +1,8 @@
 use std::string;
-use self::XPathToken::*;
+use self::Token::*;
 
 #[deriving(PartialEq,Show,Clone)]
-pub enum XPathToken {
+pub enum Token {
     And,
     AtSign,
     CurrentNode,
@@ -39,7 +39,7 @@ pub enum XPathToken {
     NodeTest(string::String),
 }
 
-impl XPathToken {
+impl Token {
     pub fn precedes_node_test(& self) -> bool {
         match *self {
             AtSign |

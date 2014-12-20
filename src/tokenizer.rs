@@ -3,8 +3,8 @@ use std::string;
 
 use self::TokenizerErr::*;
 
-use super::token::XPathToken;
-use super::token::XPathToken::*;
+use super::token::Token;
+use super::token::Token::*;
 
 fn is_digit(c: char) -> bool {
     match c {
@@ -17,12 +17,12 @@ pub struct Tokenizer {
     xpath: XPathString,
     start: uint,
     prefer_recognition_of_operator_names: bool,
-    single_char_tokens: HashMap<char, XPathToken>,
-    two_char_tokens: HashMap<&'static str, XPathToken>,
-    named_operators: Vec<(&'static str, XPathToken)>,
+    single_char_tokens: HashMap<char, Token>,
+    two_char_tokens: HashMap<&'static str, Token>,
+    named_operators: Vec<(&'static str, Token)>,
 }
 
-pub type TokenResult = Result<XPathToken, TokenizerErr>;
+pub type TokenResult = Result<Token, TokenizerErr>;
 
 #[deriving(Show,PartialEq,Clone,Copy)]
 pub enum TokenizerErr {
@@ -172,39 +172,39 @@ impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
         let single_char_tokens = {
             let mut m = HashMap::new();
-            m.insert('/', XPathToken::Slash);
-            m.insert('(', XPathToken::LeftParen);
-            m.insert(')', XPathToken::RightParen);
-            m.insert('[', XPathToken::LeftBracket);
-            m.insert(']', XPathToken::RightBracket);
-            m.insert('@', XPathToken::AtSign);
-            m.insert('$', XPathToken::DollarSign);
-            m.insert('+', XPathToken::PlusSign);
-            m.insert('-', XPathToken::MinusSign);
-            m.insert('|', XPathToken::Pipe);
-            m.insert('=', XPathToken::Equal);
-            m.insert('<', XPathToken::LessThan);
-            m.insert('>', XPathToken::GreaterThan);
+            m.insert('/', Token::Slash);
+            m.insert('(', Token::LeftParen);
+            m.insert(')', Token::RightParen);
+            m.insert('[', Token::LeftBracket);
+            m.insert(']', Token::RightBracket);
+            m.insert('@', Token::AtSign);
+            m.insert('$', Token::DollarSign);
+            m.insert('+', Token::PlusSign);
+            m.insert('-', Token::MinusSign);
+            m.insert('|', Token::Pipe);
+            m.insert('=', Token::Equal);
+            m.insert('<', Token::LessThan);
+            m.insert('>', Token::GreaterThan);
             m
         };
 
         let two_char_tokens = {
             let mut m = HashMap::new();
-            m.insert("<=", XPathToken::LessThanOrEqual);
-            m.insert(">=", XPathToken::GreaterThanOrEqual);
-            m.insert("!=", XPathToken::NotEqual);
-            m.insert("::", XPathToken::DoubleColon);
-            m.insert("//", XPathToken::DoubleSlash);
-            m.insert("..", XPathToken::ParentNode);
+            m.insert("<=", Token::LessThanOrEqual);
+            m.insert(">=", Token::GreaterThanOrEqual);
+            m.insert("!=", Token::NotEqual);
+            m.insert("::", Token::DoubleColon);
+            m.insert("//", Token::DoubleSlash);
+            m.insert("..", Token::ParentNode);
             m
         };
 
         let named_operators = vec![
-            ("and", XPathToken::And),
-            ("or",  XPathToken::Or),
-            ("mod", XPathToken::Remainder),
-            ("div", XPathToken::Divide),
-            ("*",   XPathToken::Multiply)
+            ("and", Token::And),
+            ("or",  Token::Or),
+            ("mod", Token::Remainder),
+            ("div", Token::Divide),
+            ("*",   Token::Multiply)
         ];
 
         Tokenizer {
@@ -236,7 +236,7 @@ impl Tokenizer {
         offset += 1; // Skip over ending quote
 
         self.start = offset;
-        return Ok(XPathToken::Literal(self.xpath.substr(start_of_string, end_of_string)));
+        return Ok(Token::Literal(self.xpath.substr(start_of_string, end_of_string)));
     }
 
     fn raw_next_token(& mut self) -> TokenResult {
@@ -264,7 +264,7 @@ impl Tokenizer {
             if self.xpath.char_at_is_not_digit(self.start + 1) {
                 // Ugly. Should we use START / FOLLOW constructs?
                 self.start += 1;
-                return Ok(XPathToken::CurrentNode);
+                return Ok(Token::CurrentNode);
             }
         }
 
@@ -277,7 +277,7 @@ impl Tokenizer {
             self.start = offset;
             let substr = self.xpath.substr(current_start, offset);
             match from_str(substr.as_slice()) {
-                Some(value) => Ok(XPathToken::Number(value)),
+                Some(value) => Ok(Token::Number(value)),
                 None => panic!("Not really a number!")
             }
         } else {
@@ -298,7 +298,7 @@ impl Tokenizer {
 
             if self.xpath.char_at_is(offset, '*') {
                 self.start = offset + 1;
-                return Ok(XPathToken::String("*".to_string()));
+                return Ok(Token::String("*".to_string()));
             }
 
             offset = self.xpath.while_valid_string(offset);
@@ -318,11 +318,11 @@ impl Tokenizer {
                 let name = self.xpath.substr(current_start, offset);
 
                 self.start = offset;
-                return Ok(XPathToken::PrefixedName(prefix, name));
+                return Ok(Token::PrefixedName(prefix, name));
 
             } else {
                 self.start = offset;
-                return Ok(XPathToken::String(self.xpath.substr(current_start, offset)));
+                return Ok(Token::String(self.xpath.substr(current_start, offset)));
             }
         }
     }
@@ -394,15 +394,15 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<Toke
         let next  = self.source.peek();
 
         match (token, next) {
-            (Some(Ok(XPathToken::String(val))), Some(&Ok(XPathToken::LeftParen))) => {
+            (Some(Ok(Token::String(val))), Some(&Ok(Token::LeftParen))) => {
                 if NODE_TEST_NAMES.contains(&val.as_slice()) {
-                    Some(Ok(XPathToken::NodeTest(val)))
+                    Some(Ok(Token::NodeTest(val)))
                 } else {
-                    Some(Ok(XPathToken::Function(val)))
+                    Some(Ok(Token::Function(val)))
                 }
             },
-            (Some(Ok(XPathToken::String(val))), Some(&Ok(XPathToken::DoubleColon))) => {
-                Some(Ok(XPathToken::Axis(val)))
+            (Some(Ok(Token::String(val))), Some(&Ok(Token::DoubleColon))) => {
+                Some(Ok(Token::Axis(val)))
             },
             (token, _) => token,
         }
@@ -411,7 +411,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<Toke
 
 pub struct TokenDeabbreviator<I> {
     source: I,
-    buffer: Vec<XPathToken>,
+    buffer: Vec<Token>,
 }
 
 impl<I> TokenDeabbreviator<I> {
@@ -422,38 +422,38 @@ impl<I> TokenDeabbreviator<I> {
         }
     }
 
-    fn push(&mut self, token: XPathToken) {
+    fn push(&mut self, token: Token) {
         self.buffer.push(token);
     }
 
-    fn expand_token(&mut self, token: XPathToken) {
+    fn expand_token(&mut self, token: Token) {
         match token {
-            XPathToken::AtSign => {
-                self.push(XPathToken::String("attribute".to_string()));
-                self.push(XPathToken::DoubleColon);
+            Token::AtSign => {
+                self.push(Token::String("attribute".to_string()));
+                self.push(Token::DoubleColon);
             }
-            XPathToken::DoubleSlash => {
-                self.push(XPathToken::Slash);
-                self.push(XPathToken::String("descendant-or-self".to_string()));
-                self.push(XPathToken::DoubleColon);
-                self.push(XPathToken::String("node".to_string()));
-                self.push(XPathToken::LeftParen);
-                self.push(XPathToken::RightParen);
-                self.push(XPathToken::Slash);
+            Token::DoubleSlash => {
+                self.push(Token::Slash);
+                self.push(Token::String("descendant-or-self".to_string()));
+                self.push(Token::DoubleColon);
+                self.push(Token::String("node".to_string()));
+                self.push(Token::LeftParen);
+                self.push(Token::RightParen);
+                self.push(Token::Slash);
             }
-            XPathToken::CurrentNode => {
-                self.push(XPathToken::String("self".to_string()));
-                self.push(XPathToken::DoubleColon);
-                self.push(XPathToken::String("node".to_string()));
-                self.push(XPathToken::LeftParen);
-                self.push(XPathToken::RightParen);
+            Token::CurrentNode => {
+                self.push(Token::String("self".to_string()));
+                self.push(Token::DoubleColon);
+                self.push(Token::String("node".to_string()));
+                self.push(Token::LeftParen);
+                self.push(Token::RightParen);
             }
-            XPathToken::ParentNode => {
-                self.push(XPathToken::String("parent".to_string()));
-                self.push(XPathToken::DoubleColon);
-                self.push(XPathToken::String("node".to_string()));
-                self.push(XPathToken::LeftParen);
-                self.push(XPathToken::RightParen);
+            Token::ParentNode => {
+                self.push(Token::String("parent".to_string()));
+                self.push(Token::DoubleColon);
+                self.push(Token::String("node".to_string()));
+                self.push(Token::LeftParen);
+                self.push(Token::RightParen);
             }
             _ => {
                 self.push(token);
