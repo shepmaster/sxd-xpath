@@ -20,7 +20,7 @@ use xpath::nodeset::ToNode;
 use xpath::token::XPathToken;
 use xpath::tokenizer::TokenResult;
 
-use xpath::expression::{XPathExpression,SubExpression};
+use xpath::expression::{Expression,SubExpression};
 
 use xpath::parser::{Parser,ParseResult};
 use xpath::parser::ParseErr::{
@@ -151,11 +151,11 @@ impl<'d> Exercise<'d> {
         self.parse_raw(tokens).unwrap().unwrap()
     }
 
-    fn evaluate(&'d self, expr: &XPathExpression) -> Value<'d> {
+    fn evaluate(&'d self, expr: &Expression) -> Value<'d> {
         self.evaluate_on(expr, self.doc.top_node())
     }
 
-    fn evaluate_on<N : ToNode<'d>>(&self, expr: &XPathExpression, node: N) -> Value<'d> {
+    fn evaluate_on<N : ToNode<'d>>(&self, expr: &Expression, node: N) -> Value<'d> {
         let node = node.to_node();
         let mut context = EvaluationContext::new(node,
                                                       &self.functions,

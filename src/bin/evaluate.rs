@@ -9,7 +9,7 @@ use document::parser::Parser;
 
 use xpath::nodeset::ToNode;
 use xpath::{EvaluationContext,Factory};
-use xpath::expression::XPathExpression;
+use xpath::expression::Expression;
 
 fn pretty_error(xml: &str, position: uint) -> &str {
     let s = xml.slice_from(position);

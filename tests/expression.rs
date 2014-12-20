@@ -18,7 +18,7 @@ use xpath::Function;
 use xpath::EvaluationContext;
 use xpath::nodeset::Nodeset;
 
-use xpath::expression::XPathExpression;
+use xpath::expression::Expression;
 use xpath::expression::{ExpressionAnd,
                         ExpressionEqual,
                         ExpressionNotEqual,
@@ -38,7 +38,7 @@ use xpath::node_test::XPathNodeTest;
 
 struct FailExpression;
 
-impl XPathExpression for FailExpression {
+impl Expression for FailExpression {
     fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
         panic!("Should never be called");
     }
@@ -239,7 +239,7 @@ fn expression_function_evaluates_input_arguments() {
     let package = Package::new();
     let mut setup = Setup::new(&package);
 
-    let arg_expr: Box<XPathExpression> = box ExpressionLiteral{value: BooleanLiteral(true)};
+    let arg_expr: Box<Expression> = box ExpressionLiteral{value: BooleanLiteral(true)};
     let fun = box StubFunction{value: "the function ran"};
     setup.funs.insert("test-fn".to_string(), fun);
 
