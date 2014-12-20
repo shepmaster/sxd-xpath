@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use document::Package;
 use document::dom4::Document;
 
-use xpath::XPathValue;
-use xpath::XPathValue::{Boolean, Number, String, Nodes};
+use xpath::Value;
+use xpath::Value::{Boolean, Number, String, Nodes};
 use xpath::{Functions,Variables};
 use xpath::XPathFunction;
 use xpath::XPathEvaluationContext;
@@ -39,7 +39,7 @@ use xpath::node_test::XPathNodeTest;
 struct FailExpression;
 
 impl XPathExpression for FailExpression {
-    fn evaluate<'a, 'd>(&self, _: &XPathEvaluationContext<'a, 'd>) -> XPathValue<'d> {
+    fn evaluate<'a, 'd>(&self, _: &XPathEvaluationContext<'a, 'd>) -> Value<'d> {
         panic!("Should never be called");
     }
 }
@@ -228,7 +228,7 @@ struct StubFunction {
 impl XPathFunction for StubFunction {
     fn evaluate<'a, 'd>(&self,
                         _: &XPathEvaluationContext<'a, 'd>,
-                        _: Vec<XPathValue<'d>>) -> XPathValue<'d>
+                        _: Vec<Value<'d>>) -> Value<'d>
     {
         String(self.value.to_string())
     }

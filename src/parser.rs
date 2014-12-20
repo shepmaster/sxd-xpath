@@ -3,7 +3,7 @@ use std::string;
 
 use self::ParseErr::*;
 
-use super::XPathValue::{String,Number};
+use super::Value::{String,Number};
 use super::token::XPathToken;
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis::{XPathAxis,SubAxis,PrincipalNodeType};

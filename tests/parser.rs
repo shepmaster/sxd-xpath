@@ -11,9 +11,9 @@ use std::num::Float;
 use document::Package;
 use document::dom4::{Document,Root,Element,Text};
 
-use xpath::XPathValue::{Boolean,Number,String,Nodes};
+use xpath::Value::{Boolean,Number,String,Nodes};
 use xpath::{Functions,Variables};
-use xpath::{XPathValue,XPathEvaluationContext};
+use xpath::{Value,XPathEvaluationContext};
 
 use xpath::nodeset::ToNode;
 
@@ -55,8 +55,8 @@ impl ApproxEq for f64 {
     }
 }
 
-impl<'d> ApproxEq for XPathValue<'d> {
-    fn is_approx_eq(&self, other: &XPathValue<'d>) -> bool {
+impl<'d> ApproxEq for Value<'d> {
+    fn is_approx_eq(&self, other: &Value<'d>) -> bool {
         match (self, other) {
             (&Number(ref x), &Number(ref y)) => x.is_approx_eq(y),
             _ => panic!("It's nonsensical to compare these quantities"),
@@ -139,7 +139,7 @@ impl<'d> Exercise<'d> {
     }
 
 
-    fn add_var(&mut self, name: &str, value: XPathValue<'d>) {
+    fn add_var(&mut self, name: &str, value: Value<'d>) {
         self.variables.insert(name.to_string(), value);
     }
 
@@ -151,11 +151,11 @@ impl<'d> Exercise<'d> {
         self.parse_raw(tokens).unwrap().unwrap()
     }
 
-    fn evaluate(&'d self, expr: &XPathExpression) -> XPathValue<'d> {
+    fn evaluate(&'d self, expr: &XPathExpression) -> Value<'d> {
         self.evaluate_on(expr, self.doc.top_node())
     }
 
-    fn evaluate_on<N : ToNode<'d>>(&self, expr: &XPathExpression, node: N) -> XPathValue<'d> {
+    fn evaluate_on<N : ToNode<'d>>(&self, expr: &XPathExpression, node: N) -> Value<'d> {
         let node = node.to_node();
         let mut context = XPathEvaluationContext::new(node,
                                                       &self.functions,

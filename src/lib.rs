@@ -6,7 +6,7 @@
 #[phase(plugin, link)]
 extern crate document;
 
-use self::XPathValue::*;
+use self::Value::*;
 use self::nodeset::Nodeset;
 use self::nodeset::{Node,ToNode};
 
@@ -28,14 +28,14 @@ pub mod token;
 pub mod tokenizer;
 
 #[deriving(PartialEq,Show,Clone)]
-pub enum XPathValue<'d> {
+pub enum Value<'d> {
     Boolean(bool),
     Number(f64),
     String(string::String),
     Nodes(Nodeset<'d>), // rename as Nodeset
 }
 
-impl<'d> XPathValue<'d> {
+impl<'d> Value<'d> {
     pub fn boolean(&self) -> bool {
         match *self {
             Boolean(val) => val,
@@ -104,12 +104,12 @@ impl<'d> StringValue for Node<'d> {
 pub trait XPathFunction {
     fn evaluate<'a, 'd>(&self,
                         context: &XPathEvaluationContext<'a, 'd>,
-                        args: Vec<XPathValue<'d>>) -> XPathValue<'d>;
+                        args: Vec<Value<'d>>) -> Value<'d>;
 }
 
 type BoxFunc = Box<XPathFunction + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
-pub type Variables<'d> = HashMap<string::String, XPathValue<'d>>;
+pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 
 pub struct XPathEvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
@@ -153,7 +153,7 @@ impl<'a, 'd> XPathEvaluationContext<'a, 'd> {
         self.functions.get(&name.to_string())
     }
 
-    fn value_of(&self, name: &str) -> Option<&XPathValue<'d>> {
+    fn value_of(&self, name: &str) -> Option<&Value<'d>> {
         self.variables.get(&name.to_string())
     }
 }
