@@ -34,13 +34,8 @@ use super::expression::{
     ExpressionUnion,
     ExpressionVariable,
 };
+use super::node_test;
 use super::node_test::SubNodeTest;
-use super::node_test::{
-    NodeTestAttribute,
-    NodeTestElement,
-    NodeTestNode,
-    NodeTestText,
-};
 
 #[allow(missing_copy_implementations)]
 pub struct Parser;
@@ -227,8 +222,8 @@ impl<I : Iterator<TokenResult>> Parser {
 
             match name.as_slice() {
                 // TODO: explicit element, attribute tests?
-                "node" => Ok(Some(box NodeTestNode as SubNodeTest)),
-                "text" => Ok(Some(box NodeTestText as SubNodeTest)),
+                "node" => Ok(Some(box node_test::Node as SubNodeTest)),
+                "text" => Ok(Some(box node_test::Text as SubNodeTest)),
                 _ => Err(InvalidNodeTest(name))
             }
         } else {
@@ -243,8 +238,8 @@ impl<I : Iterator<TokenResult>> Parser {
             let name = consume_value!(source, Token::String);
 
             match axis.principal_node_type() {
-                PrincipalNodeType::Attribute => Ok(Some(box NodeTestAttribute{name: name} as SubNodeTest)),
-                PrincipalNodeType::Element => Ok(Some(box NodeTestElement{name: name} as SubNodeTest)),
+                PrincipalNodeType::Attribute => Ok(Some(box node_test::Attribute{name: name} as SubNodeTest)),
+                PrincipalNodeType::Element => Ok(Some(box node_test::Element{name: name} as SubNodeTest)),
             }
         } else {
             Ok(None)

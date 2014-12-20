@@ -13,8 +13,8 @@ use xpath::EvaluationContext;
 use xpath::{Functions,Variables};
 use xpath::nodeset::Nodeset;
 
+use xpath::node_test;
 use xpath::node_test::NodeTest;
-use xpath::node_test::{NodeTestAttribute, NodeTestElement};
 
 struct Setup<'d> {
     doc: Document<'d>,
@@ -56,7 +56,7 @@ fn attribute_test_selects_attributes_with_matching_names() {
     let (attribute, context) = setup.context_for_attribute("hello", "world");
     let mut result = Nodeset::new();
 
-    let test = NodeTestAttribute{name: "hello".to_string()};
+    let test = node_test::Attribute{name: "hello".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![attribute], result);
@@ -69,7 +69,7 @@ fn attribute_test_does_not_select_other_names() {
     let (_, context) = setup.context_for_attribute("goodbye", "world");
     let mut result = Nodeset::new();
 
-    let test = NodeTestAttribute{name: "hello".to_string()};
+    let test = node_test::Attribute{name: "hello".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![], result);
@@ -82,7 +82,7 @@ fn attribute_test_supports_a_wildcard_match() {
     let (attribute, context) = setup.context_for_attribute("whatever", "value");
     let mut result = Nodeset::new();
 
-    let test = NodeTestAttribute{name: "*".to_string()};
+    let test = node_test::Attribute{name: "*".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![attribute], result);
@@ -95,7 +95,7 @@ fn element_test_selects_nodes_with_matching_names() {
     let (element, context) = setup.context_for_element("hello");
     let mut result = Nodeset::new();
 
-    let test = NodeTestElement{name: "hello".to_string()};
+    let test = node_test::Element{name: "hello".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![element], result);
@@ -108,7 +108,7 @@ fn element_test_does_not_select_other_names() {
     let (_, context) = setup.context_for_element("goodbye");
     let mut result = Nodeset::new();
 
-    let test = NodeTestElement{name: "hello".to_string()};
+    let test = node_test::Element{name: "hello".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![], result);
@@ -121,7 +121,7 @@ fn element_test_supports_a_wildcard_match() {
     let (element, context) = setup.context_for_element("hello");
     let mut result = Nodeset::new();
 
-    let test = NodeTestElement{name: "*".to_string()};
+    let test = node_test::Element{name: "*".to_string()};
     test.test(&context, &mut result);
 
     assert_eq!(nodeset![element], result);

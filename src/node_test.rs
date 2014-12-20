@@ -8,11 +8,11 @@ pub trait NodeTest {
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
-pub struct NodeTestAttribute {
+pub struct Attribute {
     pub name: String,
 }
 
-impl NodeTest for NodeTestAttribute {
+impl NodeTest for Attribute {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let AttributeNode(ref a) = context.node {
             if self.name == "*" || a.name().local_part() == self.name {
@@ -22,11 +22,11 @@ impl NodeTest for NodeTestAttribute {
     }
 }
 
-pub struct NodeTestElement {
+pub struct Element {
     pub name: String,
 }
 
-impl NodeTest for NodeTestElement {
+impl NodeTest for Element {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let ElementNode(ref e) = context.node {
             // TODO: redo namespaces!
@@ -47,18 +47,18 @@ impl NodeTest for NodeTestElement {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct NodeTestNode;
+pub struct Node;
 
-impl NodeTest for NodeTestNode {
+impl NodeTest for Node {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         result.add(context.node);
     }
 }
 
 #[allow(missing_copy_implementations)]
-pub struct NodeTestText;
+pub struct Text;
 
-impl NodeTest for NodeTestText {
+impl NodeTest for Text {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let TextNode(_) = context.node {
             result.add(context.node);
