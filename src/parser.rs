@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionLiteral,
     ExpressionMath,
     ExpressionNegation,
     ExpressionNotEqual,
@@ -249,7 +248,7 @@ impl<I : Iterator<TokenResult>> Parser {
     fn parse_string_literal(&self, source: TokenSource<I>) -> ParseResult {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(box ExpressionLiteral { value: LiteralValue::StringLiteral(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::StringLiteral(value) } as SubExpression))
         } else {
             Ok(None)
         }
@@ -258,7 +257,7 @@ impl<I : Iterator<TokenResult>> Parser {
     fn parse_numeric_literal(&self, source: TokenSource<I>) -> ParseResult {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(box ExpressionLiteral { value: LiteralValue::NumberLiteral(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::NumberLiteral(value) } as SubExpression))
         } else {
             Ok(None)
         }

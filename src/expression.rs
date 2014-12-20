@@ -152,11 +152,11 @@ pub enum LiteralValue {
     StringLiteral(String),
 }
 
-pub struct ExpressionLiteral {
+pub struct Literal {
     pub value: LiteralValue,
 }
 
-impl Expression for ExpressionLiteral {
+impl Expression for Literal {
     fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
         match &self.value {
             &BooleanLiteral(b) => Boolean(b),

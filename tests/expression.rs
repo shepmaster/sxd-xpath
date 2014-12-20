@@ -23,7 +23,7 @@ use xpath::expression::Expression;
 use xpath::expression::{And,
                         Equal,
                         ExpressionNotEqual,
-                        ExpressionLiteral,
+                        Literal,
                         ExpressionMath,
                         ExpressionPredicate,
                         ExpressionRelational,
@@ -70,8 +70,8 @@ fn expression_and_returns_logical_and() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let left  = box ExpressionLiteral{value: BooleanLiteral(true)};
-    let right = box ExpressionLiteral{value: BooleanLiteral(true)};
+    let left  = box Literal{value: BooleanLiteral(true)};
+    let right = box Literal{value: BooleanLiteral(true)};
 
     let expr = And{left: left, right: right};
 
@@ -86,7 +86,7 @@ fn expression_and_short_circuits_when_left_argument_is_false() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let left  = box ExpressionLiteral{value: BooleanLiteral(false)};
+    let left  = box Literal{value: BooleanLiteral(false)};
     let right = box FailExpression;
 
     let expr = And{left: left, right: right};
@@ -127,7 +127,7 @@ fn expression_equal_compares_number_value_of_nodeset_to_number() {
     setup.vars.insert("left".to_string(), Nodes(nodeset![string_value]));
 
     let left  = box ExpressionVariable{name: "left".to_string()};
-    let right = box ExpressionLiteral{value: NumberLiteral(6.28)};
+    let right = box Literal{value: NumberLiteral(6.28)};
 
     let expr = Equal{left: left, right: right};
 
@@ -147,7 +147,7 @@ fn expression_equal_compares_string_value_of_nodeset_to_string() {
     setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1, string_value_2]));
 
     let left  = box ExpressionVariable{name: "left".to_string()};
-    let right = box ExpressionLiteral{value: StringLiteral("boat".to_string())};
+    let right = box Literal{value: StringLiteral("boat".to_string())};
 
     let expr = Equal{left: left, right: right};
 
@@ -162,8 +162,8 @@ fn expression_equal_compares_as_boolean_if_one_argument_is_a_boolean() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let actual_bool = box ExpressionLiteral{value: BooleanLiteral(false)};
-    let truthy_str = box ExpressionLiteral{value: StringLiteral("hello".to_string())};
+    let actual_bool = box Literal{value: BooleanLiteral(false)};
+    let truthy_str = box Literal{value: StringLiteral("hello".to_string())};
 
     let expr = Equal{left: actual_bool, right: truthy_str};
 
@@ -178,8 +178,8 @@ fn expression_equal_compares_as_number_if_one_argument_is_a_number() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let actual_number = box ExpressionLiteral{value: NumberLiteral(-42.0)};
-    let number_str = box ExpressionLiteral{value: StringLiteral("-42.0".to_string())};
+    let actual_number = box Literal{value: NumberLiteral(-42.0)};
+    let number_str = box Literal{value: StringLiteral("-42.0".to_string())};
 
     let expr = Equal{left: number_str, right: actual_number};
 
@@ -194,8 +194,8 @@ fn expression_equal_compares_as_string_otherwise() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let a_str = box ExpressionLiteral{value: StringLiteral("hello".to_string())};
-    let b_str = box ExpressionLiteral{value: StringLiteral("World".to_string())};
+    let a_str = box Literal{value: StringLiteral("hello".to_string())};
+    let b_str = box Literal{value: StringLiteral("World".to_string())};
 
     let expr = Equal{left: a_str, right: b_str};
 
@@ -210,8 +210,8 @@ fn expression_not_equal_negates_equality() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let a_str = box ExpressionLiteral{value: BooleanLiteral(true)};
-    let b_str = box ExpressionLiteral{value: BooleanLiteral(false)};
+    let a_str = box Literal{value: BooleanLiteral(true)};
+    let b_str = box Literal{value: BooleanLiteral(false)};
 
     let expr = ExpressionNotEqual::new(a_str, b_str);
 
@@ -239,7 +239,7 @@ fn expression_function_evaluates_input_arguments() {
     let package = Package::new();
     let mut setup = Setup::new(&package);
 
-    let arg_expr: Box<Expression> = box ExpressionLiteral{value: BooleanLiteral(true)};
+    let arg_expr: Box<Expression> = box Literal{value: BooleanLiteral(true)};
     let fun = box StubFunction{value: "the function ran"};
     setup.funs.insert("test-fn".to_string(), fun);
 
@@ -269,8 +269,8 @@ fn expression_math_does_basic_math() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let left  = box ExpressionLiteral{value: NumberLiteral(10.0)};
-    let right = box ExpressionLiteral{value: NumberLiteral(5.0)};
+    let left  = box Literal{value: NumberLiteral(10.0)};
+    let right = box Literal{value: NumberLiteral(5.0)};
 
     let expr = ExpressionMath::multiplication(left, right);
 
@@ -292,7 +292,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
     let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
-    let predicate = box ExpressionLiteral{value: NumberLiteral(1.0)};
+    let predicate = box Literal{value: NumberLiteral(1.0)};
 
     let expr = ExpressionPredicate::new(selected_nodes, predicate);
 
@@ -314,7 +314,7 @@ fn expression_step_false_predicate_selects_no_nodes() {
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
     let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
-    let predicate = box ExpressionLiteral{value: BooleanLiteral(false)};
+    let predicate = box Literal{value: BooleanLiteral(false)};
 
     let expr = ExpressionPredicate::new(selected_nodes, predicate);
 
@@ -329,8 +329,8 @@ fn expression_relational_does_basic_comparisons() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let left  = box ExpressionLiteral{value: NumberLiteral(10.0)};
-    let right = box ExpressionLiteral{value: NumberLiteral(5.0)};
+    let left  = box Literal{value: NumberLiteral(10.0)};
+    let right = box Literal{value: NumberLiteral(5.0)};
 
     let expr = ExpressionRelational::less_than(left, right);
 
