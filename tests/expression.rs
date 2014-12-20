@@ -30,7 +30,7 @@ use xpath::expression::{And,
                         RootNode,
                         Step,
                         Union,
-                        ExpressionVariable};
+                        Variable};
 use xpath::expression::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
 use xpath::axis::Axis;
@@ -107,8 +107,8 @@ fn expression_equal_intersects_string_values_of_two_nodesets() {
     setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1]));
     setup.vars.insert("right".to_string(), Nodes(nodeset![string_value_2]));
 
-    let left  = box ExpressionVariable{name: "left".to_string()};
-    let right = box ExpressionVariable{name: "right".to_string()};
+    let left  = box Variable{name: "left".to_string()};
+    let right = box Variable{name: "right".to_string()};
 
     let expr = Equal{left: left, right: right};
 
@@ -126,7 +126,7 @@ fn expression_equal_compares_number_value_of_nodeset_to_number() {
     let string_value = setup.doc.create_text("3.14");
     setup.vars.insert("left".to_string(), Nodes(nodeset![string_value]));
 
-    let left  = box ExpressionVariable{name: "left".to_string()};
+    let left  = box Variable{name: "left".to_string()};
     let right = box Literal{value: NumberLiteral(6.28)};
 
     let expr = Equal{left: left, right: right};
@@ -146,7 +146,7 @@ fn expression_equal_compares_string_value_of_nodeset_to_string() {
     let string_value_2 = setup.doc.create_text("boat");
     setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1, string_value_2]));
 
-    let left  = box ExpressionVariable{name: "left".to_string()};
+    let left  = box Variable{name: "left".to_string()};
     let right = box Literal{value: StringLiteral("boat".to_string())};
 
     let expr = Equal{left: left, right: right};
@@ -291,7 +291,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
 
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
-    let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
+    let selected_nodes = box Variable{name: "nodes".to_string()};
     let predicate = box Literal{value: NumberLiteral(1.0)};
 
     let expr = Predicate::new(selected_nodes, predicate);
@@ -313,7 +313,7 @@ fn expression_step_false_predicate_selects_no_nodes() {
 
     setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
-    let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
+    let selected_nodes = box Variable{name: "nodes".to_string()};
     let predicate = box Literal{value: BooleanLiteral(false)};
 
     let expr = Predicate::new(selected_nodes, predicate);
@@ -408,12 +408,12 @@ fn expression_union_combines_nodesets() {
     let left_node = setup.doc.create_element("left");
     let nodes = nodeset![left_node];
     setup.vars.insert("left".to_string(), Nodes(nodes));
-    let left = box ExpressionVariable{name: "left".to_string()};
+    let left = box Variable{name: "left".to_string()};
 
     let right_node = setup.doc.create_element("right");
     let nodes = nodeset![right_node];
     setup.vars.insert("right".to_string(), Nodes(nodes));
-    let right = box ExpressionVariable{name: "right".to_string()};
+    let right = box Variable{name: "right".to_string()};
 
     let expr = Union{left: left, right: right};
 
@@ -429,7 +429,7 @@ fn expression_variable_looks_up_the_variable() {
     let mut setup = Setup::new(&package);
     setup.vars.insert("foo".to_string(), Boolean(true));
 
-    let expr = ExpressionVariable{name: "foo".to_string()};
+    let expr = Variable{name: "foo".to_string()};
 
     let context = setup.context();
     let res = expr.evaluate(&context);

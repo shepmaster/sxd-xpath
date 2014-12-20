@@ -397,11 +397,11 @@ impl Expression for Union {
     }
 }
 
-pub struct ExpressionVariable {
+pub struct Variable {
     pub name: String,
 }
 
-impl Expression for ExpressionVariable {
+impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         match context.value_of(self.name.as_slice()) {
             Some(v) => v.clone(),

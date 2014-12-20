@@ -10,9 +10,6 @@ use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
-use super::expression::{
-    ExpressionVariable,
-};
 use super::node_test;
 use super::node_test::SubNodeTest;
 
@@ -229,7 +226,7 @@ impl<I : Iterator<TokenResult>> Parser {
         if source.next_token_is(&Token::DollarSign) {
             try!(source.consume(&Token::DollarSign));
             let name = consume_value!(source, Token::String);
-            Ok(Some(box ExpressionVariable { name: name } as SubExpression))
+            Ok(Some(box expression::Variable { name: name } as SubExpression))
         } else {
             Ok(None)
         }
