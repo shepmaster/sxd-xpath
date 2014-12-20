@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionOr,
     ExpressionPath,
     ExpressionPredicate,
     ExpressionRelational,
@@ -518,7 +517,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_or_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::Or, builder: ExpressionOr::new }
+            BinaryRule { token: Token::Or, builder: expression::Or::new }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);

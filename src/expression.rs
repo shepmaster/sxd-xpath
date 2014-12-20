@@ -220,14 +220,14 @@ impl Expression for Negation {
     }
 }
 
-pub struct ExpressionOr {
+pub struct Or {
     left:  SubExpression,
     right: SubExpression,
 }
 
-binary_constructor!(ExpressionOr)
+binary_constructor!(Or)
 
-impl Expression for ExpressionOr {
+impl Expression for Or {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         return Boolean(self.left.evaluate(context).boolean() ||
                        self.right.evaluate(context).boolean())
