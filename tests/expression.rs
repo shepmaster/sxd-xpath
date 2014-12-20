@@ -25,7 +25,7 @@ use xpath::expression::{And,
                         NotEqual,
                         Literal,
                         Math,
-                        ExpressionPredicate,
+                        Predicate,
                         ExpressionRelational,
                         ExpressionRootNode,
                         ExpressionStep,
@@ -294,7 +294,7 @@ fn expression_step_numeric_predicate_selects_that_node() {
     let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
     let predicate = box Literal{value: NumberLiteral(1.0)};
 
-    let expr = ExpressionPredicate::new(selected_nodes, predicate);
+    let expr = Predicate::new(selected_nodes, predicate);
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -316,7 +316,7 @@ fn expression_step_false_predicate_selects_no_nodes() {
     let selected_nodes = box ExpressionVariable{name: "nodes".to_string()};
     let predicate = box Literal{value: BooleanLiteral(false)};
 
-    let expr = ExpressionPredicate::new(selected_nodes, predicate);
+    let expr = Predicate::new(selected_nodes, predicate);
 
     let context = setup.context();
     let res = expr.evaluate(&context);

@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionPredicate,
     ExpressionRelational,
     ExpressionRootNode,
     ExpressionStep,
@@ -336,7 +335,7 @@ impl<I : Iterator<TokenResult>> Parser {
         }
 
         Ok(predicates.into_iter().fold(node_selecting_expr, |expr, pred| {
-            ExpressionPredicate::new(expr, pred)
+            expression::Predicate::new(expr, pred)
         }))
     }
 

@@ -268,14 +268,14 @@ impl Expression for Path {
     }
 }
 
-pub struct ExpressionPredicate {
+pub struct Predicate {
     node_selector: SubExpression,
     predicate: SubExpression,
 }
 
-impl ExpressionPredicate {
+impl Predicate {
     pub fn new(node_selector: SubExpression, predicate: SubExpression) -> SubExpression {
-        box ExpressionPredicate { node_selector: node_selector, predicate: predicate }
+        box Predicate { node_selector: node_selector, predicate: predicate }
     }
 
     fn include<'a, 'd>(value: &Value, context: &EvaluationContext<'a, 'd>) -> bool {
@@ -286,7 +286,7 @@ impl ExpressionPredicate {
     }
 }
 
-impl Expression for ExpressionPredicate {
+impl Expression for Predicate {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let mut selected = Nodeset::new();
 
@@ -299,7 +299,7 @@ impl Expression for ExpressionPredicate {
 
             let value = self.predicate.evaluate(&sub_context);
 
-            if ExpressionPredicate::include(&value, &sub_context) {
+            if Predicate::include(&value, &sub_context) {
                 selected.add(*current_node);
             }
         }
