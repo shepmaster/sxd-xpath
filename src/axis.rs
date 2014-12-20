@@ -29,9 +29,9 @@ pub trait Axis {
 pub type SubAxis = Box<Axis + 'static>;
 
 #[allow(missing_copy_implementations)]
-pub struct AxisAttribute;
+pub struct Attribute;
 
-impl Axis for AxisAttribute {
+impl Axis for Attribute {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,

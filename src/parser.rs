@@ -6,9 +6,9 @@ use self::ParseErr::*;
 use super::Value::{String,Number};
 use super::token::Token;
 use super::tokenizer::{TokenResult,TokenizerErr};
+use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::axis::{
-    AxisAttribute,
     AxisChild,
     AxisDescendant,
     AxisDescendantOrSelf,
@@ -205,7 +205,7 @@ impl<I : Iterator<TokenResult>> Parser {
                 "parent" => Ok(box AxisParent as SubAxis),
                 "descendant" => Ok(box AxisDescendant as SubAxis),
                 "descendant-or-self" => Ok(AxisDescendantOrSelf::new()),
-                "attribute" => Ok(box AxisAttribute as SubAxis),
+                "attribute" => Ok(box axis::Attribute as SubAxis),
                 _ => Err(InvalidAxis(name)),
             }
         } else {
