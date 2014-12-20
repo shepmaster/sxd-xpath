@@ -8,9 +8,6 @@ use super::token::Token;
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
-use super::axis::{
-    AxisSelf,
-};
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
     ExpressionAnd,
@@ -197,7 +194,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
             match name.as_slice() {
                 // TODO: explicit child axis?
-                "self" => Ok(box AxisSelf as SubAxis),
+                "self" => Ok(box axis::Self as SubAxis),
                 "parent" => Ok(box axis::Parent as SubAxis),
                 "descendant" => Ok(box axis::Descendant as SubAxis),
                 "descendant-or-self" => Ok(axis::DescendantOrSelf::new()),

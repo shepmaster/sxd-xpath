@@ -131,9 +131,9 @@ impl Axis for Parent {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct AxisSelf;
+pub struct Self;
 
-impl Axis for AxisSelf {
+impl Axis for Self {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,
