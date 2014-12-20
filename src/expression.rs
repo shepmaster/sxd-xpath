@@ -234,18 +234,18 @@ impl Expression for Or {
     }
 }
 
-pub struct ExpressionPath {
+pub struct Path {
     start_point: SubExpression,
     steps: Vec<SubExpression>,
 }
 
-impl ExpressionPath {
+impl Path {
     pub fn new(start_point: SubExpression, steps: Vec<SubExpression>) -> SubExpression {
-        box ExpressionPath {start_point: start_point, steps: steps}
+        box Path {start_point: start_point, steps: steps}
     }
 }
 
-impl Expression for ExpressionPath {
+impl Expression for Path {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let mut result = self.start_point.evaluate(context).nodeset();
 
