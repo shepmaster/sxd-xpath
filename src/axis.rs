@@ -53,9 +53,9 @@ impl Axis for Attribute {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct AxisChild;
+pub struct Child;
 
-impl Axis for AxisChild {
+impl Axis for Child {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,
