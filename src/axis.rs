@@ -73,9 +73,9 @@ impl Axis for Child {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct AxisDescendant;
+pub struct Descendant;
 
-impl Axis for AxisDescendant {
+impl Axis for Descendant {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,
@@ -94,15 +94,15 @@ impl Axis for AxisDescendant {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct AxisDescendantOrSelf {
-    descendant: AxisDescendant,
+pub struct DescendantOrSelf {
+    descendant: Descendant,
 }
 
-impl AxisDescendantOrSelf {
-    pub fn new() -> SubAxis { box AxisDescendantOrSelf{descendant: AxisDescendant} }
+impl DescendantOrSelf {
+    pub fn new() -> SubAxis { box DescendantOrSelf{descendant: Descendant} }
 }
 
-impl Axis for AxisDescendantOrSelf {
+impl Axis for DescendantOrSelf {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,

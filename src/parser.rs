@@ -9,8 +9,6 @@ use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::axis::{
-    AxisDescendant,
-    AxisDescendantOrSelf,
     AxisParent,
     AxisSelf,
 };
@@ -202,8 +200,8 @@ impl<I : Iterator<TokenResult>> Parser {
                 // TODO: explicit child axis?
                 "self" => Ok(box AxisSelf as SubAxis),
                 "parent" => Ok(box AxisParent as SubAxis),
-                "descendant" => Ok(box AxisDescendant as SubAxis),
-                "descendant-or-self" => Ok(AxisDescendantOrSelf::new()),
+                "descendant" => Ok(box axis::Descendant as SubAxis),
+                "descendant-or-self" => Ok(axis::DescendantOrSelf::new()),
                 "attribute" => Ok(box axis::Attribute as SubAxis),
                 _ => Err(InvalidAxis(name)),
             }
