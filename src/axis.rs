@@ -1,7 +1,5 @@
 extern crate document;
 
-use self::PrincipalNodeType::*;
-
 use super::EvaluationContext;
 use super::node_test::NodeTest;
 use super::nodeset::Nodeset;
@@ -24,7 +22,7 @@ pub trait Axis {
 
     /// Describes what node type is naturally selected by this axis.
     fn principal_node_type(&self) -> PrincipalNodeType {
-        Element
+        PrincipalNodeType::Element
     }
 }
 
@@ -50,7 +48,7 @@ impl Axis for AxisAttribute {
     }
 
     fn principal_node_type(&self) -> PrincipalNodeType {
-        Attribute
+        PrincipalNodeType::Attribute
     }
 }
 
