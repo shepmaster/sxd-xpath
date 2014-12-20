@@ -109,19 +109,19 @@ impl Expression for Equal {
     }
 }
 
-pub struct ExpressionNotEqual {
+pub struct NotEqual {
     equal: Equal,
 }
 
-impl ExpressionNotEqual {
+impl NotEqual {
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionNotEqual {
+        box NotEqual {
             equal: Equal{left: left, right: right}
         }
     }
 }
 
-impl Expression for ExpressionNotEqual {
+impl Expression for NotEqual {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         Boolean(!self.equal.boolean_evaluate(context))
     }

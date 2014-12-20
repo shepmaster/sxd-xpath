@@ -22,7 +22,7 @@ use xpath::expression;
 use xpath::expression::Expression;
 use xpath::expression::{And,
                         Equal,
-                        ExpressionNotEqual,
+                        NotEqual,
                         Literal,
                         Math,
                         ExpressionPredicate,
@@ -213,7 +213,7 @@ fn expression_not_equal_negates_equality() {
     let a_str = box Literal{value: BooleanLiteral(true)};
     let b_str = box Literal{value: BooleanLiteral(false)};
 
-    let expr = ExpressionNotEqual::new(a_str, b_str);
+    let expr = NotEqual::new(a_str, b_str);
 
     let context = setup.context();
     let res = expr.evaluate(&context);
