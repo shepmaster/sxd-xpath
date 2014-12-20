@@ -141,7 +141,7 @@ impl XPathExpression for ExpressionFunction {
 
                 fun.evaluate(context, args)
             },
-            None => panic!("throw UnknownXPathFunctionException(_name)"),
+            None => panic!("throw UnknownFunctionException(_name)"),
         }
     }
 }

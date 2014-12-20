@@ -101,13 +101,13 @@ impl<'d> StringValue for Node<'d> {
     }
 }
 
-pub trait XPathFunction {
+pub trait Function {
     fn evaluate<'a, 'd>(&self,
                         context: &XPathEvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Value<'d>;
 }
 
-type BoxFunc = Box<XPathFunction + 'static>;
+type BoxFunc = Box<Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 

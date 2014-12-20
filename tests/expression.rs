@@ -14,7 +14,7 @@ use document::dom4::Document;
 use xpath::Value;
 use xpath::Value::{Boolean, Number, String, Nodes};
 use xpath::{Functions,Variables};
-use xpath::XPathFunction;
+use xpath::Function;
 use xpath::XPathEvaluationContext;
 use xpath::nodeset::Nodeset;
 
@@ -225,7 +225,7 @@ struct StubFunction {
     value: &'static str,
 }
 
-impl XPathFunction for StubFunction {
+impl Function for StubFunction {
     fn evaluate<'a, 'd>(&self,
                         _: &XPathEvaluationContext<'a, 'd>,
                         _: Vec<Value<'d>>) -> Value<'d>

@@ -1,4 +1,4 @@
-use super::XPathFunction;
+use super::Function;
 use super::XPathEvaluationContext;
 use super::Functions;
 use super::Value;
@@ -6,7 +6,7 @@ use super::Value::Boolean;
 
 struct True;
 
-impl XPathFunction for True {
+impl Function for True {
     fn evaluate<'a, 'd>(&self,
                         _context: &XPathEvaluationContext<'a, 'd>,
                         _args: Vec<Value<'d>>) -> Value<'d>
@@ -17,7 +17,7 @@ impl XPathFunction for True {
 
 struct False;
 
-impl XPathFunction for False {
+impl Function for False {
     fn evaluate<'a, 'd>(&self,
                         _context: &XPathEvaluationContext<'a, 'd>,
                         _args: Vec<Value<'d>>) -> Value<'d>
@@ -28,7 +28,7 @@ impl XPathFunction for False {
 
 struct Not;
 
-impl XPathFunction for Not {
+impl Function for Not {
     fn evaluate<'a, 'd>(&self,
                         _context: &XPathEvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Value<'d>
