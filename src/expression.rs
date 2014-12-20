@@ -308,7 +308,7 @@ impl Expression for Predicate {
     }
 }
 
-pub struct ExpressionRelational {
+pub struct Relational {
     pub  left: SubExpression,
     pub right: SubExpression,
     pub operation: fn(f64, f64) -> bool,
@@ -319,29 +319,29 @@ fn    less_than_or_equal(left: f64, right: f64) -> bool { left <= right }
 fn          greater_than(left: f64, right: f64) -> bool { left >  right }
 fn greater_than_or_equal(left: f64, right: f64) -> bool { left >= right }
 
-impl ExpressionRelational {
+impl Relational {
     pub fn less_than(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box ExpressionRelational{left: left, right: right, operation: less_than}
+        box Relational{left: left, right: right, operation: less_than}
     }
 
     pub fn less_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box ExpressionRelational{left: left, right: right, operation: less_than_or_equal}
+        box Relational{left: left, right: right, operation: less_than_or_equal}
     }
 
     pub fn greater_than(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box ExpressionRelational{left: left, right: right, operation: greater_than}
+        box Relational{left: left, right: right, operation: greater_than}
     }
 
     pub fn greater_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box ExpressionRelational{left: left, right: right, operation: greater_than_or_equal}
+        box Relational{left: left, right: right, operation: greater_than_or_equal}
     }
 }
 
-impl Expression for ExpressionRelational {
+impl Expression for Relational {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let left_val = self.left.evaluate(context);
         let right_val = self.right.evaluate(context);

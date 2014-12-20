@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionRelational,
     ExpressionRootNode,
     ExpressionStep,
     ExpressionUnion,
@@ -481,13 +480,13 @@ impl<I : Iterator<TokenResult>> Parser {
     fn parse_relational_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
             BinaryRule { token: Token::LessThan,
-                         builder: ExpressionRelational::less_than },
+                         builder: expression::Relational::less_than },
             BinaryRule { token: Token::LessThanOrEqual,
-                         builder: ExpressionRelational::less_than_or_equal },
+                         builder: expression::Relational::less_than_or_equal },
             BinaryRule { token: Token::GreaterThan,
-                         builder: ExpressionRelational::greater_than },
+                         builder: expression::Relational::greater_than },
             BinaryRule { token: Token::GreaterThanOrEqual,
-                         builder: ExpressionRelational::greater_than_or_equal },
+                         builder: expression::Relational::greater_than_or_equal },
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);

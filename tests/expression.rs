@@ -26,7 +26,7 @@ use xpath::expression::{And,
                         Literal,
                         Math,
                         Predicate,
-                        ExpressionRelational,
+                        Relational,
                         ExpressionRootNode,
                         ExpressionStep,
                         ExpressionUnion,
@@ -332,7 +332,7 @@ fn expression_relational_does_basic_comparisons() {
     let left  = box Literal{value: NumberLiteral(10.0)};
     let right = box Literal{value: NumberLiteral(5.0)};
 
-    let expr = ExpressionRelational::less_than(left, right);
+    let expr = Relational::less_than(left, right);
 
     let context = setup.context();
     let res = expr.evaluate(&context);
