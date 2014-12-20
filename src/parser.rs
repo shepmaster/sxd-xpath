@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionNegation,
     ExpressionNotEqual,
     ExpressionOr,
     ExpressionPath,
@@ -452,7 +451,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
             match expr {
                 Some(expr) => {
-                    let expr: SubExpression = box ExpressionNegation { expression: expr };
+                    let expr: SubExpression = box expression::Negation { expression: expr };
                     Ok(Some(expr))
                 },
                 None => Err(RightHandSideExpressionMissing),

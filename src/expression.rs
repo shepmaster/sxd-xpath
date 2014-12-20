@@ -209,11 +209,11 @@ impl Expression for Math {
     }
 }
 
-pub struct ExpressionNegation {
+pub struct Negation {
     pub expression: SubExpression,
 }
 
-impl Expression for ExpressionNegation {
+impl Expression for Negation {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let result = self.expression.evaluate(context);
         return Number(-result.number());
