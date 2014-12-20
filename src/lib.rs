@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::string;
 use std::num::Float;
 
-use tokenizer::{XPathTokenizer,XPathTokenDeabbreviator,XPathTokenDisambiguator};
+use tokenizer::{Tokenizer,XPathTokenDeabbreviator,XPathTokenDisambiguator};
 use parser::Parser;
 
 pub mod macros;
@@ -168,7 +168,7 @@ impl Factory {
     }
 
     pub fn build(&self, xpath: &str) -> parser::ParseResult {
-        let tokenizer = XPathTokenizer::new(xpath);
+        let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = XPathTokenDeabbreviator::new(tokenizer);
         let disambiguator = XPathTokenDisambiguator::new(deabbreviator);
 

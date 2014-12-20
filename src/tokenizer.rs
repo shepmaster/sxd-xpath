@@ -13,7 +13,7 @@ fn is_digit(c: char) -> bool {
     }
 }
 
-pub struct XPathTokenizer {
+pub struct Tokenizer {
     xpath: XPathString,
     start: uint,
     prefer_recognition_of_operator_names: bool,
@@ -168,8 +168,8 @@ impl XPathString {
 
 static QUOTE_CHARS: [char, .. 2] =  ['\'', '\"'];
 
-impl XPathTokenizer {
-    pub fn new(xpath: & str) -> XPathTokenizer {
+impl Tokenizer {
+    pub fn new(xpath: & str) -> Tokenizer {
         let single_char_tokens = {
             let mut m = HashMap::new();
             m.insert('/', XPathToken::Slash);
@@ -207,7 +207,7 @@ impl XPathTokenizer {
             ("*",   XPathToken::Multiply)
         ];
 
-        XPathTokenizer {
+        Tokenizer {
             xpath: XPathString::new(xpath),
             start: 0,
             prefer_recognition_of_operator_names: false,
@@ -359,7 +359,7 @@ impl XPathTokenizer {
     }
 }
 
-impl Iterator<TokenResult> for XPathTokenizer {
+impl Iterator<TokenResult> for Tokenizer {
     fn next(&mut self) -> Option<TokenResult> {
         if self.has_more_tokens() {
             Some(self.next_token())
