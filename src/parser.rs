@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionUnion,
     ExpressionVariable,
 };
 use super::node_test;
@@ -424,7 +423,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_union_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::Pipe, builder: ExpressionUnion::new }
+            BinaryRule { token: Token::Pipe, builder: expression::Union::new }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);

@@ -29,7 +29,7 @@ use xpath::expression::{And,
                         Relational,
                         RootNode,
                         Step,
-                        ExpressionUnion,
+                        Union,
                         ExpressionVariable};
 use xpath::expression::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
@@ -415,7 +415,7 @@ fn expression_union_combines_nodesets() {
     setup.vars.insert("right".to_string(), Nodes(nodes));
     let right = box ExpressionVariable{name: "right".to_string()};
 
-    let expr = ExpressionUnion{left: left, right: right};
+    let expr = Union{left: left, right: right};
 
     let context = setup.context();
     let res = expr.evaluate(&context);

@@ -381,14 +381,14 @@ impl Expression for Step {
     }
 }
 
-pub struct ExpressionUnion {
+pub struct Union {
     pub left:  SubExpression,
     pub right: SubExpression,
 }
 
-binary_constructor!(ExpressionUnion)
+binary_constructor!(Union)
 
-impl Expression for ExpressionUnion {
+impl Expression for Union {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let mut left_val = self.left.evaluate(context).nodeset();
         let right_val = self.right.evaluate(context).nodeset();
