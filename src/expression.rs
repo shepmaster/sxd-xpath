@@ -166,7 +166,7 @@ impl Expression for Literal {
     }
 }
 
-pub struct ExpressionMath {
+pub struct Math {
     left:  SubExpression,
     right: SubExpression,
     operation: fn(f64, f64) -> f64,
@@ -178,29 +178,29 @@ fn multiply(a: f64, b: f64) -> f64 {a * b}
 fn   divide(a: f64, b: f64) -> f64 {a / b}
 fn  modulus(a: f64, b: f64) -> f64 {a % b}
 
-impl ExpressionMath {
+impl Math {
     pub fn addition(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionMath{left: left, right: right, operation: add}
+        box Math{left: left, right: right, operation: add}
     }
 
     pub fn subtraction(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionMath{left: left, right: right, operation: subtract}
+        box Math{left: left, right: right, operation: subtract}
     }
 
     pub fn multiplication(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionMath{left: left, right: right, operation: multiply}
+        box Math{left: left, right: right, operation: multiply}
     }
 
     pub fn division(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionMath{left: left, right: right, operation: divide}
+        box Math{left: left, right: right, operation: divide}
     }
 
     pub fn remainder(left: SubExpression, right: SubExpression) -> SubExpression {
-        box ExpressionMath{left: left, right: right, operation: modulus}
+        box Math{left: left, right: right, operation: modulus}
     }
 }
 
-impl Expression for ExpressionMath {
+impl Expression for Math {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let left = self.left.evaluate(context);
         let right = self.right.evaluate(context);

@@ -24,7 +24,7 @@ use xpath::expression::{And,
                         Equal,
                         ExpressionNotEqual,
                         Literal,
-                        ExpressionMath,
+                        Math,
                         ExpressionPredicate,
                         ExpressionRelational,
                         ExpressionRootNode,
@@ -272,7 +272,7 @@ fn expression_math_does_basic_math() {
     let left  = box Literal{value: NumberLiteral(10.0)};
     let right = box Literal{value: NumberLiteral(5.0)};
 
-    let expr = ExpressionMath::multiplication(left, right);
+    let expr = Math::multiplication(left, right);
 
     let context = setup.context();
     let res = expr.evaluate(&context);

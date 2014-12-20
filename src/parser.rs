@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionMath,
     ExpressionNegation,
     ExpressionNotEqual,
     ExpressionOr,
@@ -465,9 +464,9 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_multiplicative_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::Multiply,  builder: ExpressionMath::multiplication },
-            BinaryRule { token: Token::Divide,    builder: ExpressionMath::division },
-            BinaryRule { token: Token::Remainder, builder: ExpressionMath::remainder }
+            BinaryRule { token: Token::Multiply,  builder: expression::Math::multiplication },
+            BinaryRule { token: Token::Divide,    builder: expression::Math::division },
+            BinaryRule { token: Token::Remainder, builder: expression::Math::remainder }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
@@ -476,8 +475,8 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_additive_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::PlusSign,  builder: ExpressionMath::addition },
-            BinaryRule { token: Token::MinusSign, builder: ExpressionMath::subtraction}
+            BinaryRule { token: Token::PlusSign,  builder: expression::Math::addition },
+            BinaryRule { token: Token::MinusSign, builder: expression::Math::subtraction }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
