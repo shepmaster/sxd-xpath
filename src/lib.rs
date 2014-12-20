@@ -15,7 +15,7 @@ use std::string;
 use std::num::Float;
 
 use tokenizer::{XPathTokenizer,XPathTokenDeabbreviator,XPathTokenDisambiguator};
-use parser::XPathParser;
+use parser::Parser;
 
 pub mod macros;
 pub mod nodeset;
@@ -159,12 +159,12 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
 }
 
 pub struct Factory {
-    parser: XPathParser,
+    parser: Parser,
 }
 
 impl Factory {
     pub fn new() -> Factory {
-        Factory { parser: XPathParser::new() }
+        Factory { parser: Parser::new() }
     }
 
     pub fn build(&self, xpath: &str) -> parser::ParseResult {

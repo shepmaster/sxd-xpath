@@ -43,11 +43,11 @@ use super::node_test::{
 };
 
 #[allow(missing_copy_implementations)]
-pub struct XPathParser;
+pub struct Parser;
 
-impl XPathParser {
-    pub fn new() -> XPathParser {
-        XPathParser
+impl Parser {
+    pub fn new() -> Parser {
+        Parser
     }
 }
 
@@ -197,7 +197,7 @@ fn first_matching_rule
     Ok(None)
 }
 
-impl<I : Iterator<TokenResult>> XPathParser {
+impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_axis(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr> {
         if next_token_is!(source, XPathToken::Axis) {

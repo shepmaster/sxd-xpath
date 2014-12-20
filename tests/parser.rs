@@ -22,7 +22,7 @@ use xpath::tokenizer::TokenResult;
 
 use xpath::expression::{XPathExpression,SubExpression};
 
-use xpath::parser::{XPathParser,ParseResult};
+use xpath::parser::{Parser,ParseResult};
 use xpath::parser::ParseErr::{
     EmptyPredicate,
     ExtraUnparsedTokens,
@@ -122,7 +122,7 @@ struct Exercise<'d> {
     doc: &'d TestDoc<'d>,
     functions: Functions,
     variables: Variables<'d>,
-    parser: XPathParser,
+    parser: Parser,
 }
 
 impl<'d> Exercise<'d> {
@@ -134,7 +134,7 @@ impl<'d> Exercise<'d> {
             doc: doc,
             functions: functions,
             variables: HashMap::new(),
-            parser: XPathParser::new(),
+            parser: Parser::new(),
         }
     }
 
