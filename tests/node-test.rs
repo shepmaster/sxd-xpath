@@ -13,7 +13,7 @@ use xpath::EvaluationContext;
 use xpath::{Functions,Variables};
 use xpath::nodeset::Nodeset;
 
-use xpath::node_test::XPathNodeTest;
+use xpath::node_test::NodeTest;
 use xpath::node_test::{NodeTestAttribute, NodeTestElement};
 
 struct Setup<'d> {

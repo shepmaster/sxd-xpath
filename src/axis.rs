@@ -3,7 +3,7 @@ extern crate document;
 use self::PrincipalNodeType::*;
 
 use super::EvaluationContext;
-use super::node_test::XPathNodeTest;
+use super::node_test::NodeTest;
 use super::nodeset::Nodeset;
 use super::nodeset::Node::ElementNode;
 
@@ -19,7 +19,7 @@ pub trait Axis {
     /// adding matching nodes to the nodeset.
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>);
 
     /// Describes what node type is naturally selected by this axis.
@@ -36,7 +36,7 @@ pub struct AxisAttribute;
 impl Axis for AxisAttribute {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         if let ElementNode(ref e) = context.node {
@@ -60,7 +60,7 @@ pub struct AxisChild;
 impl Axis for AxisChild {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         let n = context.node;
@@ -80,7 +80,7 @@ pub struct AxisDescendant;
 impl Axis for AxisDescendant {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         let n = context.node;
@@ -107,7 +107,7 @@ impl AxisDescendantOrSelf {
 impl Axis for AxisDescendantOrSelf {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);
@@ -121,7 +121,7 @@ pub struct AxisParent;
 impl Axis for AxisParent {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         if let Some(p) = context.node.parent() {
@@ -138,7 +138,7 @@ pub struct AxisSelf;
 impl Axis for AxisSelf {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
-                            node_test: &XPathNodeTest,
+                            node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);

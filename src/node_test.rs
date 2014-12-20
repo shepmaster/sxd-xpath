@@ -2,17 +2,17 @@ use super::EvaluationContext;
 use super::nodeset::Nodeset;
 use super::nodeset::Node::{AttributeNode,ElementNode,TextNode};
 
-pub trait XPathNodeTest {
+pub trait NodeTest {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
-pub type SubNodeTest = Box<XPathNodeTest + 'static>;
+pub type SubNodeTest = Box<NodeTest + 'static>;
 
 pub struct NodeTestAttribute {
     pub name: String,
 }
 
-impl XPathNodeTest for NodeTestAttribute {
+impl NodeTest for NodeTestAttribute {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let AttributeNode(ref a) = context.node {
             if self.name == "*" || a.name().local_part() == self.name {
@@ -26,7 +26,7 @@ pub struct NodeTestElement {
     pub name: String,
 }
 
-impl XPathNodeTest for NodeTestElement {
+impl NodeTest for NodeTestElement {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let ElementNode(ref e) = context.node {
             // TODO: redo namespaces!
@@ -49,7 +49,7 @@ impl XPathNodeTest for NodeTestElement {
 #[allow(missing_copy_implementations)]
 pub struct NodeTestNode;
 
-impl XPathNodeTest for NodeTestNode {
+impl NodeTest for NodeTestNode {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         result.add(context.node);
     }
@@ -58,7 +58,7 @@ impl XPathNodeTest for NodeTestNode {
 #[allow(missing_copy_implementations)]
 pub struct NodeTestText;
 
-impl XPathNodeTest for NodeTestText {
+impl NodeTest for NodeTestText {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let TextNode(_) = context.node {
             result.add(context.node);
