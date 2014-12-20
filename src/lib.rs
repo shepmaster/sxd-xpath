@@ -158,13 +158,13 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
     }
 }
 
-pub struct XPathFactory {
+pub struct Factory {
     parser: XPathParser,
 }
 
-impl XPathFactory {
-    pub fn new() -> XPathFactory {
-        XPathFactory { parser: XPathParser::new() }
+impl Factory {
+    pub fn new() -> Factory {
+        Factory { parser: XPathParser::new() }
     }
 
     pub fn build(&self, xpath: &str) -> parser::ParseResult {

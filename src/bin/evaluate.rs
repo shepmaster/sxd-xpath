@@ -8,7 +8,7 @@ use std::io::File;
 use document::parser::Parser;
 
 use xpath::nodeset::ToNode;
-use xpath::{EvaluationContext,XPathFactory};
+use xpath::{EvaluationContext,Factory};
 use xpath::expression::XPathExpression;
 
 fn pretty_error(xml: &str, position: uint) -> &str {
@@ -23,7 +23,7 @@ fn main() {
     let filename = args.remove(1).expect("File required");
     let xpath_str = args.remove(1).expect("XPath required");
 
-    let factory = XPathFactory::new();
+    let factory = Factory::new();
 
     let expr = match factory.build(xpath_str.as_slice()) {
         Err(x) => panic!("Unable to compile XPath: {}", x),
