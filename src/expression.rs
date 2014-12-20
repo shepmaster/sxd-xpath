@@ -9,7 +9,7 @@ use super::Value;
 use super::Value::{Boolean,Number,Nodes};
 use super::StringValue;
 
-use super::axis::XPathAxis;
+use super::axis::Axis;
 use super::node_test::XPathNodeTest;
 
 // TODO: Figure out how to use HOFs to get rid of returning a Box here
@@ -359,7 +359,7 @@ impl Expression for ExpressionRootNode {
     }
 }
 
-pub type StepAxis = Box<XPathAxis + 'static>;
+pub type StepAxis = Box<Axis + 'static>;
 pub type StepTest = Box<XPathNodeTest + 'static>;
 
 pub struct ExpressionStep {

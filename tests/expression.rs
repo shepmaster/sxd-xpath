@@ -33,7 +33,7 @@ use xpath::expression::{ExpressionAnd,
                         ExpressionVariable};
 use xpath::expression::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
-use xpath::axis::XPathAxis;
+use xpath::axis::Axis;
 use xpath::node_test::XPathNodeTest;
 
 struct FailExpression;
@@ -367,7 +367,7 @@ impl MockAxis {
     }
 }
 
-impl XPathAxis for MockAxis {
+impl Axis for MockAxis {
     fn select_nodes(&self,
                     _context:   &EvaluationContext,
                     _node_test: &XPathNodeTest,

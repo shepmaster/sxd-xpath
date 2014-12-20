@@ -14,7 +14,7 @@ pub enum PrincipalNodeType {
 }
 
 /// A directed traversal of Nodes.
-pub trait XPathAxis {
+pub trait Axis {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
     fn select_nodes<'a, 'd>(&self,
@@ -28,12 +28,12 @@ pub trait XPathAxis {
     }
 }
 
-pub type SubAxis = Box<XPathAxis + 'static>;
+pub type SubAxis = Box<Axis + 'static>;
 
 #[allow(missing_copy_implementations)]
 pub struct AxisAttribute;
 
-impl XPathAxis for AxisAttribute {
+impl Axis for AxisAttribute {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,
@@ -57,7 +57,7 @@ impl XPathAxis for AxisAttribute {
 #[allow(missing_copy_implementations)]
 pub struct AxisChild;
 
-impl XPathAxis for AxisChild {
+impl Axis for AxisChild {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,
@@ -77,7 +77,7 @@ impl XPathAxis for AxisChild {
 #[allow(missing_copy_implementations)]
 pub struct AxisDescendant;
 
-impl XPathAxis for AxisDescendant {
+impl Axis for AxisDescendant {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,
@@ -104,7 +104,7 @@ impl AxisDescendantOrSelf {
     pub fn new() -> SubAxis { box AxisDescendantOrSelf{descendant: AxisDescendant} }
 }
 
-impl XPathAxis for AxisDescendantOrSelf {
+impl Axis for AxisDescendantOrSelf {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,
@@ -118,7 +118,7 @@ impl XPathAxis for AxisDescendantOrSelf {
 #[allow(missing_copy_implementations)]
 pub struct AxisParent;
 
-impl XPathAxis for AxisParent {
+impl Axis for AxisParent {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,
@@ -135,7 +135,7 @@ impl XPathAxis for AxisParent {
 #[allow(missing_copy_implementations)]
 pub struct AxisSelf;
 
-impl XPathAxis for AxisSelf {
+impl Axis for AxisSelf {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &XPathNodeTest,

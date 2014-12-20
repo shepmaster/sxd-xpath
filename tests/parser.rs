@@ -27,7 +27,7 @@ use xpath::parser::ParseErr::{
     EmptyPredicate,
     ExtraUnparsedTokens,
     InvalidNodeTest,
-    InvalidXPathAxis,
+    InvalidAxis,
     RanOutOfInput,
     RightHandSideExpressionMissing,
     TokenizerError,
@@ -998,7 +998,7 @@ fn unknown_axis_is_reported_as_an_error() {
 
     let ex = Exercise::new(&doc);
     let res = ex.parse_raw(tokens);
-    assert_eq!(Some(InvalidXPathAxis("bad-axis".to_string())), res.err());
+    assert_eq!(Some(InvalidAxis("bad-axis".to_string())), res.err());
 }
 
 #[test]

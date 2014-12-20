@@ -6,7 +6,7 @@ use self::ParseErr::*;
 use super::Value::{String,Number};
 use super::token::XPathToken;
 use super::tokenizer::{TokenResult,TokenizerErr};
-use super::axis::{XPathAxis,SubAxis,PrincipalNodeType};
+use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::axis::{
     AxisAttribute,
     AxisChild,
@@ -56,7 +56,7 @@ pub enum ParseErr {
     EmptyPredicate,
     ExtraUnparsedTokens,
     InvalidNodeTest(string::String),
-    InvalidXPathAxis(string::String),
+    InvalidAxis(string::String),
     RanOutOfInput,
     RightHandSideExpressionMissing,
     TokenizerError(TokenizerErr),
@@ -211,7 +211,7 @@ impl<I : Iterator<TokenResult>> Parser {
                 "descendant" => Ok(box AxisDescendant as SubAxis),
                 "descendant-or-self" => Ok(AxisDescendantOrSelf::new()),
                 "attribute" => Ok(box AxisAttribute as SubAxis),
-                _ => Err(InvalidXPathAxis(name)),
+                _ => Err(InvalidAxis(name)),
             }
         } else {
             Ok(box AxisChild as SubAxis)
@@ -236,7 +236,7 @@ impl<I : Iterator<TokenResult>> Parser {
         }
     }
 
-    fn default_node_test(&self, source: TokenSource<I>, axis: &XPathAxis)
+    fn default_node_test(&self, source: TokenSource<I>, axis: &Axis)
                          -> Result<Option<SubNodeTest>,ParseErr>
     {
         if next_token_is!(source, XPathToken::String) {
