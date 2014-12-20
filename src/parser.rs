@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionEqual,
     ExpressionFunction,
     ExpressionLiteral,
     ExpressionMath,
@@ -505,7 +504,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_equality_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::Equal,    builder: ExpressionEqual::new },
+            BinaryRule { token: Token::Equal,    builder: expression::Equal::new },
             BinaryRule { token: Token::NotEqual, builder: ExpressionNotEqual::new },
         ];
 

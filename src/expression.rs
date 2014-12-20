@@ -54,14 +54,14 @@ impl Expression for ContextNode {
     }
 }
 
-pub struct ExpressionEqual {
+pub struct Equal {
     pub left:  SubExpression,
     pub right: SubExpression,
 }
 
-binary_constructor!(ExpressionEqual)
+binary_constructor!(Equal)
 
-impl ExpressionEqual {
+impl Equal {
     fn boolean_evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> bool {
         let left_val = self.left.evaluate(context);
         let right_val = self.right.evaluate(context);
@@ -103,20 +103,20 @@ impl ExpressionEqual {
     }
 }
 
-impl Expression for ExpressionEqual {
+impl Expression for Equal {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         Boolean(self.boolean_evaluate(context))
     }
 }
 
 pub struct ExpressionNotEqual {
-    equal: ExpressionEqual,
+    equal: Equal,
 }
 
 impl ExpressionNotEqual {
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
         box ExpressionNotEqual {
-            equal: ExpressionEqual{left: left, right: right}
+            equal: Equal{left: left, right: right}
         }
     }
 }

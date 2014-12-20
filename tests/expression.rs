@@ -20,7 +20,7 @@ use xpath::nodeset::Nodeset;
 
 use xpath::expression::Expression;
 use xpath::expression::{And,
-                        ExpressionEqual,
+                        Equal,
                         ExpressionNotEqual,
                         ExpressionFunction,
                         ExpressionLiteral,
@@ -110,7 +110,7 @@ fn expression_equal_intersects_string_values_of_two_nodesets() {
     let left  = box ExpressionVariable{name: "left".to_string()};
     let right = box ExpressionVariable{name: "right".to_string()};
 
-    let expr = ExpressionEqual{left: left, right: right};
+    let expr = Equal{left: left, right: right};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -129,7 +129,7 @@ fn expression_equal_compares_number_value_of_nodeset_to_number() {
     let left  = box ExpressionVariable{name: "left".to_string()};
     let right = box ExpressionLiteral{value: NumberLiteral(6.28)};
 
-    let expr = ExpressionEqual{left: left, right: right};
+    let expr = Equal{left: left, right: right};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -149,7 +149,7 @@ fn expression_equal_compares_string_value_of_nodeset_to_string() {
     let left  = box ExpressionVariable{name: "left".to_string()};
     let right = box ExpressionLiteral{value: StringLiteral("boat".to_string())};
 
-    let expr = ExpressionEqual{left: left, right: right};
+    let expr = Equal{left: left, right: right};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -165,7 +165,7 @@ fn expression_equal_compares_as_boolean_if_one_argument_is_a_boolean() {
     let actual_bool = box ExpressionLiteral{value: BooleanLiteral(false)};
     let truthy_str = box ExpressionLiteral{value: StringLiteral("hello".to_string())};
 
-    let expr = ExpressionEqual{left: actual_bool, right: truthy_str};
+    let expr = Equal{left: actual_bool, right: truthy_str};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -181,7 +181,7 @@ fn expression_equal_compares_as_number_if_one_argument_is_a_number() {
     let actual_number = box ExpressionLiteral{value: NumberLiteral(-42.0)};
     let number_str = box ExpressionLiteral{value: StringLiteral("-42.0".to_string())};
 
-    let expr = ExpressionEqual{left: number_str, right: actual_number};
+    let expr = Equal{left: number_str, right: actual_number};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -197,7 +197,7 @@ fn expression_equal_compares_as_string_otherwise() {
     let a_str = box ExpressionLiteral{value: StringLiteral("hello".to_string())};
     let b_str = box ExpressionLiteral{value: StringLiteral("World".to_string())};
 
-    let expr = ExpressionEqual{left: a_str, right: b_str};
+    let expr = Equal{left: a_str, right: b_str};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
