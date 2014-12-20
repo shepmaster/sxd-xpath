@@ -409,14 +409,14 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDisambiguator
     }
 }
 
-pub struct XPathTokenDeabbreviator<I> {
+pub struct TokenDeabbreviator<I> {
     source: I,
     buffer: Vec<XPathToken>,
 }
 
-impl<I> XPathTokenDeabbreviator<I> {
-    pub fn new(source: I) -> XPathTokenDeabbreviator<I> {
-        XPathTokenDeabbreviator {
+impl<I> TokenDeabbreviator<I> {
+    pub fn new(source: I) -> TokenDeabbreviator<I> {
+        TokenDeabbreviator {
             source: source,
             buffer: vec!(),
         }
@@ -462,7 +462,7 @@ impl<I> XPathTokenDeabbreviator<I> {
     }
 }
 
-impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDeabbreviator<I> {
+impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
     fn next(&mut self) -> Option<TokenResult> {
         if self.buffer.is_empty() {
             let token = self.source.next();
