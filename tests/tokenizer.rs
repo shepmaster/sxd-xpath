@@ -1,6 +1,5 @@
 extern crate xpath;
 
-use xpath::token;
 use xpath::token::XPathToken;
 
 use xpath::tokenizer::XPathTokenizer;
@@ -18,7 +17,7 @@ fn is_finished(tokenizer: & XPathTokenizer) -> bool {
     ! tokenizer.has_more_tokens()
 }
 
-fn all_tokens_raw<I: Iterator<TokenResult>>(mut tokenizer: I) -> Result<Vec<XPathToken>, TokenizerErr> {
+fn all_tokens_raw<I: Iterator<TokenResult>>(tokenizer: I) -> Result<Vec<XPathToken>, TokenizerErr> {
     tokenizer.collect()
 }
 
