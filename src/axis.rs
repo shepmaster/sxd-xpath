@@ -114,9 +114,9 @@ impl Axis for DescendantOrSelf {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct AxisParent;
+pub struct Parent;
 
-impl Axis for AxisParent {
+impl Axis for Parent {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,
