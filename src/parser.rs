@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionRootNode,
     ExpressionStep,
     ExpressionUnion,
     ExpressionVariable,
@@ -376,10 +375,10 @@ impl<I : Iterator<TokenResult>> Parser {
         if source.next_token_is(&Token::Slash) {
             try!(source.consume(&Token::Slash));
 
-            let start_point = box ExpressionRootNode;
+            let start_point = box expression::RootNode;
             match try!(self.parse_relative_location_path_raw(source, start_point)) {
                 Some(expr) => Ok(Some(expr)),
-                None => Ok(Some(box ExpressionRootNode as SubExpression)),
+                None => Ok(Some(box expression::RootNode as SubExpression)),
             }
         } else {
             Ok(None)

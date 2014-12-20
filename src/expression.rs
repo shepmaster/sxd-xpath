@@ -351,9 +351,9 @@ impl Expression for Relational {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct ExpressionRootNode;
+pub struct RootNode;
 
-impl Expression for ExpressionRootNode {
+impl Expression for RootNode {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         Nodes(nodeset![context.node.document().root()])
     }

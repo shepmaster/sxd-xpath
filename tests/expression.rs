@@ -27,7 +27,7 @@ use xpath::expression::{And,
                         Math,
                         Predicate,
                         Relational,
-                        ExpressionRootNode,
+                        RootNode,
                         ExpressionStep,
                         ExpressionUnion,
                         ExpressionVariable};
@@ -344,7 +344,7 @@ fn expression_root_node_finds_the_root() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let expr = ExpressionRootNode;
+    let expr = RootNode;
 
     let context = setup.context();
     let res = expr.evaluate(&context);
