@@ -31,14 +31,14 @@ macro_rules! binary_constructor(
     );
 )
 
-pub struct ExpressionAnd {
+pub struct And {
     pub left:  SubExpression,
     pub right: SubExpression,
 }
 
-binary_constructor!(ExpressionAnd)
+binary_constructor!(And)
 
-impl Expression for ExpressionAnd {
+impl Expression for And {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         Boolean(self.left.evaluate(context).boolean() &&
                 self.right.evaluate(context).boolean())

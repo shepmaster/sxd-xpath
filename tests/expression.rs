@@ -19,7 +19,7 @@ use xpath::EvaluationContext;
 use xpath::nodeset::Nodeset;
 
 use xpath::expression::Expression;
-use xpath::expression::{ExpressionAnd,
+use xpath::expression::{And,
                         ExpressionEqual,
                         ExpressionNotEqual,
                         ExpressionFunction,
@@ -73,7 +73,7 @@ fn expression_and_returns_logical_and() {
     let left  = box ExpressionLiteral{value: BooleanLiteral(true)};
     let right = box ExpressionLiteral{value: BooleanLiteral(true)};
 
-    let expr = ExpressionAnd{left: left, right: right};
+    let expr = And{left: left, right: right};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -89,7 +89,7 @@ fn expression_and_short_circuits_when_left_argument_is_false() {
     let left  = box ExpressionLiteral{value: BooleanLiteral(false)};
     let right = box FailExpression;
 
-    let expr = ExpressionAnd{left: left, right: right};
+    let expr = And{left: left, right: right};
 
     let context = setup.context();
     expr.evaluate(&context);

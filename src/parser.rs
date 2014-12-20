@@ -8,9 +8,9 @@ use super::token::Token;
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
+use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionAnd,
     ExpressionContextNode,
     ExpressionEqual,
     ExpressionFunction,
@@ -516,7 +516,7 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_and_expression(&self, source: TokenSource<I>) -> ParseResult {
         let rules = vec![
-            BinaryRule { token: Token::And, builder: ExpressionAnd::new }
+            BinaryRule { token: Token::And, builder: expression::And::new }
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
