@@ -46,9 +46,9 @@ impl Expression for And {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct ExpressionContextNode;
+pub struct ContextNode;
 
-impl Expression for ExpressionContextNode {
+impl Expression for ContextNode {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         Nodes(nodeset![context.node])
     }

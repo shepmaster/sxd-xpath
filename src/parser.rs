@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionContextNode,
     ExpressionEqual,
     ExpressionFunction,
     ExpressionLiteral,
@@ -379,7 +378,7 @@ impl<I : Iterator<TokenResult>> Parser {
     }
 
     fn parse_relative_location_path(&self, source: TokenSource<I>) -> ParseResult {
-        let start_point = box ExpressionContextNode;
+        let start_point = box expression::ContextNode;
         self.parse_relative_location_path_raw(source, start_point)
     }
 
