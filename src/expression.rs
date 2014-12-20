@@ -127,12 +127,12 @@ impl Expression for ExpressionNotEqual {
     }
 }
 
-pub struct ExpressionFunction {
+pub struct Function {
     pub name: String,
     pub arguments: Vec<SubExpression>,
 }
 
-impl Expression for ExpressionFunction {
+impl Expression for Function {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         match context.function_for_name(self.name.as_slice()) {
             Some(fun) => {

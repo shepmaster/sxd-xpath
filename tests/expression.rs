@@ -18,11 +18,11 @@ use xpath::Function;
 use xpath::EvaluationContext;
 use xpath::nodeset::Nodeset;
 
+use xpath::expression;
 use xpath::expression::Expression;
 use xpath::expression::{And,
                         Equal,
                         ExpressionNotEqual,
-                        ExpressionFunction,
                         ExpressionLiteral,
                         ExpressionMath,
                         ExpressionPredicate,
@@ -243,7 +243,7 @@ fn expression_function_evaluates_input_arguments() {
     let fun = box StubFunction{value: "the function ran"};
     setup.funs.insert("test-fn".to_string(), fun);
 
-    let expr = ExpressionFunction{name: "test-fn".to_string(), arguments: vec!(arg_expr)};
+    let expr = expression::Function{name: "test-fn".to_string(), arguments: vec!(arg_expr)};
 
     let context = setup.context();
     let res = expr.evaluate(&context);
@@ -257,7 +257,7 @@ fn expression_function_unknown_function_is_reported_as_an_error() {
     let package = Package::new();
     let setup = Setup::new(&package);
 
-    let expr = ExpressionFunction{name: "unknown-fn".to_string(), arguments: vec!()};
+    let expr = expression::Function{name: "unknown-fn".to_string(), arguments: vec!()};
 
     let context = setup.context();
     expr.evaluate(&context);

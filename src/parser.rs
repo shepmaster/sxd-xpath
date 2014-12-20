@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionFunction,
     ExpressionLiteral,
     ExpressionMath,
     ExpressionNegation,
@@ -281,7 +280,7 @@ impl<I : Iterator<TokenResult>> Parser {
             }
             try!(source.consume(&Token::RightParen));
 
-            Ok(Some(box ExpressionFunction{ name: name, arguments: arguments } as SubExpression))
+            Ok(Some(box expression::Function{ name: name, arguments: arguments } as SubExpression))
         } else {
             Ok(None)
         }
