@@ -13,7 +13,7 @@ use document::dom4::{Document,Root,Element,Text};
 
 use xpath::Value::{Boolean,Number,String,Nodes};
 use xpath::{Functions,Variables};
-use xpath::{Value,XPathEvaluationContext};
+use xpath::{Value,EvaluationContext};
 
 use xpath::nodeset::ToNode;
 
@@ -157,7 +157,7 @@ impl<'d> Exercise<'d> {
 
     fn evaluate_on<N : ToNode<'d>>(&self, expr: &XPathExpression, node: N) -> Value<'d> {
         let node = node.to_node();
-        let mut context = XPathEvaluationContext::new(node,
+        let mut context = EvaluationContext::new(node,
                                                       &self.functions,
                                                       &self.variables);
         context.next(node);

@@ -15,7 +15,7 @@ use xpath::Value;
 use xpath::Value::{Boolean, Number, String, Nodes};
 use xpath::{Functions,Variables};
 use xpath::Function;
-use xpath::XPathEvaluationContext;
+use xpath::EvaluationContext;
 use xpath::nodeset::Nodeset;
 
 use xpath::expression::XPathExpression;
@@ -39,7 +39,7 @@ use xpath::node_test::XPathNodeTest;
 struct FailExpression;
 
 impl XPathExpression for FailExpression {
-    fn evaluate<'a, 'd>(&self, _: &XPathEvaluationContext<'a, 'd>) -> Value<'d> {
+    fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
         panic!("Should never be called");
     }
 }
@@ -59,9 +59,9 @@ impl<'d> Setup<'d> {
         }
     }
 
-    fn context(&'d self) -> XPathEvaluationContext<'d, 'd> {
+    fn context(&'d self) -> EvaluationContext<'d, 'd> {
         let node = self.doc.create_element("test");
-        XPathEvaluationContext::new(node, &self.funs, &self.vars)
+        EvaluationContext::new(node, &self.funs, &self.vars)
     }
 }
 
@@ -227,7 +227,7 @@ struct StubFunction {
 
 impl Function for StubFunction {
     fn evaluate<'a, 'd>(&self,
-                        _: &XPathEvaluationContext<'a, 'd>,
+                        _: &EvaluationContext<'a, 'd>,
                         _: Vec<Value<'d>>) -> Value<'d>
     {
         String(self.value.to_string())
@@ -369,7 +369,7 @@ impl MockAxis {
 
 impl XPathAxis for MockAxis {
     fn select_nodes(&self,
-                    _context:   &XPathEvaluationContext,
+                    _context:   &EvaluationContext,
                     _node_test: &XPathNodeTest,
                     _result:    &mut Nodeset)
     {
@@ -380,7 +380,7 @@ impl XPathAxis for MockAxis {
 struct DummyNodeTest;
 
 impl XPathNodeTest for DummyNodeTest {
-    fn test(&self, _context: &XPathEvaluationContext, _result: &mut Nodeset) {
+    fn test(&self, _context: &EvaluationContext, _result: &mut Nodeset) {
     }
 }
 

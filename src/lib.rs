@@ -103,7 +103,7 @@ impl<'d> StringValue for Node<'d> {
 
 pub trait Function {
     fn evaluate<'a, 'd>(&self,
-                        context: &XPathEvaluationContext<'a, 'd>,
+                        context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Value<'d>;
 }
 
@@ -111,19 +111,19 @@ type BoxFunc = Box<Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 
-pub struct XPathEvaluationContext<'a, 'd : 'a> {
+pub struct EvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
     functions: &'a Functions,
     variables: &'a Variables<'d>,
     position: uint,
 }
 
-impl<'a, 'd> XPathEvaluationContext<'a, 'd> {
+impl<'a, 'd> EvaluationContext<'a, 'd> {
     pub fn new<N: ToNode<'d>>(node: N,
                               functions: &'a Functions,
-                              variables: &'a Variables<'d>) -> XPathEvaluationContext<'a, 'd>
+                              variables: &'a Variables<'d>) -> EvaluationContext<'a, 'd>
     {
-        XPathEvaluationContext {
+        EvaluationContext {
             node: node.to_node(),
             functions: functions,
             variables: variables,
@@ -131,8 +131,8 @@ impl<'a, 'd> XPathEvaluationContext<'a, 'd> {
         }
     }
 
-    fn new_context_for(&self, _size: uint) -> XPathEvaluationContext<'a, 'd> {
-        XPathEvaluationContext {
+    fn new_context_for(&self, _size: uint) -> EvaluationContext<'a, 'd> {
+        EvaluationContext {
             node: self.node,
             functions: self.functions,
             variables: self.variables,

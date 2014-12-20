@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use document::Package;
 use document::dom4::{Document,Element,Attribute};
 
-use xpath::XPathEvaluationContext;
+use xpath::EvaluationContext;
 use xpath::{Functions,Variables};
 use xpath::nodeset::Nodeset;
 
@@ -32,19 +32,19 @@ impl<'d> Setup<'d> {
     }
 
     fn context_for_attribute(&'d self, name: &str, val: &str)
-                             -> (Attribute<'d>, XPathEvaluationContext<'d, 'd>)
+                             -> (Attribute<'d>, EvaluationContext<'d, 'd>)
     {
         let e = self.doc.create_element("element");
         let a = e.set_attribute_value(name, val);
-        let c = XPathEvaluationContext::new(a, &self.functions, &self.variables);
+        let c = EvaluationContext::new(a, &self.functions, &self.variables);
         (a, c)
     }
 
     fn context_for_element(&'d self, name: &str)
-                           -> (Element<'d>, XPathEvaluationContext<'d, 'd>)
+                           -> (Element<'d>, EvaluationContext<'d, 'd>)
     {
         let e = self.doc.create_element(name);
-        let c = XPathEvaluationContext::new(e, &self.functions, &self.variables);
+        let c = EvaluationContext::new(e, &self.functions, &self.variables);
         (e, c)
     }
 }

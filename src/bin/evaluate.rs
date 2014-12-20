@@ -8,7 +8,7 @@ use std::io::File;
 use document::parser::Parser;
 
 use xpath::nodeset::ToNode;
-use xpath::{XPathEvaluationContext,XPathFactory};
+use xpath::{EvaluationContext,XPathFactory};
 use xpath::expression::XPathExpression;
 
 fn pretty_error(xml: &str, position: uint) -> &str {
@@ -51,7 +51,7 @@ fn main() {
     let mut functions = HashMap::new();
     xpath::function::register_core_functions(& mut functions);
     let variables = HashMap::new();
-    let mut context = XPathEvaluationContext::new(d.root().to_node(),
+    let mut context = EvaluationContext::new(d.root().to_node(),
                                                   &functions,
                                                   &variables);
     context.next(d.root().to_node());
