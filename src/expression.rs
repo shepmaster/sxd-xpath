@@ -362,18 +362,18 @@ impl Expression for RootNode {
 pub type StepAxis = Box<Axis + 'static>;
 pub type StepTest = Box<NodeTest + 'static>;
 
-pub struct ExpressionStep {
+pub struct Step {
     axis: StepAxis,
     node_test: StepTest,
 }
 
-impl ExpressionStep {
+impl Step {
     pub fn new(axis: StepAxis, node_test: StepTest) -> SubExpression {
-        box ExpressionStep {axis: axis, node_test: node_test}
+        box Step {axis: axis, node_test: node_test}
     }
 }
 
-impl Expression for ExpressionStep {
+impl Expression for Step {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         let mut result = Nodeset::new();
         self.axis.select_nodes(context, &*self.node_test, &mut result);

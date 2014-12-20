@@ -28,7 +28,7 @@ use xpath::expression::{And,
                         Predicate,
                         Relational,
                         RootNode,
-                        ExpressionStep,
+                        Step,
                         ExpressionUnion,
                         ExpressionVariable};
 use xpath::expression::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
@@ -392,7 +392,7 @@ fn expression_step_delegates_to_the_axis() {
     let axis = MockAxis::new();
     let node_test = DummyNodeTest;
 
-    let expr = ExpressionStep::new(box axis.clone(), box node_test);
+    let expr = Step::new(box axis.clone(), box node_test);
 
     let context = setup.context();
     expr.evaluate(&context);

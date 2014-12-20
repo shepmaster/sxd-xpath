@@ -11,7 +11,6 @@ use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
 use super::expression::{SubExpression,LiteralValue};
 use super::expression::{
-    ExpressionStep,
     ExpressionUnion,
     ExpressionVariable,
 };
@@ -313,7 +312,7 @@ impl<I : Iterator<TokenResult>> Parser {
         };
 
         match node_test {
-            Some(test) => Ok(Some(ExpressionStep::new(axis, test))),
+            Some(test) => Ok(Some(expression::Step::new(axis, test))),
             None => Ok(None)
         }
     }
