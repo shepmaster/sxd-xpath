@@ -10,7 +10,7 @@ use xpath::tokenizer::TokenizerErr::{
     UnableToCreateToken,
 };
 
-use xpath::tokenizer::XPathTokenDisambiguator;
+use xpath::tokenizer::TokenDisambiguator;
 use xpath::tokenizer::TokenDeabbreviator;
 
 fn is_finished(tokenizer: & Tokenizer) -> bool {
@@ -397,7 +397,7 @@ fn disambiguates_node_test_functions() {
             Ok(XPathToken::LeftParen),
         );
 
-        let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
+        let disambig = TokenDisambiguator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(disambig),
                    vec!(XPathToken::NodeTest(name.to_string()),
@@ -412,7 +412,7 @@ fn name_followed_by_left_paren_becomes_function_name() {
         Ok(XPathToken::LeftParen),
      );
 
-    let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
+    let disambig = TokenDisambiguator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(disambig),
                vec!(XPathToken::Function("test".to_string()),
@@ -426,7 +426,7 @@ fn name_followed_by_double_colon_becomes_axis_name() {
         Ok(XPathToken::DoubleColon),
     );
 
-    let disambig = XPathTokenDisambiguator::new(input_tokens.into_iter());
+    let disambig = TokenDisambiguator::new(input_tokens.into_iter());
 
     assert_eq!(all_tokens(disambig),
                vec!(XPathToken::Axis("test".to_string()),

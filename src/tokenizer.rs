@@ -373,13 +373,13 @@ fn is_number_char(c: char) -> bool {
     return is_digit(c) || '.' == c;
 }
 
-pub struct XPathTokenDisambiguator<T, I> {
+pub struct TokenDisambiguator<T, I> {
     source: ::std::iter::Peekable<T, I>,
 }
 
-impl<T, I: Iterator<T>> XPathTokenDisambiguator<T, I> {
-    pub fn new(source: I) -> XPathTokenDisambiguator<T, I> {
-        XPathTokenDisambiguator{
+impl<T, I: Iterator<T>> TokenDisambiguator<T, I> {
+    pub fn new(source: I) -> TokenDisambiguator<T, I> {
+        TokenDisambiguator{
             source: source.peekable(),
         }
     }
@@ -388,7 +388,7 @@ impl<T, I: Iterator<T>> XPathTokenDisambiguator<T, I> {
 static NODE_TEST_NAMES : [&'static str, .. 4] =
     [ "comment", "text", "processing-instruction", "node" ];
 
-impl<I: Iterator<TokenResult>> Iterator<TokenResult> for XPathTokenDisambiguator<TokenResult, I> {
+impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<TokenResult, I> {
     fn next(&mut self) -> Option<TokenResult> {
         let token = self.source.next();
         let next  = self.source.peek();
