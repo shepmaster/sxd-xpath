@@ -421,7 +421,7 @@ impl Expression for Variable {
 
     use super::super::Value;
     use super::super::Value::{Boolean, Number, String, Nodes};
-    use super::super::{Functions,Variables};
+    use super::super::{Functions,Variables,Namespaces};
     use super::super::Function;
     use super::super::EvaluationContext;
     use super::super::nodeset::Nodeset;
@@ -457,6 +457,7 @@ impl Expression for Variable {
         doc: Document<'d>,
         funs: Functions,
         vars: Variables<'d>,
+        nses: Namespaces,
     }
 
     impl<'d> Setup<'d> {
@@ -465,12 +466,13 @@ impl Expression for Variable {
                 doc: package.as_document(),
                 funs: HashMap::new(),
                 vars: HashMap::new(),
+                nses: HashMap::new(),
             }
         }
 
         fn context(&'d self) -> EvaluationContext<'d, 'd> {
             let node = self.doc.create_element("test");
-            EvaluationContext::new(node, &self.funs, &self.vars)
+            EvaluationContext::new(node, &self.funs, &self.vars, &self.nses)
         }
     }
 

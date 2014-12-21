@@ -51,9 +51,11 @@ fn main() {
     let mut functions = HashMap::new();
     xpath::function::register_core_functions(& mut functions);
     let variables = HashMap::new();
+    let namespaces = HashMap::new();
     let mut context = EvaluationContext::new(d.root().to_node(),
-                                                  &functions,
-                                                  &variables);
+                                             &functions,
+                                             &variables,
+                                             &namespaces);
     context.next(d.root().to_node());
 
     let res = expr.evaluate(&context);

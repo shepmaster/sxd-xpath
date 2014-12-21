@@ -532,7 +532,7 @@ mod test {
     use document::dom4::{Document,Root,Element,Text};
 
     use super::super::Value::{Boolean,Number,String,Nodes};
-    use super::super::{Functions,Variables};
+    use super::super::{Functions,Variables,Namespaces};
     use super::super::{Value,EvaluationContext};
 
     use super::super::nodeset::ToNode;
@@ -646,6 +646,7 @@ mod test {
         doc: &'d TestDoc<'d>,
         functions: Functions,
         variables: Variables<'d>,
+        namespaces: Namespaces,
         parser: Parser,
     }
 
@@ -658,10 +659,10 @@ mod test {
                 doc: doc,
                 functions: functions,
                 variables: HashMap::new(),
+                namespaces: HashMap::new(),
                 parser: Parser::new(),
             }
         }
-
 
         fn add_var(&mut self, name: &str, value: Value<'d>) {
             self.variables.insert(name.to_string(), value);
@@ -682,8 +683,9 @@ mod test {
         fn evaluate_on<N : ToNode<'d>>(&self, expr: &Expression, node: N) -> Value<'d> {
             let node = node.to_node();
             let mut context = EvaluationContext::new(node,
-                                                          &self.functions,
-                                                          &self.variables);
+                                                     &self.functions,
+                                                     &self.variables,
+                                                     &self.namespaces);
             context.next(node);
             expr.evaluate(&context)
         }

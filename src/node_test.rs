@@ -74,7 +74,7 @@ mod test {
     use document::dom4::{Document,Element,Attribute};
 
     use super::super::EvaluationContext;
-    use super::super::{Functions,Variables};
+    use super::super::{Functions,Variables,Namespaces};
     use super::super::nodeset::Nodeset;
 
     use super::super::node_test;
@@ -84,6 +84,7 @@ mod test {
         doc: Document<'d>,
         functions: Functions,
         variables: Variables<'d>,
+        namespaces: Namespaces,
     }
 
     impl<'d> Setup<'d> {
@@ -92,6 +93,7 @@ mod test {
                 doc: package.as_document(),
                 functions: HashMap::new(),
                 variables: HashMap::new(),
+                namespaces: HashMap::new(),
             }
         }
 
@@ -100,7 +102,7 @@ mod test {
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
-            let c = EvaluationContext::new(a, &self.functions, &self.variables);
+            let c = EvaluationContext::new(a, &self.functions, &self.variables, &self.namespaces);
             (a, c)
         }
 
@@ -108,7 +110,7 @@ mod test {
                                -> (Element<'d>, EvaluationContext<'d, 'd>)
         {
             let e = self.doc.create_element(name);
-            let c = EvaluationContext::new(e, &self.functions, &self.variables);
+            let c = EvaluationContext::new(e, &self.functions, &self.variables, &self.namespaces);
             (e, c)
         }
     }

@@ -110,23 +110,29 @@ pub trait Function {
 type BoxFunc = Box<Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
+pub type Namespaces = HashMap<string::String, string::String>;
 
 pub struct EvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
     functions: &'a Functions,
     variables: &'a Variables<'d>,
+    namespaces: &'a Namespaces,
     position: uint,
 }
 
 impl<'a, 'd> EvaluationContext<'a, 'd> {
-    pub fn new<N: ToNode<'d>>(node: N,
-                              functions: &'a Functions,
-                              variables: &'a Variables<'d>) -> EvaluationContext<'a, 'd>
+    pub fn new<N>(node: N,
+                  functions: &'a Functions,
+                  variables: &'a Variables<'d>,
+                  namespaces: &'a Namespaces)
+                  -> EvaluationContext<'a, 'd>
+        where N: ToNode<'d>
     {
         EvaluationContext {
             node: node.to_node(),
             functions: functions,
             variables: variables,
+            namespaces: namespaces,
             position: 0,
         }
     }
@@ -136,6 +142,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
             node: self.node,
             functions: self.functions,
             variables: self.variables,
+            namespaces: self.namespaces,
             position: 0,
         }
     }
