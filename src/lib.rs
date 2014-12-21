@@ -22,9 +22,9 @@ pub mod nodeset;
 pub mod axis;
 pub mod expression;
 pub mod function;
-pub mod node_test;
+mod node_test;
 pub mod parser;
-pub mod token;
+mod token;
 pub mod tokenizer;
 
 #[deriving(PartialEq,Show,Clone)]
@@ -162,6 +162,10 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
 
     fn value_of(&self, name: &str) -> Option<&Value<'d>> {
         self.variables.get(&name.to_string())
+    }
+
+    fn namespace_for(&self, prefix: &str) -> Option<&str> {
+        self.namespaces.get(prefix).map(|ns| ns.as_slice())
     }
 }
 

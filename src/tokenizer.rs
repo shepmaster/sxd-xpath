@@ -6,6 +6,7 @@ use document::parser::XmlParseExt;
 
 use self::TokenizerErr::*;
 
+use super::node_test;
 use super::token::{Token,AxisName,NodeTestName};
 use super::token::Token::*;
 
@@ -198,8 +199,11 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
     fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         let (wc, p) = try_parse!(p.consume_literal("*"));
 
-        let tok = Token::NameTest((None, wc.to_string()));
-        peresil::Result::success(tok, p)
+        let name = node_test::NameTest {
+            prefix: None,
+            local_part: wc.to_string(),
+        };
+        peresil::Result::success(Token::NameTest(name), p)
     }
 
     fn prefixed_wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
@@ -207,16 +211,19 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         let (_, p) = try_parse!(p.consume_literal(":"));
         let (wc, p) = try_parse!(p.consume_literal("*"));
 
-        let tok = Token::NameTest((Some(prefix.to_string()), wc.to_string()));
-        peresil::Result::success(tok, p)
+        let name = node_test::NameTest {
+            prefix: Some(prefix.to_string()),
+            local_part: wc.to_string(),
+        };
+        peresil::Result::success(Token::NameTest(name), p)
     }
 
     fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         p.consume_prefixed_name().map(|name| {
-            Token::NameTest((
-                name.prefix.map(|p| p.to_string()),
-                name.local_part.to_string()
-            ))
+            Token::NameTest(node_test::NameTest {
+                prefix: name.prefix.map(|p| p.to_string()),
+                local_part: name.local_part.to_string()
+            })
         })
     }
 
@@ -377,6 +384,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
 
 #[cfg(test)]
 mod test {
+    use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
 
     use super::Tokenizer;
@@ -404,7 +412,10 @@ mod test {
     }
 
     fn name_test(local_part: &str) -> Token {
-        Token::NameTest((None, local_part.to_string()))
+        Token::NameTest(node_test::NameTest {
+            prefix: None,
+            local_part: local_part.to_string()
+        })
     }
 
     #[test]
@@ -449,7 +460,11 @@ mod test {
     {
         let tokenizer = Tokenizer::new("ns:foo");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::NameTest((Some("ns".to_string()), "foo".to_string()))));
+        let name = node_test::NameTest {
+            prefix: Some("ns".to_string()),
+            local_part: "foo".to_string()
+        };
+        assert_eq!(all_tokens(tokenizer), vec![Token::NameTest(name)]);
     }
 
     #[test]

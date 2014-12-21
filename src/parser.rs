@@ -202,13 +202,15 @@ impl<I : Iterator<TokenResult>> Parser {
     {
         if next_token_is!(source, Token::NameTest) {
             let name = consume_value!(source, Token::NameTest);
-            // TODO: Use prefix
-            let name = name.1;
 
-            match axis.principal_node_type() {
-                PrincipalNodeType::Attribute => Ok(Some(box node_test::Attribute{name: name} as SubNodeTest)),
-                PrincipalNodeType::Element => Ok(Some(box node_test::Element{name: name} as SubNodeTest)),
-            }
+            let test = match axis.principal_node_type() {
+                PrincipalNodeType::Attribute =>
+                    box node_test::Attribute::new(name) as SubNodeTest,
+                PrincipalNodeType::Element =>
+                    box node_test::Element::new(name) as SubNodeTest,
+            };
+
+            Ok(Some(test))
         } else {
             Ok(None)
         }
@@ -537,6 +539,7 @@ mod test {
 
     use super::super::nodeset::ToNode;
 
+    use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
     use super::super::tokenizer::{TokenResult,TokenizerErr};
 
@@ -566,7 +569,10 @@ mod test {
     );
 
     fn name_test(local_part: &str) -> Token {
-        Token::NameTest((None, local_part.to_string()))
+        Token::NameTest(node_test::NameTest {
+            prefix: None,
+            local_part: local_part.to_string()
+        })
     }
 
     trait ApproxEq {

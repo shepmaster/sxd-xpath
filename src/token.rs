@@ -1,4 +1,5 @@
 use std::string;
+use super::node_test;
 
 #[deriving(Copy,Clone,PartialEq,Show)]
 pub enum AxisName {
@@ -56,7 +57,7 @@ pub enum Token {
     // Specializations
     Axis(AxisName),
     Function(string::String),
-    NameTest((Option<string::String>, string::String)),
+    NameTest(node_test::NameTest),
     NodeTest(NodeTestName),
     Variable(string::String),
 }
