@@ -276,7 +276,7 @@ impl Tokenizer {
 
             self.start = offset;
             let substr = self.xpath.substr(current_start, offset);
-            match from_str(substr.as_slice()) {
+            match substr.parse() {
                 Some(value) => Ok(Token::Number(value)),
                 None => panic!("Not really a number!")
             }

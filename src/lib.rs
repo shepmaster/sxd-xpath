@@ -48,7 +48,7 @@ impl<'d> Value<'d> {
     pub fn number(&self) -> f64 {
         match *self {
             Number(val) => val,
-            String(ref s) => from_str(s.as_slice()).unwrap_or(Float::nan()),
+            String(ref s) => s.parse().unwrap_or(Float::nan()),
             _ => unimplemented!(),
         }
     }

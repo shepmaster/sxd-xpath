@@ -1,7 +1,7 @@
 use document::dom4;
 
 use self::Node::*;
-use std::slice::Items;
+use std::slice::Iter;
 
 macro_rules! unpack(
     ($enum_name:ident, $name:ident, $wrapper:ident, dom4::$inner:ident) => (
@@ -144,7 +144,7 @@ impl<'d> Nodeset<'d> {
         self.nodes.push(node.to_node());
     }
 
-    pub fn iter(&self) -> Items<Node<'d>> {
+    pub fn iter(&self) -> Iter<Node<'d>> {
         self.nodes.iter()
     }
 
