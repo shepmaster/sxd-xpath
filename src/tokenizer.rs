@@ -10,7 +10,7 @@ use super::token::Token;
 use super::token::Token::*;
 
 pub struct Tokenizer {
-    xpath: XPathString,
+    xpath: string::String,
     start: uint,
     prefer_recognition_of_operator_names: bool,
 }
@@ -21,28 +21,6 @@ pub type TokenResult = Result<Token, TokenizerErr>;
 pub enum TokenizerErr {
     MismatchedQuoteCharacters,
     UnableToCreateToken,
-}
-
-struct XPathString {
-    xpath: Vec<char>,
-    xpath2: string::String,
-}
-
-impl XPathString {
-    fn new(xpath: &str) -> XPathString {
-        XPathString {
-            xpath: xpath.chars().collect(),
-            xpath2: xpath.to_string(),
-        }
-    }
-
-    fn slice_from(&self, offset: uint) -> &str {
-        self.xpath2.slice_from(offset)
-    }
-
-    fn len(& self) -> uint {
-        self.xpath.len()
-    }
 }
 
 trait XPathParseExt<'a> {
@@ -182,9 +160,9 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
 }
 
 impl Tokenizer {
-    pub fn new(xpath: & str) -> Tokenizer {
+    pub fn new(xpath: &str) -> Tokenizer {
         Tokenizer {
-            xpath: XPathString::new(xpath),
+            xpath: xpath.to_string(),
             start: 0,
             prefer_recognition_of_operator_names: false,
         }
