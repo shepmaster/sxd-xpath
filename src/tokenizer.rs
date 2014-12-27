@@ -368,7 +368,7 @@ mod test {
     fn all_tokens<I: Iterator<TokenResult>>(tokenizer: I) -> Vec<Token> {
         match all_tokens_raw(tokenizer) {
             Ok(toks) => toks,
-            Err(msg) => panic!(msg),
+            Err(msg) => panic!("{}", msg),
         }
     }
 
