@@ -82,15 +82,23 @@ static AXES: [Identifier<'static, AxisName>, ..13] = [
     ("self", AxisName::Self),
 ];
 
-fn parse_quoted_literal<'a>(p: Point<'a>, quote: &str)
-                            -> peresil::Result<'a, Token, TokenizerErr>
-{
-    let (_, p) = try_parse!(p.consume_literal(quote));
-    let (v, p) = try_parse!(p.consume_quoted_string(quote));
-    let (_, p) = try_parse!(p.consume_literal(quote), MismatchedQuoteCharacters);
+fn parse_literal<'a>(p: Point<'a>) -> peresil::Result<'a, &'a str, TokenizerErr> {
+    fn with_quote<'a>(p: Point<'a>, quote: &str)
+                     -> peresil::Result<'a, &'a str, TokenizerErr>
+    {
+        let (_, p) = try_parse!(p.consume_literal(quote));
+        let (v, p) = try_parse!(p.consume_quoted_string(quote));
+        let (_, p) = try_parse!(p.consume_literal(quote), MismatchedQuoteCharacters);
 
-    let tok = Token::Literal(v.to_string());
-    peresil::Result::success(tok, p)
+        peresil::Result::success(v, p)
+    }
+
+    with_quote(p, "\x22") // "
+        .or_else(|| with_quote(p, "\x27")) // '
+}
+
+fn parse_quoted_literal<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    parse_literal(p).map(|v| Token::Literal(v.to_string()))
 }
 
 fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
@@ -200,8 +208,7 @@ impl Tokenizer {
         let (tok, p) = try_parse!({
             p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
                 .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
-                .or_else(|| parse_quoted_literal(p, "\x22")) // "
-                .or_else(|| parse_quoted_literal(p, "\x27")) // '
+                .or_else(|| parse_quoted_literal(p))
                 .or_else(|| parse_number(p))
                 .or_else(|| parse_current_node(p))
                 .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
