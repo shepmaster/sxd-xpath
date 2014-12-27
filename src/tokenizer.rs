@@ -184,6 +184,17 @@ fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         .or_else(|| with_arg(p))
 }
 
+fn parse_function_call<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    let (name, p) = try_parse!(p.consume_prefixed_name());
+    // Do not advance the point here. We want to know if there *is* a
+    // left-paren, but do not want to actually consume it here.
+    try_parse!(p.consume_literal("("));
+
+    // TODO: We should be using the prefix here!
+    let name = name.local_part.to_string();
+    peresil::Result::success(Token::Function(name), p)
+}
+
 fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         let (wc, p) = try_parse!(p.consume_literal("*"));
@@ -241,6 +252,7 @@ impl Tokenizer {
                 .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
                 .or_else(|| parse_axis_specifier(p))
                 .or_else(|| parse_node_type(p))
+                .or_else(|| parse_function_call(p))
                 .or_else(|| parse_name_test(p))
         });
 
@@ -289,32 +301,6 @@ impl Iterator<TokenResult> for Tokenizer {
             Some(self.next_token())
         } else {
             None
-        }
-    }
-}
-
-pub struct TokenDisambiguator<T, I> {
-    source: ::std::iter::Peekable<T, I>,
-}
-
-impl<T, I: Iterator<T>> TokenDisambiguator<T, I> {
-    pub fn new(source: I) -> TokenDisambiguator<T, I> {
-        TokenDisambiguator{
-            source: source.peekable(),
-        }
-    }
-}
-
-impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<TokenResult, I> {
-    fn next(&mut self) -> Option<TokenResult> {
-        let token = self.source.next();
-        let next  = self.source.peek();
-
-        match (token, next) {
-            (Some(Ok(Token::String(val))), Some(&Ok(Token::LeftParen))) => {
-                Some(Ok(Token::Function(val)))
-            },
-            (token, _) => token,
         }
     }
 }
@@ -392,7 +378,6 @@ mod test {
         UnableToCreateToken,
     };
 
-    use super::TokenDisambiguator;
     use super::TokenDeabbreviator;
 
     fn is_finished(tokenizer: &Tokenizer) -> bool {
@@ -752,6 +737,15 @@ mod test {
     }
 
     #[test]
+    fn tokenizes_function_call() {
+        let tokenizer = Tokenizer::new("hello()");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+                                               Token::LeftParen,
+                                               Token::RightParen]);
+    }
+
+    #[test]
     fn exception_thrown_when_nothing_was_tokenized()
     {
         let tokenizer = Tokenizer::new("!");
@@ -776,20 +770,6 @@ mod test {
         let res = all_tokens_raw(tokenizer);
 
         assert_eq!(Err(MismatchedQuoteCharacters), res);
-    }
-
-    #[test]
-    fn name_followed_by_left_paren_becomes_function_name() {
-        let input_tokens: Vec<TokenResult> = vec!(
-            Ok(Token::String("test".to_string())),
-            Ok(Token::LeftParen),
-         );
-
-        let disambig = TokenDisambiguator::new(input_tokens.into_iter());
-
-        assert_eq!(all_tokens(disambig),
-                   vec!(Token::Function("test".to_string()),
-                        Token::LeftParen));
     }
 
     #[test]
