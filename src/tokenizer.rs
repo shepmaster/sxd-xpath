@@ -215,29 +215,27 @@ impl Tokenizer {
     }
 
     fn raw_next_token(& mut self) -> TokenResult {
-        {
-            let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
+        let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
 
-            let r = p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
-                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
-                .or_else(|| parse_quoted_literal(p, "\x22")) // "
-                .or_else(|| parse_quoted_literal(p, "\x27")) // '
-                .or_else(|| parse_number(p))
-                .or_else(|| parse_current_node(p))
-                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
-                .or_else(|| parse_name_test(p));
+        let r = p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
+            .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
+            .or_else(|| parse_quoted_literal(p, "\x22")) // "
+            .or_else(|| parse_quoted_literal(p, "\x27")) // '
+            .or_else(|| parse_number(p))
+            .or_else(|| parse_current_node(p))
+            .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
+            .or_else(|| parse_name_test(p));
 
-            match r {
-                peresil::Result::Success(p) => {
-                    self.start = p.point.offset;
-                    return Ok(p.data)
-                },
-                peresil::Result::Partial{ failure: p, .. } |
-                peresil::Result::Failure(p) => {
-                    match p.data {
-                        Some(e) => Err(e),
-                        None    => Err(UnableToCreateToken),
-                    }
+        match r {
+            peresil::Result::Success(p) => {
+                self.start = p.point.offset;
+                return Ok(p.data)
+            },
+            peresil::Result::Partial{ failure: p, .. } |
+            peresil::Result::Failure(p) => {
+                match p.data {
+                    Some(e) => Err(e),
+                    None    => Err(UnableToCreateToken),
                 }
             }
         }
