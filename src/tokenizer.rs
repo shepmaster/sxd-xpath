@@ -2,6 +2,7 @@ use std::string;
 
 use document::peresil;
 use document::peresil::{Point,Identifier};
+use document::parser::XmlParseExt;
 
 use self::TokenizerErr::*;
 
@@ -91,16 +92,6 @@ impl XPathString {
             while offset < self.xpath.len() && self.valid_ncname_follow_char(offset) {
                 offset += 1;
             }
-        }
-
-        return offset;
-    }
-
-    fn while_valid_number(& self, offset: uint) -> uint {
-        let mut offset = offset;
-
-        while offset < self.xpath.len() && is_number_char(self.xpath[offset]) {
-            offset += 1;
         }
 
         return offset;
@@ -200,6 +191,39 @@ fn parse_quoted_literal<'a>(p: Point<'a>, quote: &str)
     peresil::Result::success(tok, p)
 }
 
+fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    fn fractional_part<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
+        let (_, p) = try_parse!(p.consume_literal("."));
+        let (_, p) = p.consume_decimal_chars::<E>().optional(p);
+
+        peresil::Result::success((), p)
+    }
+
+    fn with_integer<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
+        let (_, p) = try_parse!(p.consume_decimal_chars());
+        let (_, p) = fractional_part::<E>(p).optional(p);
+
+        peresil::Result::success((), p)
+    }
+
+    fn without_integer<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
+        let (_, p) = try_parse!(p.consume_literal("."));
+        let (_, p) = try_parse!(p.consume_decimal_chars());
+
+        peresil::Result::success((), p)
+    }
+
+    let before_p = p;
+
+    let (_, p) = try_parse!(with_integer(p)
+                            .or_else(|| without_integer(p)));
+
+    let num = before_p.to(p);
+    let num = num.parse().expect("Unable to parse number");
+
+    peresil::Result::success(Token::Number(num), p)
+}
+
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
         let named_operators = vec![
@@ -230,7 +254,7 @@ impl Tokenizer {
                 .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
                 .or_else(|| parse_quoted_literal(p, "\x22")) // "
                 .or_else(|| parse_quoted_literal(p, "\x27")) // '
-                ;
+                .or_else(|| parse_number(p));
 
             match r {
                 peresil::Result::Success(p) => {
@@ -257,19 +281,7 @@ impl Tokenizer {
             }
         }
 
-        if is_number_char(c) {
-            let mut offset = self.start;
-            let current_start = self.start;
-
-            offset = self.xpath.while_valid_number(offset);
-
-            self.start = offset;
-            let substr = self.xpath.substr(current_start, offset);
-            match substr.parse() {
-                Some(value) => Ok(Token::Number(value)),
-                None => panic!("Not really a number!")
-            }
-        } else {
+        {
             let mut offset = self.start;
             let current_start = self.start;
 
@@ -356,10 +368,6 @@ impl Iterator<TokenResult> for Tokenizer {
             None
         }
     }
-}
-
-fn is_number_char(c: char) -> bool {
-    return is_digit(c) || '.' == c;
 }
 
 pub struct TokenDisambiguator<T, I> {
