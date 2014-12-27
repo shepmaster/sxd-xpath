@@ -13,7 +13,6 @@ pub struct Tokenizer {
     xpath: XPathString,
     start: uint,
     prefer_recognition_of_operator_names: bool,
-    named_operators: Vec<(&'static str, Token)>,
 }
 
 pub type TokenResult = Result<Token, TokenizerErr>;
@@ -45,17 +44,6 @@ impl XPathString {
     fn len(& self) -> uint {
         self.xpath.len()
     }
-
-    fn str_at_is(& self, offset: uint, needle: &[char]) -> bool {
-        let s_len = needle.len();
-
-        if self.xpath.len() < offset + s_len { return false; }
-
-        let xpath_chars = self.xpath.slice(offset, offset + s_len);
-
-        needle == xpath_chars
-    }
-
 
     fn valid_ncname_start_char(& self, offset: uint) -> bool {
         let c = self.xpath[offset];
@@ -163,6 +151,14 @@ static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..6] = [
     ("..", Token::ParentNode),
 ];
 
+static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
+    ("and", Token::And),
+    ("or",  Token::Or),
+    ("mod", Token::Remainder),
+    ("div", Token::Divide),
+    ("*",   Token::Multiply),
+];
+
 fn parse_quoted_literal<'a>(p: Point<'a>, quote: &str)
                             -> peresil::Result<'a, Token, TokenizerErr>
 {
@@ -213,21 +209,22 @@ fn parse_current_node<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerE
     peresil::Result::success(Token::CurrentNode, p)
 }
 
+fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
+                          -> peresil::Result<'a, Token, TokenizerErr>
+{
+    if prefer_named_ops {
+        p.consume_identifier(NAMED_OPERATORS.as_slice())
+    } else {
+        peresil::Result::failure(None, p)
+    }
+}
+
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
-        let named_operators = vec![
-            ("and", Token::And),
-            ("or",  Token::Or),
-            ("mod", Token::Remainder),
-            ("div", Token::Divide),
-            ("*",   Token::Multiply)
-        ];
-
         Tokenizer {
             xpath: XPathString::new(xpath),
             start: 0,
             prefer_recognition_of_operator_names: false,
-            named_operators: named_operators,
         }
     }
 
@@ -244,7 +241,8 @@ impl Tokenizer {
                 .or_else(|| parse_quoted_literal(p, "\x22")) // "
                 .or_else(|| parse_quoted_literal(p, "\x27")) // '
                 .or_else(|| parse_number(p))
-                .or_else(|| parse_current_node(p));
+                .or_else(|| parse_current_node(p))
+                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names));
 
             match r {
                 peresil::Result::Success(p) => {
@@ -264,18 +262,6 @@ impl Tokenizer {
         {
             let mut offset = self.start;
             let current_start = self.start;
-
-            if self.prefer_recognition_of_operator_names {
-                for &(ref name, ref token) in self.named_operators.iter() {
-                    let name_chars: Vec<char> = name.chars().collect();
-                    let name_chars_slice = name_chars.as_slice();
-
-                    if self.xpath.str_at_is(offset, name_chars_slice) {
-                        self.start += name_chars.len();
-                        return Ok(token.clone());
-                    }
-                }
-            }
 
             if self.xpath.char_at_is(offset, '*') {
                 self.start = offset + 1;
