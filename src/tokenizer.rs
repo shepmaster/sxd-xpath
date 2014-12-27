@@ -19,7 +19,6 @@ pub type TokenResult = Result<Token, TokenizerErr>;
 
 #[deriving(Show,PartialEq,Clone,Copy)]
 pub enum TokenizerErr {
-    MissingLocalName,
     MismatchedQuoteCharacters,
     UnableToCreateToken,
 }
@@ -43,55 +42,6 @@ impl XPathString {
 
     fn len(& self) -> uint {
         self.xpath.len()
-    }
-
-    fn valid_ncname_start_char(& self, offset: uint) -> bool {
-        let c = self.xpath[offset];
-        if c >= 'A' && c <= 'Z' { return true }
-        if c == '_' { return true }
-        if c >= 'a' && c <= 'z' { return true }
-        // TODO: All non-ASCII codepoints
-        return false;
-    }
-
-    fn valid_ncname_follow_char(& self, offset: uint) -> bool {
-        let c = self.xpath[offset];
-        if self.valid_ncname_start_char(offset) { return true }
-        if c == '-' { return true }
-        if c == '.' { return true }
-        if c >= '0' && c <= '9' { return true }
-        // TODO: All non-ASCII codepoints
-        return false;
-    }
-
-    fn while_valid_string(& self, offset: uint) -> uint {
-        let mut offset = offset;
-
-        if offset < self.xpath.len() && self.valid_ncname_start_char(offset) {
-            offset += 1;
-
-            while offset < self.xpath.len() && self.valid_ncname_follow_char(offset) {
-                offset += 1;
-            }
-        }
-
-        return offset;
-    }
-
-    fn substr(& self, start: uint, end: uint) -> string::String {
-        string::String::from_chars(self.xpath.slice(start, end))
-    }
-
-    fn char_at_is(&self, offset: uint, c: char) -> bool {
-        let has_one_more = self.xpath.len() >= offset + 1;
-
-        has_one_more && self.xpath[offset] == c
-    }
-
-    fn char_at_is_not(&self, offset: uint, c: char) -> bool {
-        let has_one_more = self.xpath.len() >= offset + 1;
-
-        ! has_one_more || self.xpath[offset] != c
     }
 
     fn is_xml_space(&self, offset: uint) -> bool {
@@ -219,6 +169,38 @@ fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
     }
 }
 
+fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
+        let (wc, p) = try_parse!(p.consume_literal("*"));
+
+        let tok = Token::String(wc.to_string());
+        peresil::Result::success(tok, p)
+    }
+
+    fn prefixed_wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
+        let (prefix, p) = try_parse!(p.consume_ncname());
+        let (_, p) = try_parse!(p.consume_literal(":"));
+        let (wc, p) = try_parse!(p.consume_literal("*"));
+
+        let tok = Token::PrefixedName(prefix.to_string(), wc.to_string());
+        peresil::Result::success(tok, p)
+    }
+
+    fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
+        p.consume_prefixed_name().map(|name| {
+            let local = name.local_part.to_string();
+            match name.prefix {
+                Some(prefix) => Token::PrefixedName(prefix.to_string(), local),
+                None         => Token::String(local),
+            }
+        })
+    }
+
+    wildcard(p)
+        .or_else(|| prefixed_wildcard(p))
+        .or_else(|| prefixed_name(p))
+}
+
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
         Tokenizer {
@@ -242,7 +224,8 @@ impl Tokenizer {
                 .or_else(|| parse_quoted_literal(p, "\x27")) // '
                 .or_else(|| parse_number(p))
                 .or_else(|| parse_current_node(p))
-                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names));
+                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
+                .or_else(|| parse_name_test(p));
 
             match r {
                 peresil::Result::Success(p) => {
@@ -251,45 +234,11 @@ impl Tokenizer {
                 },
                 peresil::Result::Partial{ failure: p, .. } |
                 peresil::Result::Failure(p) => {
-                    if let Some(e) = p.data {
-                        return Err(e);
+                    match p.data {
+                        Some(e) => Err(e),
+                        None    => Err(UnableToCreateToken),
                     }
-                    // Continue processing
                 }
-            }
-        }
-
-        {
-            let mut offset = self.start;
-            let current_start = self.start;
-
-            if self.xpath.char_at_is(offset, '*') {
-                self.start = offset + 1;
-                return Ok(Token::String("*".to_string()));
-            }
-
-            offset = self.xpath.while_valid_string(offset);
-
-            if self.xpath.char_at_is(offset, ':') && self.xpath.char_at_is_not(offset + 1, ':') {
-                let prefix = self.xpath.substr(current_start, offset);
-
-                offset += 1;
-
-                let current_start = offset;
-                offset = self.xpath.while_valid_string(offset);
-
-                if current_start == offset {
-                    return Err(MissingLocalName);
-                }
-
-                let name = self.xpath.substr(current_start, offset);
-
-                self.start = offset;
-                return Ok(Token::PrefixedName(prefix, name));
-
-            } else {
-                self.start = offset;
-                return Ok(Token::String(self.xpath.substr(current_start, offset)));
             }
         }
     }
@@ -452,7 +401,6 @@ mod test {
     use super::{TokenResult,TokenizerErr};
     use super::TokenizerErr::{
         MismatchedQuoteCharacters,
-        MissingLocalName,
         UnableToCreateToken,
     };
 
@@ -822,7 +770,7 @@ mod test {
         let tokenizer = Tokenizer::new("ns:");
         let res = all_tokens_raw(tokenizer);
 
-        assert_eq!(Err(MissingLocalName), res);
+        assert_eq!(Err(UnableToCreateToken), res);
     }
 
     #[test]
