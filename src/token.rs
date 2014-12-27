@@ -1,6 +1,23 @@
 use std::string;
 use self::Token::*;
 
+#[deriving(Copy,Clone,PartialEq,Show)]
+pub enum AxisName {
+    Ancestor,
+    AncestorOrSelf,
+    Attribute,
+    Child,
+    Descendant,
+    DescendantOrSelf,
+    Following,
+    FollowingSibling,
+    Namespace,
+    Parent,
+    Preceding,
+    PrecedingSibling,
+    Self,
+}
+
 #[deriving(PartialEq,Show,Clone)]
 pub enum Token {
     And,
@@ -33,7 +50,7 @@ pub enum Token {
     String(string::String),
 
     // Specializations
-    Axis(string::String),
+    Axis(AxisName),
     Function(string::String),
     NodeTest(string::String),
 }

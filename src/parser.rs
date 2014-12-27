@@ -4,7 +4,7 @@ use std::string;
 use self::ParseErr::*;
 
 use super::Value::{String,Number};
-use super::token::Token;
+use super::token::{Token,AxisName};
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
@@ -27,7 +27,6 @@ pub enum ParseErr {
     EmptyPredicate,
     ExtraUnparsedTokens,
     InvalidNodeTest(string::String),
-    InvalidAxis(string::String),
     RanOutOfInput,
     RightHandSideExpressionMissing,
     TokenizerError(TokenizerErr),
@@ -174,14 +173,13 @@ impl<I : Iterator<TokenResult>> Parser {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
 
-            match name.as_slice() {
-                // TODO: explicit child axis?
-                "self" => Ok(box axis::Self as SubAxis),
-                "parent" => Ok(box axis::Parent as SubAxis),
-                "descendant" => Ok(box axis::Descendant as SubAxis),
-                "descendant-or-self" => Ok(axis::DescendantOrSelf::new()),
-                "attribute" => Ok(box axis::Attribute as SubAxis),
-                _ => Err(InvalidAxis(name)),
+            match name {
+                AxisName::Self => Ok(box axis::Self as SubAxis),
+                AxisName::Parent => Ok(box axis::Parent as SubAxis),
+                AxisName::Descendant => Ok(box axis::Descendant as SubAxis),
+                AxisName::DescendantOrSelf => Ok(axis::DescendantOrSelf::new()),
+                AxisName::Attribute => Ok(box axis::Attribute as SubAxis),
+                _ => unimplemented!(),
             }
         } else {
             Ok(box axis::Child as SubAxis)
@@ -545,7 +543,7 @@ mod test {
 
     use super::super::nodeset::ToNode;
 
-    use super::super::token::Token;
+    use super::super::token::{Token,AxisName};
     use super::super::tokenizer::{TokenResult,TokenizerErr};
 
     use super::super::function::register_core_functions;
@@ -557,7 +555,6 @@ mod test {
         EmptyPredicate,
         ExtraUnparsedTokens,
         InvalidNodeTest,
-        InvalidAxis,
         RanOutOfInput,
         RightHandSideExpressionMissing,
         TokenizerError,
@@ -731,7 +728,7 @@ mod test {
     #[test]
     fn parses_self_axis() {
         let tokens = tokens![
-            Token::Axis("self".to_string()),
+            Token::Axis(AxisName::Self),
             Token::String("the-top-node".to_string())
         ];
 
@@ -747,7 +744,7 @@ mod test {
     #[test]
     fn parses_parent_axis() {
         let tokens = tokens![
-            Token::Axis("parent".to_string()),
+            Token::Axis(AxisName::Parent),
             Token::String("the-top-node".to_string())
         ];
 
@@ -764,7 +761,7 @@ mod test {
     #[test]
     fn parses_descendant_axis() {
         let tokens = tokens![
-            Token::Axis("descendant".to_string()),
+            Token::Axis(AxisName::Descendant),
             Token::String("two".to_string())
         ];
 
@@ -782,7 +779,7 @@ mod test {
     #[test]
     fn parses_descendant_or_self_axis() {
         let tokens = tokens![
-            Token::Axis("descendant-or-self".to_string()),
+            Token::Axis(AxisName::DescendantOrSelf),
             Token::String("*".to_string())
         ];
 
@@ -800,7 +797,7 @@ mod test {
     #[test]
     fn parses_attribute_axis() {
         let tokens = tokens![
-            Token::Axis("attribute".to_string()),
+            Token::Axis(AxisName::Attribute),
             Token::String("*".to_string())
         ];
 
@@ -870,7 +867,7 @@ mod test {
     #[test]
     fn parses_axis_and_node_test() {
         let tokens = tokens![
-            Token::Axis("self".to_string()),
+            Token::Axis(AxisName::Self),
             Token::NodeTest("text".to_string()),
             Token::LeftParen,
             Token::RightParen
@@ -1507,21 +1504,6 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(Nodes(nodeset![doc.top_node()]), ex.evaluate_on(&*expr, node2));
-    }
-
-    #[test]
-    fn unknown_axis_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::Axis("bad-axis".to_string()),
-            Token::String("*".to_string())
-        ];
-
-        let package = Package::new();
-        let doc = TestDoc(package.as_document());
-
-        let ex = Exercise::new(&doc);
-        let res = ex.parse_raw(tokens);
-        assert_eq!(Some(InvalidAxis("bad-axis".to_string())), res.err());
     }
 
     #[test]

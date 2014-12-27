@@ -6,7 +6,7 @@ use document::parser::XmlParseExt;
 
 use self::TokenizerErr::*;
 
-use super::token::Token;
+use super::token::{Token,AxisName};
 use super::token::Token::*;
 
 pub struct Tokenizer {
@@ -65,23 +65,6 @@ static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
     ("div", Token::Divide),
     ("*",   Token::Multiply),
 ];
-
-#[deriving(Copy,Clone,PartialEq,Show)]
-enum AxisName {
-    Ancestor,
-    AncestorOrSelf,
-    Attribute,
-    Child,
-    Descendant,
-    DescendantOrSelf,
-    Following,
-    FollowingSibling,
-    Namespace,
-    Parent,
-    Preceding,
-    PrecedingSibling,
-    Self,
-}
 
 static AXES: [Identifier<'static, AxisName>, ..13] = [
     ("ancestor", AxisName::Ancestor),
@@ -163,10 +146,7 @@ fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenize
     let (axis, p) = try_parse!(p.consume_identifier(AXES.as_slice()));
     let (_, p) = try_parse!(p.consume_literal("::"));
 
-    // Ugly. Should just pass the enum around
-    let name = AXES.iter().find(|&&(_, n)| n == axis).map(|&(n, _)| n).unwrap().to_string();
-
-    peresil::Result::success(Token::Axis(name), p)
+    peresil::Result::success(Token::Axis(axis), p)
 }
 
 fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
@@ -331,24 +311,24 @@ impl<I> TokenDeabbreviator<I> {
     fn expand_token(&mut self, token: Token) {
         match token {
             Token::AtSign => {
-                self.push(Token::Axis("attribute".to_string()));
+                self.push(Token::Axis(AxisName::Attribute));
             }
             Token::DoubleSlash => {
                 self.push(Token::Slash);
-                self.push(Token::Axis("descendant-or-self".to_string()));
+                self.push(Token::Axis(AxisName::DescendantOrSelf));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
                 self.push(Token::Slash);
             }
             Token::CurrentNode => {
-                self.push(Token::Axis("self".to_string()));
+                self.push(Token::Axis(AxisName::Self));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
             }
             Token::ParentNode => {
-                self.push(Token::Axis("parent".to_string()));
+                self.push(Token::Axis(AxisName::Parent));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
@@ -381,7 +361,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
 
 #[cfg(test)]
 mod test {
-    use super::super::token::Token;
+    use super::super::token::{Token,AxisName};
 
     use super::Tokenizer;
     use super::{TokenResult,TokenizerErr};
@@ -476,7 +456,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("ancestor::world");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::Axis("ancestor".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::Ancestor),
                                                Token::String("world".to_string())));
     }
 
@@ -799,7 +779,7 @@ mod test {
         // let a: () = deabbrv.next();
         // println!("{}",a );
 
-        assert_eq!(all_tokens(deabbrv), vec![Token::Axis("attribute".to_string())]);
+        assert_eq!(all_tokens(deabbrv), vec![Token::Axis(AxisName::Attribute)]);
     }
 
     #[test]
@@ -809,7 +789,7 @@ mod test {
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(deabbrv), vec!(Token::Slash,
-                                             Token::Axis("descendant-or-self".to_string()),
+                                             Token::Axis(AxisName::DescendantOrSelf),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen,
@@ -822,7 +802,7 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis("self".to_string()),
+        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::Self),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen));
@@ -834,7 +814,7 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis("parent".to_string()),
+        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::Parent),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen));
