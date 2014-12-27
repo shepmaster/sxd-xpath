@@ -168,7 +168,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn has_more_tokens(& self) -> bool {
+    pub fn has_more_tokens(&self) -> bool {
         self.xpath.len() > self.start
     }
 
@@ -191,7 +191,7 @@ impl Tokenizer {
         peresil::Result::success(tok, p)
     }
 
-    fn raw_next_token(& mut self) -> TokenResult {
+    fn raw_next_token(&mut self) -> TokenResult {
         let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
 
         match self.parse_token(p) {
@@ -209,7 +209,7 @@ impl Tokenizer {
         }
     }
 
-    fn next_token(& mut self) -> TokenResult {
+    fn next_token(&mut self) -> TokenResult {
         let token = try!(self.raw_next_token());
 
         if ! (token.precedes_node_test() ||
@@ -357,7 +357,7 @@ mod test {
     use super::TokenDisambiguator;
     use super::TokenDeabbreviator;
 
-    fn is_finished(tokenizer: & Tokenizer) -> bool {
+    fn is_finished(tokenizer: &Tokenizer) -> bool {
         ! tokenizer.has_more_tokens()
     }
 
