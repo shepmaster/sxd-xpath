@@ -2,7 +2,6 @@ use std::iter::Peekable;
 
 use self::ParseErr::*;
 
-use super::Value::{String,Number};
 use super::token::{Token,AxisName,NodeTestName};
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
@@ -201,8 +200,10 @@ impl<I : Iterator<TokenResult>> Parser {
     fn default_node_test(&self, source: TokenSource<I>, axis: &Axis)
                          -> Result<Option<SubNodeTest>,ParseErr>
     {
-        if next_token_is!(source, Token::String) {
-            let name = consume_value!(source, Token::String);
+        if next_token_is!(source, Token::NameTest) {
+            let name = consume_value!(source, Token::NameTest);
+            // TODO: Use prefix
+            let name = name.1;
 
             match axis.principal_node_type() {
                 PrincipalNodeType::Attribute => Ok(Some(box node_test::Attribute{name: name} as SubNodeTest)),
@@ -564,6 +565,10 @@ mod test {
         ($($e:expr),+,) => (tokens!($($e),+))
     );
 
+    fn name_test(local_part: &str) -> Token {
+        Token::NameTest((None, local_part.to_string()))
+    }
+
     trait ApproxEq {
         fn is_approx_eq(&self, other: &Self) -> bool;
     }
@@ -686,7 +691,7 @@ mod test {
 
     #[test]
     fn parses_string_as_child() {
-        let tokens = tokens![Token::String("hello".to_string())];
+        let tokens = tokens![name_test("hello")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -701,9 +706,9 @@ mod test {
     #[test]
     fn parses_two_strings_as_grandchild() {
         let tokens = tokens![
-            Token::String("hello".to_string()),
+            name_test("hello"),
             Token::Slash,
-            Token::String("world".to_string())
+            name_test("world")
         ];
 
         let package = Package::new();
@@ -721,7 +726,7 @@ mod test {
     fn parses_self_axis() {
         let tokens = tokens![
             Token::Axis(AxisName::Self),
-            Token::String("the-top-node".to_string())
+            name_test("the-top-node")
         ];
 
         let package = Package::new();
@@ -737,7 +742,7 @@ mod test {
     fn parses_parent_axis() {
         let tokens = tokens![
             Token::Axis(AxisName::Parent),
-            Token::String("the-top-node".to_string())
+            name_test("the-top-node")
         ];
 
         let package = Package::new();
@@ -754,7 +759,7 @@ mod test {
     fn parses_descendant_axis() {
         let tokens = tokens![
             Token::Axis(AxisName::Descendant),
-            Token::String("two".to_string())
+            name_test("two")
         ];
 
         let package = Package::new();
@@ -772,7 +777,7 @@ mod test {
     fn parses_descendant_or_self_axis() {
         let tokens = tokens![
             Token::Axis(AxisName::DescendantOrSelf),
-            Token::String("*".to_string())
+            name_test("*")
         ];
 
         let package = Package::new();
@@ -790,7 +795,7 @@ mod test {
     fn parses_attribute_axis() {
         let tokens = tokens![
             Token::Axis(AxisName::Attribute),
-            Token::String("*".to_string())
+            name_test("*")
         ];
 
         let package = Package::new();
@@ -806,7 +811,7 @@ mod test {
 
     #[test]
     fn parses_child_with_same_name_as_an_axis() {
-        let tokens = tokens![Token::String("self".to_string())];
+        let tokens = tokens![name_test("self")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -869,7 +874,7 @@ mod test {
     #[test]
     fn numeric_predicate_selects_indexed_node() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::Number(2.0),
             Token::RightBracket
@@ -902,7 +907,7 @@ mod test {
     #[test]
     fn predicate_accepts_any_expression() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::Function("true".to_string()),
             Token::LeftParen,
@@ -928,7 +933,7 @@ mod test {
     #[test]
     fn true_function_predicate_selects_all_nodes() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::Function("true".to_string()),
             Token::LeftParen,
@@ -950,7 +955,7 @@ mod test {
     #[test]
     fn false_function_predicate_selects_no_nodes() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::Function("false".to_string()),
             Token::LeftParen,
@@ -972,7 +977,7 @@ mod test {
     #[test]
     fn multiple_predicates() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::Number(2.0),
             Token::RightBracket,
@@ -1406,7 +1411,7 @@ mod test {
         let tokens = tokens![
             Token::Variable("variable".to_string()),
             Token::Slash,
-            Token::String("child".to_string()),
+            name_test("child"),
         ];
 
         let package = Package::new();
@@ -1467,7 +1472,7 @@ mod test {
     fn absolute_path_with_child_expression() {
         let tokens = tokens![
             Token::Slash,
-            Token::String("*".to_string()),
+            name_test("*"),
         ];
 
         let package = Package::new();
@@ -1528,7 +1533,7 @@ mod test {
     #[test]
     fn empty_predicate_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::LeftBracket,
             Token::RightBracket,
         ];
@@ -1544,7 +1549,7 @@ mod test {
     #[test]
     fn relative_path_with_trailing_slash_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::String("*".to_string()),
+            name_test("*"),
             Token::Slash,
         ];
 

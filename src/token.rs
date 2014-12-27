@@ -49,16 +49,15 @@ pub enum Token {
     ParentNode,
     Pipe,
     PlusSign,
-    PrefixedName(string::String, string::String),
     Remainder,
     RightBracket,
     RightParen,
     Slash,
-    String(string::String),
 
     // Specializations
     Axis(AxisName),
     Function(string::String),
+    NameTest((Option<string::String>, string::String)),
     NodeTest(NodeTestName),
     Variable(string::String),
 }

@@ -198,7 +198,7 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
     fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         let (wc, p) = try_parse!(p.consume_literal("*"));
 
-        let tok = Token::String(wc.to_string());
+        let tok = Token::NameTest((None, wc.to_string()));
         peresil::Result::success(tok, p)
     }
 
@@ -207,17 +207,16 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         let (_, p) = try_parse!(p.consume_literal(":"));
         let (wc, p) = try_parse!(p.consume_literal("*"));
 
-        let tok = Token::PrefixedName(prefix.to_string(), wc.to_string());
+        let tok = Token::NameTest((Some(prefix.to_string()), wc.to_string()));
         peresil::Result::success(tok, p)
     }
 
     fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         p.consume_prefixed_name().map(|name| {
-            let local = name.local_part.to_string();
-            match name.prefix {
-                Some(prefix) => Token::PrefixedName(prefix.to_string(), local),
-                None         => Token::String(local),
-            }
+            Token::NameTest((
+                name.prefix.map(|p| p.to_string()),
+                name.local_part.to_string()
+            ))
         })
     }
 
@@ -404,6 +403,10 @@ mod test {
         }
     }
 
+    fn name_test(local_part: &str) -> Token {
+        Token::NameTest((None, local_part.to_string()))
+    }
+
     #[test]
     fn empty_string_has_no_tokens()
     {
@@ -416,7 +419,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("hello");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("hello".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(name_test("hello")));
     }
 
     #[test]
@@ -424,9 +427,9 @@ mod test {
     {
         let tokenizer = Tokenizer::new("hello/world");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
                                                Token::Slash,
-                                               Token::String("world".to_string())));
+                                               name_test("world")));
     }
 
     #[test]
@@ -434,11 +437,11 @@ mod test {
     {
         let tokenizer = Tokenizer::new("hello/there/world");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
                                                Token::Slash,
-                                               Token::String("there".to_string()),
+                                               name_test("there"),
                                                Token::Slash,
-                                               Token::String("world".to_string())));
+                                               name_test("world")));
     }
 
     #[test]
@@ -446,7 +449,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("ns:foo");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::PrefixedName("ns".to_string(), "foo".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(Token::NameTest((Some("ns".to_string()), "foo".to_string()))));
     }
 
     #[test]
@@ -464,7 +467,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("*");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("*".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(name_test("*")));
     }
 
     #[test]
@@ -473,7 +476,7 @@ mod test {
         let tokenizer = Tokenizer::new("ancestor::world");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::Ancestor),
-                                               Token::String("world".to_string())));
+                                               name_test("world")));
     }
 
     #[test]
@@ -497,9 +500,9 @@ mod test {
     {
         let tokenizer = Tokenizer::new("hello//world");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
                                                Token::DoubleSlash,
-                                               Token::String("world".to_string())));
+                                               name_test("world")));
     }
 
     #[test]
@@ -685,7 +688,7 @@ mod test {
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(1.0),
                                                Token::And,
-                                               Token::String("z2".to_string())));
+                                               name_test("z2")));
     }
 
     #[test]
@@ -695,7 +698,7 @@ mod test {
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(2.0),
                                                Token::Or,
-                                               Token::String("or".to_string())));
+                                               name_test("or")));
     }
 
     #[test]
@@ -705,7 +708,7 @@ mod test {
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(3.0),
                                                Token::Remainder,
-                                               Token::String("div".to_string())));
+                                               name_test("div")));
     }
 
     #[test]
@@ -715,7 +718,7 @@ mod test {
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(1.0),
                                                Token::Divide,
-                                               Token::String("z2".to_string())));
+                                               name_test("z2")));
     }
 
     #[test]
