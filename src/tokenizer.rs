@@ -106,17 +106,6 @@ impl XPathString {
         return offset;
     }
 
-    fn while_not_character(& self, offset: uint, end_char: char) -> uint {
-        let mut offset = offset;
-
-        while offset < self.xpath.len() && self.xpath[offset] != end_char {
-            offset += 1;
-        }
-
-        return offset;
-    }
-
-
     fn substr(& self, start: uint, end: uint) -> string::String {
         string::String::from_chars(self.xpath.slice(start, end))
     }
@@ -164,6 +153,17 @@ impl XPathString {
     }
 }
 
+trait XPathParseExt<'a> {
+    fn consume_quoted_string<E>(&self, quote: &str) -> peresil::Result<'a, &'a str, E>;
+}
+
+impl<'a> XPathParseExt<'a> for Point<'a> {
+    fn consume_quoted_string<E>(&self, quote: &str) -> peresil::Result<'a, &'a str, E> {
+        let end_of_str = self.s.find_str(quote).or(Some(self.s.len()));
+        self.consume_to(end_of_str)
+    }
+}
+
 static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..13] = [
     ("/", Token::Slash),
     ("(", Token::LeftParen),
@@ -189,7 +189,16 @@ static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..6] = [
     ("..", Token::ParentNode),
 ];
 
-static QUOTE_CHARS: [char, .. 2] =  ['\'', '\"'];
+fn parse_quoted_literal<'a>(p: Point<'a>, quote: &str)
+                            -> peresil::Result<'a, Token, TokenizerErr>
+{
+    let (_, p) = try_parse!(p.consume_literal(quote));
+    let (v, p) = try_parse!(p.consume_quoted_string(quote));
+    let (_, p) = try_parse!(p.consume_literal(quote), MismatchedQuoteCharacters);
+
+    let tok = Token::Literal(v.to_string());
+    peresil::Result::success(tok, p)
+}
 
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
@@ -213,50 +222,32 @@ impl Tokenizer {
         self.xpath.len() > self.start
     }
 
-    fn tokenize_literal(& mut self, quote_char: char) -> TokenResult {
-        let mut offset = self.start;
-
-        offset += 1; // Skip over the starting quote
-        let start_of_string = offset;
-
-        offset = self.xpath.while_not_character(offset, quote_char);
-        let end_of_string = offset;
-
-        if self.xpath.char_at_is_not(offset, quote_char) {
-            return Err(MismatchedQuoteCharacters);
-        }
-        offset += 1; // Skip over ending quote
-
-        self.start = offset;
-        return Ok(Token::Literal(self.xpath.substr(start_of_string, end_of_string)));
-    }
-
     fn raw_next_token(& mut self) -> TokenResult {
         {
             let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
 
-            let r = p.consume_identifier::<_, ()>(TWO_CHAR_TOKENS.as_slice())
-                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()));
+            let r = p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
+                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
+                .or_else(|| parse_quoted_literal(p, "\x22")) // "
+                .or_else(|| parse_quoted_literal(p, "\x27")) // '
+                ;
 
             match r {
                 peresil::Result::Success(p) => {
                     self.start = p.point.offset;
                     return Ok(p.data)
                 },
-                peresil::Result::Partial{ .. } |
-                peresil::Result::Failure(..) => {
+                peresil::Result::Partial{ failure: p, .. } |
+                peresil::Result::Failure(p) => {
+                    if let Some(e) = p.data {
+                        return Err(e);
+                    }
                     // Continue processing
                 }
             }
         }
 
         let c = self.xpath.char_at(self.start);
-
-        for quote_char in QUOTE_CHARS.iter() {
-            if *quote_char == c {
-                return self.tokenize_literal(*quote_char);
-            }
-        }
 
         if '.' == c {
             if self.xpath.char_at_is_not_digit(self.start + 1) {
