@@ -6,7 +6,7 @@ use document::parser::XmlParseExt;
 
 use self::TokenizerErr::*;
 
-use super::token::{Token,AxisName};
+use super::token::{Token,AxisName,NodeTestName};
 use super::token::Token::*;
 
 pub struct Tokenizer {
@@ -80,6 +80,12 @@ static AXES: [Identifier<'static, AxisName>, ..13] = [
     ("preceding", AxisName::Preceding),
     ("preceding-sibling", AxisName::PrecedingSibling),
     ("self", AxisName::Self),
+];
+
+static NODE_TESTS_WITHOUT_ARG : [Identifier<'static, NodeTestName>, .. 3] = [
+    ("comment", NodeTestName::Comment),
+    ("text", NodeTestName::Text),
+    ("node", NodeTestName::Node),
 ];
 
 fn parse_literal<'a>(p: Point<'a>) -> peresil::Result<'a, &'a str, TokenizerErr> {
@@ -157,6 +163,27 @@ fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenize
     peresil::Result::success(Token::Axis(axis), p)
 }
 
+fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    fn without_arg<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
+        let (node_type, p) = try_parse!(p.consume_identifier(NODE_TESTS_WITHOUT_ARG.as_slice()));
+        let (_, p) = try_parse!(p.consume_literal("()"));
+
+        peresil::Result::success(Token::NodeTest(node_type), p)
+    }
+
+    fn with_arg<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+        let (_, p) = try_parse!(p.consume_literal("processing-instruction("));
+        let (arg, p) = try_parse!(parse_literal(p));
+        let (_, p) = try_parse!(p.consume_literal(")"));
+
+        let name = NodeTestName::ProcessingInstruction(arg.to_string());
+        peresil::Result::success(Token::NodeTest(name), p)
+    }
+
+    without_arg(p)
+        .or_else(|| with_arg(p))
+}
+
 fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         let (wc, p) = try_parse!(p.consume_literal("*"));
@@ -213,6 +240,7 @@ impl Tokenizer {
                 .or_else(|| parse_current_node(p))
                 .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
                 .or_else(|| parse_axis_specifier(p))
+                .or_else(|| parse_node_type(p))
                 .or_else(|| parse_name_test(p))
         });
 
@@ -277,9 +305,6 @@ impl<T, I: Iterator<T>> TokenDisambiguator<T, I> {
     }
 }
 
-static NODE_TEST_NAMES : [&'static str, .. 4] =
-    [ "comment", "text", "processing-instruction", "node" ];
-
 impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<TokenResult, I> {
     fn next(&mut self) -> Option<TokenResult> {
         let token = self.source.next();
@@ -287,11 +312,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<Toke
 
         match (token, next) {
             (Some(Ok(Token::String(val))), Some(&Ok(Token::LeftParen))) => {
-                if NODE_TEST_NAMES.contains(&val.as_slice()) {
-                    Some(Ok(Token::NodeTest(val)))
-                } else {
-                    Some(Ok(Token::Function(val)))
-                }
+                Some(Ok(Token::Function(val)))
             },
             (token, _) => token,
         }
@@ -323,22 +344,16 @@ impl<I> TokenDeabbreviator<I> {
             Token::DoubleSlash => {
                 self.push(Token::Slash);
                 self.push(Token::Axis(AxisName::DescendantOrSelf));
-                self.push(Token::String("node".to_string()));
-                self.push(Token::LeftParen);
-                self.push(Token::RightParen);
+                self.push(Token::NodeTest(NodeTestName::Node));
                 self.push(Token::Slash);
             }
             Token::CurrentNode => {
                 self.push(Token::Axis(AxisName::Self));
-                self.push(Token::String("node".to_string()));
-                self.push(Token::LeftParen);
-                self.push(Token::RightParen);
+                self.push(Token::NodeTest(NodeTestName::Node));
             }
             Token::ParentNode => {
                 self.push(Token::Axis(AxisName::Parent));
-                self.push(Token::String("node".to_string()));
-                self.push(Token::LeftParen);
-                self.push(Token::RightParen);
+                self.push(Token::NodeTest(NodeTestName::Node));
             }
             _ => {
                 self.push(token);
@@ -368,7 +383,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
 
 #[cfg(test)]
 mod test {
-    use super::super::token::{Token,AxisName};
+    use super::super::token::{Token,AxisName,NodeTestName};
 
     use super::Tokenizer;
     use super::{TokenResult,TokenizerErr};
@@ -720,6 +735,23 @@ mod test {
     }
 
     #[test]
+    fn tokenizes_node_test_without_args() {
+        let tokenizer = Tokenizer::new("text()");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::NodeTest(NodeTestName::Text)]);
+    }
+
+    #[test]
+    fn tokenizes_node_test_with_args() {
+        let tokenizer = Tokenizer::new("processing-instruction('hi')");
+
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::NodeTest(NodeTestName::ProcessingInstruction("hi".to_string()))]
+        );
+    }
+
+    #[test]
     fn exception_thrown_when_nothing_was_tokenized()
     {
         let tokenizer = Tokenizer::new("!");
@@ -744,23 +776,6 @@ mod test {
         let res = all_tokens_raw(tokenizer);
 
         assert_eq!(Err(MismatchedQuoteCharacters), res);
-    }
-
-    #[test]
-    fn disambiguates_node_test_functions() {
-        // Would prefer parametric tests
-        for name in ["comment", "text", "processing-instruction", "node"].iter() {
-            let input_tokens: Vec<TokenResult> = vec!(
-                Ok(Token::String(name.to_string())),
-                Ok(Token::LeftParen),
-            );
-
-            let disambig = TokenDisambiguator::new(input_tokens.into_iter());
-
-            assert_eq!(all_tokens(disambig),
-                       vec!(Token::NodeTest(name.to_string()),
-                            Token::LeftParen));
-        }
     }
 
     #[test]
@@ -797,9 +812,7 @@ mod test {
 
         assert_eq!(all_tokens(deabbrv), vec!(Token::Slash,
                                              Token::Axis(AxisName::DescendantOrSelf),
-                                             Token::String("node".to_string()),
-                                             Token::LeftParen,
-                                             Token::RightParen,
+                                             Token::NodeTest(NodeTestName::Node),
                                              Token::Slash));
     }
 
@@ -810,9 +823,7 @@ mod test {
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::Self),
-                                             Token::String("node".to_string()),
-                                             Token::LeftParen,
-                                             Token::RightParen));
+                                             Token::NodeTest(NodeTestName::Node)));
     }
 
     #[test]
@@ -822,8 +833,6 @@ mod test {
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::Parent),
-                                             Token::String("node".to_string()),
-                                             Token::LeftParen,
-                                             Token::RightParen));
+                                             Token::NodeTest(NodeTestName::Node)));
     }
 }

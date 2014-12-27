@@ -1,10 +1,9 @@
 use std::iter::Peekable;
-use std::string;
 
 use self::ParseErr::*;
 
 use super::Value::{String,Number};
-use super::token::{Token,AxisName};
+use super::token::{Token,AxisName,NodeTestName};
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
@@ -26,7 +25,6 @@ impl Parser {
 pub enum ParseErr {
     EmptyPredicate,
     ExtraUnparsedTokens,
-    InvalidNodeTest(string::String),
     RanOutOfInput,
     RightHandSideExpressionMissing,
     TokenizerError(TokenizerErr),
@@ -190,14 +188,10 @@ impl<I : Iterator<TokenResult>> Parser {
         if next_token_is!(source, Token::NodeTest) {
             let name = consume_value!(source, Token::NodeTest);
 
-            try!(source.consume(&Token::LeftParen));
-            try!(source.consume(&Token::RightParen));
-
-            match name.as_slice() {
-                // TODO: explicit element, attribute tests?
-                "node" => Ok(Some(box node_test::Node as SubNodeTest)),
-                "text" => Ok(Some(box node_test::Text as SubNodeTest)),
-                _ => Err(InvalidNodeTest(name))
+            match name {
+                NodeTestName::Node => Ok(Some(box node_test::Node as SubNodeTest)),
+                NodeTestName::Text => Ok(Some(box node_test::Text as SubNodeTest)),
+                _ => unimplemented!(),
             }
         } else {
             Ok(None)
@@ -543,7 +537,7 @@ mod test {
 
     use super::super::nodeset::ToNode;
 
-    use super::super::token::{Token,AxisName};
+    use super::super::token::{Token,AxisName,NodeTestName};
     use super::super::tokenizer::{TokenResult,TokenizerErr};
 
     use super::super::function::register_core_functions;
@@ -554,7 +548,6 @@ mod test {
     use super::super::parser::ParseErr::{
         EmptyPredicate,
         ExtraUnparsedTokens,
-        InvalidNodeTest,
         RanOutOfInput,
         RightHandSideExpressionMissing,
         TokenizerError,
@@ -828,11 +821,7 @@ mod test {
 
     #[test]
     fn parses_node_node_test() {
-        let tokens = tokens![
-            Token::NodeTest("node".to_string()),
-            Token::LeftParen,
-            Token::RightParen
-        ];
+        let tokens = tokens![Token::NodeTest(NodeTestName::Node)];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -847,11 +836,7 @@ mod test {
 
     #[test]
     fn parses_text_node_test() {
-        let tokens = tokens![
-            Token::NodeTest("text".to_string()),
-            Token::LeftParen,
-            Token::RightParen
-        ];
+        let tokens = tokens![Token::NodeTest(NodeTestName::Text)];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -868,9 +853,7 @@ mod test {
     fn parses_axis_and_node_test() {
         let tokens = tokens![
             Token::Axis(AxisName::Self),
-            Token::NodeTest("text".to_string()),
-            Token::LeftParen,
-            Token::RightParen
+            Token::NodeTest(NodeTestName::Text),
         ];
 
         let package = Package::new();
@@ -1504,22 +1487,6 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(Nodes(nodeset![doc.top_node()]), ex.evaluate_on(&*expr, node2));
-    }
-
-    #[test]
-    fn unknown_node_test_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::NodeTest("bad-node-test".to_string()),
-            Token::LeftParen,
-            Token::RightParen
-        ];
-
-        let package = Package::new();
-        let doc = TestDoc(package.as_document());
-
-        let ex = Exercise::new(&doc);
-        let res = ex.parse_raw(tokens);
-        assert_eq!(Some(InvalidNodeTest("bad-node-test".to_string())), res.err());
     }
 
     #[test]

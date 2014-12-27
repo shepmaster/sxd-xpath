@@ -18,6 +18,14 @@ pub enum AxisName {
     Self,
 }
 
+#[deriving(Clone,PartialEq,Show)]
+pub enum NodeTestName {
+    Comment,
+    Text,
+    ProcessingInstruction(string::String),
+    Node,
+}
+
 #[deriving(PartialEq,Show,Clone)]
 pub enum Token {
     And,
@@ -52,7 +60,7 @@ pub enum Token {
     // Specializations
     Axis(AxisName),
     Function(string::String),
-    NodeTest(string::String),
+    NodeTest(NodeTestName),
 }
 
 impl Token {
