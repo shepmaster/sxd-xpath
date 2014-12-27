@@ -8,7 +8,6 @@ pub enum Token {
     CurrentNode,
     Divide,
     DollarSign,
-    DoubleColon,
     DoubleSlash,
     Equal,
     GreaterThan,
@@ -43,7 +42,7 @@ impl Token {
     pub fn precedes_node_test(& self) -> bool {
         match *self {
             AtSign |
-            DoubleColon => true,
+            Axis(..) => true,
             _ => false,
         }
     }

@@ -50,11 +50,10 @@ static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..13] = [
     (">", Token::GreaterThan),
 ];
 
-static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..6] = [
+static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..5] = [
     ("<=", Token::LessThanOrEqual),
     (">=", Token::GreaterThanOrEqual),
     ("!=", Token::NotEqual),
-    ("::", Token::DoubleColon),
     ("//", Token::DoubleSlash),
     ("..", Token::ParentNode),
 ];
@@ -65,6 +64,39 @@ static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
     ("mod", Token::Remainder),
     ("div", Token::Divide),
     ("*",   Token::Multiply),
+];
+
+#[deriving(Copy,Clone,PartialEq,Show)]
+enum AxisName {
+    Ancestor,
+    AncestorOrSelf,
+    Attribute,
+    Child,
+    Descendant,
+    DescendantOrSelf,
+    Following,
+    FollowingSibling,
+    Namespace,
+    Parent,
+    Preceding,
+    PrecedingSibling,
+    Self,
+}
+
+static AXES: [Identifier<'static, AxisName>, ..13] = [
+    ("ancestor", AxisName::Ancestor),
+    ("ancestor-or-self", AxisName::AncestorOrSelf),
+    ("attribute", AxisName::Attribute),
+    ("child", AxisName::Child),
+    ("descendant", AxisName::Descendant),
+    ("descendant-or-self", AxisName::DescendantOrSelf),
+    ("following", AxisName::Following),
+    ("following-sibling", AxisName::FollowingSibling),
+    ("namespace", AxisName::Namespace),
+    ("parent", AxisName::Parent),
+    ("preceding", AxisName::Preceding),
+    ("preceding-sibling", AxisName::PrecedingSibling),
+    ("self", AxisName::Self),
 ];
 
 fn parse_quoted_literal<'a>(p: Point<'a>, quote: &str)
@@ -127,6 +159,16 @@ fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
     }
 }
 
+fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    let (axis, p) = try_parse!(p.consume_identifier(AXES.as_slice()));
+    let (_, p) = try_parse!(p.consume_literal("::"));
+
+    // Ugly. Should just pass the enum around
+    let name = AXES.iter().find(|&&(_, n)| n == axis).map(|&(n, _)| n).unwrap().to_string();
+
+    peresil::Result::success(Token::Axis(name), p)
+}
+
 fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         let (wc, p) = try_parse!(p.consume_literal("*"));
@@ -183,6 +225,7 @@ impl Tokenizer {
                 .or_else(|| parse_number(p))
                 .or_else(|| parse_current_node(p))
                 .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
+                .or_else(|| parse_axis_specifier(p))
                 .or_else(|| parse_name_test(p))
         });
 
@@ -263,9 +306,6 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDisambiguator<Toke
                     Some(Ok(Token::Function(val)))
                 }
             },
-            (Some(Ok(Token::String(val))), Some(&Ok(Token::DoubleColon))) => {
-                Some(Ok(Token::Axis(val)))
-            },
             (token, _) => token,
         }
     }
@@ -291,28 +331,24 @@ impl<I> TokenDeabbreviator<I> {
     fn expand_token(&mut self, token: Token) {
         match token {
             Token::AtSign => {
-                self.push(Token::String("attribute".to_string()));
-                self.push(Token::DoubleColon);
+                self.push(Token::Axis("attribute".to_string()));
             }
             Token::DoubleSlash => {
                 self.push(Token::Slash);
-                self.push(Token::String("descendant-or-self".to_string()));
-                self.push(Token::DoubleColon);
+                self.push(Token::Axis("descendant-or-self".to_string()));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
                 self.push(Token::Slash);
             }
             Token::CurrentNode => {
-                self.push(Token::String("self".to_string()));
-                self.push(Token::DoubleColon);
+                self.push(Token::Axis("self".to_string()));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
             }
             Token::ParentNode => {
-                self.push(Token::String("parent".to_string()));
-                self.push(Token::DoubleColon);
+                self.push(Token::Axis("parent".to_string()));
                 self.push(Token::String("node".to_string()));
                 self.push(Token::LeftParen);
                 self.push(Token::RightParen);
@@ -436,20 +472,11 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_axis_separator()
-    {
-        let tokenizer = Tokenizer::new("::");
-
-        assert_eq!(all_tokens(tokenizer), vec!(Token::DoubleColon));
-    }
-
-    #[test]
     fn tokenizes_axis_selector()
     {
-        let tokenizer = Tokenizer::new("hello::world");
+        let tokenizer = Tokenizer::new("ancestor::world");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::String("hello".to_string()),
-                                               Token::DoubleColon,
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Axis("ancestor".to_string()),
                                                Token::String("world".to_string())));
     }
 
@@ -764,20 +791,6 @@ mod test {
     }
 
     #[test]
-    fn name_followed_by_double_colon_becomes_axis_name() {
-        let input_tokens: Vec<TokenResult> = vec!(
-            Ok(Token::String("test".to_string())),
-            Ok(Token::DoubleColon),
-        );
-
-        let disambig = TokenDisambiguator::new(input_tokens.into_iter());
-
-        assert_eq!(all_tokens(disambig),
-                   vec!(Token::Axis("test".to_string()),
-                        Token::DoubleColon));
-    }
-
-    #[test]
     fn converts_at_sign_to_attribute_axis() {
         let input_tokens: Vec<TokenResult> = vec!(Ok(Token::AtSign));
         // let iter: &Iterator<TokenResult> = &input_tokens.into_iter();
@@ -786,8 +799,7 @@ mod test {
         // let a: () = deabbrv.next();
         // println!("{}",a );
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::String("attribute".to_string()),
-                                             Token::DoubleColon));
+        assert_eq!(all_tokens(deabbrv), vec![Token::Axis("attribute".to_string())]);
     }
 
     #[test]
@@ -797,8 +809,7 @@ mod test {
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
         assert_eq!(all_tokens(deabbrv), vec!(Token::Slash,
-                                             Token::String("descendant-or-self".to_string()),
-                                             Token::DoubleColon,
+                                             Token::Axis("descendant-or-self".to_string()),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen,
@@ -811,8 +822,7 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::String("self".to_string()),
-                                             Token::DoubleColon,
+        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis("self".to_string()),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen));
@@ -824,8 +834,7 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::String("parent".to_string()),
-                                             Token::DoubleColon,
+        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis("parent".to_string()),
                                              Token::String("node".to_string()),
                                              Token::LeftParen,
                                              Token::RightParen));

@@ -173,7 +173,6 @@ impl<I : Iterator<TokenResult>> Parser {
     fn parse_axis(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr> {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
-            try!(source.consume(&Token::DoubleColon));
 
             match name.as_slice() {
                 // TODO: explicit child axis?
@@ -733,7 +732,6 @@ mod test {
     fn parses_self_axis() {
         let tokens = tokens![
             Token::Axis("self".to_string()),
-            Token::DoubleColon,
             Token::String("the-top-node".to_string())
         ];
 
@@ -750,7 +748,6 @@ mod test {
     fn parses_parent_axis() {
         let tokens = tokens![
             Token::Axis("parent".to_string()),
-            Token::DoubleColon,
             Token::String("the-top-node".to_string())
         ];
 
@@ -768,7 +765,6 @@ mod test {
     fn parses_descendant_axis() {
         let tokens = tokens![
             Token::Axis("descendant".to_string()),
-            Token::DoubleColon,
             Token::String("two".to_string())
         ];
 
@@ -787,7 +783,6 @@ mod test {
     fn parses_descendant_or_self_axis() {
         let tokens = tokens![
             Token::Axis("descendant-or-self".to_string()),
-            Token::DoubleColon,
             Token::String("*".to_string())
         ];
 
@@ -806,7 +801,6 @@ mod test {
     fn parses_attribute_axis() {
         let tokens = tokens![
             Token::Axis("attribute".to_string()),
-            Token::DoubleColon,
             Token::String("*".to_string())
         ];
 
@@ -877,7 +871,6 @@ mod test {
     fn parses_axis_and_node_test() {
         let tokens = tokens![
             Token::Axis("self".to_string()),
-            Token::DoubleColon,
             Token::NodeTest("text".to_string()),
             Token::LeftParen,
             Token::RightParen
@@ -1520,7 +1513,6 @@ mod test {
     fn unknown_axis_is_reported_as_an_error() {
         let tokens = tokens![
             Token::Axis("bad-axis".to_string()),
-            Token::DoubleColon,
             Token::String("*".to_string())
         ];
 
