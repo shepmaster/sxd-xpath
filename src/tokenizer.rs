@@ -219,7 +219,7 @@ impl Tokenizer {
         match self.parse_token(p) {
             peresil::Result::Success(p) => {
                 self.start = p.point.offset;
-                return Ok(p.data)
+                Ok(p.data)
             },
             peresil::Result::Partial{ failure: p, .. } |
             peresil::Result::Failure(p) => {
@@ -232,15 +232,7 @@ impl Tokenizer {
     }
 
     fn next_token(& mut self) -> TokenResult {
-        let old_start = self.start;
-        let token = self.raw_next_token();
-        if token.is_err() { return token; }
-
-        let token = token.unwrap();
-
-        if old_start == self.start {
-            return Err(UnableToCreateToken);
-        }
+        let token = try!(self.raw_next_token());
 
         if ! (token.precedes_node_test() ||
               token.precedes_expression() ||
