@@ -9,13 +9,6 @@ use self::TokenizerErr::*;
 use super::token::Token;
 use super::token::Token::*;
 
-fn is_digit(c: char) -> bool {
-    match c {
-        '0'...'9' => true,
-        _ => false,
-    }
-}
-
 pub struct Tokenizer {
     xpath: XPathString,
     start: uint,
@@ -101,10 +94,6 @@ impl XPathString {
         string::String::from_chars(self.xpath.slice(start, end))
     }
 
-    fn char_at(&self, offset: uint) -> char {
-        self.xpath[offset]
-    }
-
     fn char_at_is(&self, offset: uint, c: char) -> bool {
         let has_one_more = self.xpath.len() >= offset + 1;
 
@@ -115,12 +104,6 @@ impl XPathString {
         let has_one_more = self.xpath.len() >= offset + 1;
 
         ! has_one_more || self.xpath[offset] != c
-    }
-
-    fn char_at_is_not_digit(& self, offset: uint) -> bool {
-        let has_more_chars = self.xpath.len() >= offset + 1;
-
-        ! has_more_chars || ! is_digit(self.xpath[offset])
     }
 
     fn is_xml_space(&self, offset: uint) -> bool {
@@ -224,6 +207,12 @@ fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     peresil::Result::success(Token::Number(num), p)
 }
 
+fn parse_current_node<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    let (_, p) = try_parse!(p.consume_literal("."));
+
+    peresil::Result::success(Token::CurrentNode, p)
+}
+
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
         let named_operators = vec![
@@ -254,7 +243,8 @@ impl Tokenizer {
                 .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
                 .or_else(|| parse_quoted_literal(p, "\x22")) // "
                 .or_else(|| parse_quoted_literal(p, "\x27")) // '
-                .or_else(|| parse_number(p));
+                .or_else(|| parse_number(p))
+                .or_else(|| parse_current_node(p));
 
             match r {
                 peresil::Result::Success(p) => {
@@ -268,16 +258,6 @@ impl Tokenizer {
                     }
                     // Continue processing
                 }
-            }
-        }
-
-        let c = self.xpath.char_at(self.start);
-
-        if '.' == c {
-            if self.xpath.char_at_is_not_digit(self.start + 1) {
-                // Ugly. Should we use START / FOLLOW constructs?
-                self.start += 1;
-                return Ok(Token::CurrentNode);
             }
         }
 
