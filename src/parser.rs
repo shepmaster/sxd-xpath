@@ -214,9 +214,8 @@ impl<I : Iterator<TokenResult>> Parser {
     }
 
     fn parse_variable_reference(&self, source: TokenSource<I>) -> ParseResult {
-        if source.next_token_is(&Token::DollarSign) {
-            try!(source.consume(&Token::DollarSign));
-            let name = consume_value!(source, Token::String);
+        if next_token_is!(source, Token::Variable) {
+            let name = consume_value!(source, Token::Variable);
             Ok(Some(box expression::Variable { name: name } as SubExpression))
         } else {
             Ok(None)
@@ -1366,10 +1365,7 @@ mod test {
 
     #[test]
     fn variable_reference() {
-        let tokens = tokens![
-            Token::DollarSign,
-            Token::String("variable-name".to_string()),
-        ];
+        let tokens = tokens![Token::Variable("variable-name".to_string())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1384,8 +1380,7 @@ mod test {
     #[test]
     fn filter_expression() {
         let tokens = tokens![
-            Token::DollarSign,
-            Token::String("variable".to_string()),
+            Token::Variable("variable".to_string()),
             Token::LeftBracket,
             Token::Number(0.0),
             Token::RightBracket,
@@ -1409,8 +1404,7 @@ mod test {
     #[test]
     fn filter_expression_and_relative_path() {
         let tokens = tokens![
-            Token::DollarSign,
-            Token::String("variable".to_string()),
+            Token::Variable("variable".to_string()),
             Token::Slash,
             Token::String("child".to_string()),
         ];
@@ -1433,11 +1427,9 @@ mod test {
     #[test]
     fn union_expression() {
         let tokens = tokens![
-            Token::DollarSign,
-            Token::String("variable1".to_string()),
+            Token::Variable("variable1".to_string()),
             Token::Pipe,
-            Token::DollarSign,
-            Token::String("variable2".to_string()),
+            Token::Variable("variable2".to_string()),
         ];
 
         let package = Package::new();
@@ -1567,8 +1559,7 @@ mod test {
     #[test]
     fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::DollarSign,
-            Token::String("variable".to_string()),
+            Token::Variable("variable".to_string()),
             Token::Slash,
         ];
 

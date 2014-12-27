@@ -32,7 +32,6 @@ pub enum Token {
     AtSign,
     CurrentNode,
     Divide,
-    DollarSign,
     DoubleSlash,
     Equal,
     GreaterThan,
@@ -61,6 +60,7 @@ pub enum Token {
     Axis(AxisName),
     Function(string::String),
     NodeTest(NodeTestName),
+    Variable(string::String),
 }
 
 impl Token {

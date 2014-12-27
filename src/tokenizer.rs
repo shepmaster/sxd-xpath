@@ -34,14 +34,13 @@ impl<'a> XPathParseExt<'a> for Point<'a> {
     }
 }
 
-static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..13] = [
+static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..12] = [
     ("/", Token::Slash),
     ("(", Token::LeftParen),
     (")", Token::RightParen),
     ("[", Token::LeftBracket),
     ("]", Token::RightBracket),
     ("@", Token::AtSign),
-    ("$", Token::DollarSign),
     ("+", Token::PlusSign),
     ("-", Token::MinusSign),
     ("|", Token::Pipe),
@@ -227,6 +226,15 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         .or_else(|| prefixed_name(p))
 }
 
+fn parse_variable_reference<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    let (_, p) = try_parse!(p.consume_literal("$"));
+    let (name, p) = try_parse!(p.consume_prefixed_name());
+
+    // TODO: We should be using the prefix here!
+    let name = name.local_part.to_string();
+    peresil::Result::success(Token::Variable(name), p)
+}
+
 impl Tokenizer {
     pub fn new(xpath: &str) -> Tokenizer {
         Tokenizer {
@@ -254,6 +262,7 @@ impl Tokenizer {
                 .or_else(|| parse_node_type(p))
                 .or_else(|| parse_function_call(p))
                 .or_else(|| parse_name_test(p))
+                .or_else(|| parse_variable_reference(p))
         });
 
         let (_, p) = p.consume_space().optional(p);
@@ -590,11 +599,11 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_dollar_sign()
+    fn tokenizes_variable_reference()
     {
-        let tokenizer = Tokenizer::new("$");
+        let tokenizer = Tokenizer::new("$yo");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::DollarSign));
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Variable("yo".to_string())));
     }
 
     #[test]
