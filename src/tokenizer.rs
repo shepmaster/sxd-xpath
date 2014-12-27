@@ -1,5 +1,7 @@
-use std::collections::HashMap;
 use std::string;
+
+use document::peresil;
+use document::peresil::{Point,Identifier};
 
 use self::TokenizerErr::*;
 
@@ -17,8 +19,6 @@ pub struct Tokenizer {
     xpath: XPathString,
     start: uint,
     prefer_recognition_of_operator_names: bool,
-    single_char_tokens: HashMap<char, Token>,
-    two_char_tokens: HashMap<&'static str, Token>,
     named_operators: Vec<(&'static str, Token)>,
 }
 
@@ -33,13 +33,19 @@ pub enum TokenizerErr {
 
 struct XPathString {
     xpath: Vec<char>,
+    xpath2: string::String,
 }
 
 impl XPathString {
     fn new(xpath: &str) -> XPathString {
         XPathString {
             xpath: xpath.chars().collect(),
+            xpath2: xpath.to_string(),
         }
+    }
+
+    fn slice_from(&self, offset: uint) -> &str {
+        self.xpath2.slice_from(offset)
     }
 
     fn len(& self) -> uint {
@@ -115,14 +121,6 @@ impl XPathString {
         string::String::from_chars(self.xpath.slice(start, end))
     }
 
-    fn safe_substr(& self, start: uint, end: uint) -> Option<string::String> {
-        if self.xpath.len() >= end {
-            Some(self.substr(start, end))
-        } else {
-            None
-        }
-    }
-
     fn char_at(&self, offset: uint) -> char {
         self.xpath[offset]
     }
@@ -166,39 +164,35 @@ impl XPathString {
     }
 }
 
+static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..13] = [
+    ("/", Token::Slash),
+    ("(", Token::LeftParen),
+    (")", Token::RightParen),
+    ("[", Token::LeftBracket),
+    ("]", Token::RightBracket),
+    ("@", Token::AtSign),
+    ("$", Token::DollarSign),
+    ("+", Token::PlusSign),
+    ("-", Token::MinusSign),
+    ("|", Token::Pipe),
+    ("=", Token::Equal),
+    ("<", Token::LessThan),
+    (">", Token::GreaterThan),
+];
+
+static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..6] = [
+    ("<=", Token::LessThanOrEqual),
+    (">=", Token::GreaterThanOrEqual),
+    ("!=", Token::NotEqual),
+    ("::", Token::DoubleColon),
+    ("//", Token::DoubleSlash),
+    ("..", Token::ParentNode),
+];
+
 static QUOTE_CHARS: [char, .. 2] =  ['\'', '\"'];
 
 impl Tokenizer {
     pub fn new(xpath: & str) -> Tokenizer {
-        let single_char_tokens = {
-            let mut m = HashMap::new();
-            m.insert('/', Token::Slash);
-            m.insert('(', Token::LeftParen);
-            m.insert(')', Token::RightParen);
-            m.insert('[', Token::LeftBracket);
-            m.insert(']', Token::RightBracket);
-            m.insert('@', Token::AtSign);
-            m.insert('$', Token::DollarSign);
-            m.insert('+', Token::PlusSign);
-            m.insert('-', Token::MinusSign);
-            m.insert('|', Token::Pipe);
-            m.insert('=', Token::Equal);
-            m.insert('<', Token::LessThan);
-            m.insert('>', Token::GreaterThan);
-            m
-        };
-
-        let two_char_tokens = {
-            let mut m = HashMap::new();
-            m.insert("<=", Token::LessThanOrEqual);
-            m.insert(">=", Token::GreaterThanOrEqual);
-            m.insert("!=", Token::NotEqual);
-            m.insert("::", Token::DoubleColon);
-            m.insert("//", Token::DoubleSlash);
-            m.insert("..", Token::ParentNode);
-            m
-        };
-
         let named_operators = vec![
             ("and", Token::And),
             ("or",  Token::Or),
@@ -211,8 +205,6 @@ impl Tokenizer {
             xpath: XPathString::new(xpath),
             start: 0,
             prefer_recognition_of_operator_names: false,
-            single_char_tokens: single_char_tokens,
-            two_char_tokens: two_char_tokens,
             named_operators: named_operators,
         }
     }
@@ -240,19 +232,25 @@ impl Tokenizer {
     }
 
     fn raw_next_token(& mut self) -> TokenResult {
-        if let Some(first_two) = self.xpath.safe_substr(self.start, self.start + 2) {
-            if let Some(token) = self.two_char_tokens.get(first_two.as_slice()) {
-                self.start += 2;
-                return Ok(token.clone());
+        {
+            let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
+
+            let r = p.consume_identifier::<_, ()>(TWO_CHAR_TOKENS.as_slice())
+                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()));
+
+            match r {
+                peresil::Result::Success(p) => {
+                    self.start = p.point.offset;
+                    return Ok(p.data)
+                },
+                peresil::Result::Partial{ .. } |
+                peresil::Result::Failure(..) => {
+                    // Continue processing
+                }
             }
         }
 
         let c = self.xpath.char_at(self.start);
-
-        if let Some(token) = self.single_char_tokens.get(&c) {
-            self.start += 1;
-            return Ok(token.clone());
-        }
 
         for quote_char in QUOTE_CHARS.iter() {
             if *quote_char == c {
