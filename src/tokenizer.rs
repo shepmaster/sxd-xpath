@@ -43,26 +43,6 @@ impl XPathString {
     fn len(& self) -> uint {
         self.xpath.len()
     }
-
-    fn is_xml_space(&self, offset: uint) -> bool {
-        let c = self.xpath[offset];
-
-        return
-            c == ' '  ||
-            c == '\t' ||
-            c == '\n' ||
-            c == '\r';
-    }
-
-    fn end_of_whitespace(& self, offset: uint) -> uint {
-        let mut offset = offset;
-
-        while offset < self.xpath.len() && self.is_xml_space(offset) {
-            offset += 1;
-        }
-
-        offset
-    }
 }
 
 trait XPathParseExt<'a> {
@@ -214,19 +194,29 @@ impl Tokenizer {
         self.xpath.len() > self.start
     }
 
+    fn parse_token<'a>(&self, p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+        let (_, p) = p.consume_space().optional(p);
+
+        let (tok, p) = try_parse!({
+            p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
+                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
+                .or_else(|| parse_quoted_literal(p, "\x22")) // "
+                .or_else(|| parse_quoted_literal(p, "\x27")) // '
+                .or_else(|| parse_number(p))
+                .or_else(|| parse_current_node(p))
+                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
+                .or_else(|| parse_name_test(p))
+        });
+
+        let (_, p) = p.consume_space().optional(p);
+
+        peresil::Result::success(tok, p)
+    }
+
     fn raw_next_token(& mut self) -> TokenResult {
         let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
 
-        let r = p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
-            .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
-            .or_else(|| parse_quoted_literal(p, "\x22")) // "
-            .or_else(|| parse_quoted_literal(p, "\x27")) // '
-            .or_else(|| parse_number(p))
-            .or_else(|| parse_current_node(p))
-            .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
-            .or_else(|| parse_name_test(p));
-
-        match r {
+        match self.parse_token(p) {
             peresil::Result::Success(p) => {
                 self.start = p.point.offset;
                 return Ok(p.data)
@@ -241,13 +231,7 @@ impl Tokenizer {
         }
     }
 
-    fn consume_whitespace(& mut self) {
-        self.start = self.xpath.end_of_whitespace(self.start);
-    }
-
     fn next_token(& mut self) -> TokenResult {
-        self.consume_whitespace();
-
         let old_start = self.start;
         let token = self.raw_next_token();
         if token.is_err() { return token; }
@@ -257,8 +241,6 @@ impl Tokenizer {
         if old_start == self.start {
             return Err(UnableToCreateToken);
         }
-
-        self.consume_whitespace();
 
         if ! (token.precedes_node_test() ||
               token.precedes_expression() ||
