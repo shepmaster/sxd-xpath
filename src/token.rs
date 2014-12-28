@@ -1,5 +1,4 @@
 use std::string;
-use self::Token::*;
 
 #[deriving(Copy,Clone,PartialEq,Show)]
 pub enum AxisName {
@@ -65,38 +64,38 @@ pub enum Token {
 impl Token {
     pub fn precedes_node_test(& self) -> bool {
         match *self {
-            AtSign |
-            Axis(..) => true,
+            Token::AtSign |
+            Token::Axis(..) => true,
             _ => false,
         }
     }
 
     pub fn precedes_expression(& self) -> bool {
         match *self {
-            LeftParen |
-            LeftBracket => true,
+            Token::LeftParen |
+            Token::LeftBracket => true,
             _ => false,
         }
     }
 
     pub fn is_operator(& self) -> bool {
         match *self {
-            Slash |
-            DoubleSlash |
-            PlusSign |
-            MinusSign |
-            Pipe |
-            Equal |
-            NotEqual |
-            LessThan |
-            LessThanOrEqual |
-            GreaterThan |
-            GreaterThanOrEqual |
-            And |
-            Or |
-            Remainder |
-            Divide |
-            Multiply => true,
+            Token::Slash |
+            Token::DoubleSlash |
+            Token::PlusSign |
+            Token::MinusSign |
+            Token::Pipe |
+            Token::Equal |
+            Token::NotEqual |
+            Token::LessThan |
+            Token::LessThanOrEqual |
+            Token::GreaterThan |
+            Token::GreaterThanOrEqual |
+            Token::And |
+            Token::Or |
+            Token::Remainder |
+            Token::Divide |
+            Token::Multiply => true,
             _ => false,
         }
     }
