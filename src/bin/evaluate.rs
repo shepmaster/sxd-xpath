@@ -1,5 +1,6 @@
 extern crate document;
 extern crate xpath;
+extern crate getopts;
 
 use std::cmp::min;
 use std::collections::HashMap;
@@ -11,30 +12,31 @@ use xpath::nodeset::ToNode;
 use xpath::{EvaluationContext,Factory};
 use xpath::expression::Expression;
 
+use getopts::{reqopt,optmulti,getopts,OptGroup,usage};
+
+fn print_usage(program: &str, opts: &[OptGroup]) {
+    let brief = format!("Usage: {} [options] FILE...", program);
+    print!("{}", usage(brief.as_slice(), opts));
+}
+
 fn pretty_error(xml: &str, position: uint) -> &str {
     let s = xml.slice_from(position);
     let l = s.chars().count();
     s.slice_chars(0, min(l, 15))
 }
 
-fn main() {
-    let mut args = std::os::args();
-
-    args.remove(0); // Executable name
-
-    let filename = args.remove(0).expect("File required");
-    let xpath_str = args.remove(0).expect("XPath required");
-
+fn build_xpath(xpath_str: &str) -> Box<xpath::expression::Expression> {
     let factory = Factory::new();
 
-    let expr = match factory.build(xpath_str.as_slice()) {
+    match factory.build(xpath_str) {
         Err(x) => panic!("Unable to compile XPath: {}", x),
         Ok(None) => panic!("Unable to compile XPath"),
         Ok(Some(x)) => x,
-    };
+    }
+}
 
+fn load_xml(filename: &str) -> document::Package {
     let p = Parser::new();
-
     let path = Path::new(filename);
     let mut file = File::open(&path);
 
@@ -43,29 +45,75 @@ fn main() {
         Err(x) => panic!("Can't read: {}", x),
     };
 
-    let package = match p.parse(data.as_slice()) {
+    match p.parse(data.as_slice()) {
         Ok(d) => d,
         Err(point) => panic!("Unable to parse: {}", pretty_error(data.as_slice(), point)),
+    }
+}
+
+
+
+fn build_functions() -> xpath::Functions {
+    let mut functions = HashMap::new();
+    xpath::function::register_core_functions(&mut functions);
+    functions
+}
+
+fn build_variables<'a>() -> xpath::Variables<'a> {
+    HashMap::new()
+}
+
+fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
+    let mut namespaces = HashMap::new();
+    for ns_defn in arguments.opt_strs("namespace").iter() {
+        let parts: Vec<_> = ns_defn.splitn(2, ':').collect();
+        if parts.len() < 2 {
+            panic!("Namespace definition '{}' is malformed", ns_defn);
+        }
+
+        namespaces.insert(parts[0].to_string(), parts[1].to_string());
+    }
+    namespaces
+}
+
+fn main() {
+    let args = std::os::args();
+    let program_name = &args[0];
+
+    let opts = &[
+        reqopt("", "xpath", "The XPath to execute", "XPATH"),
+        optmulti("", "namespace", "set namespace prefix", "PREFIX:URI"),
+    ];
+
+    let arguments = match getopts(args.tail(), opts) {
+        Ok(x) => x,
+        Err(x) => {
+            println!("{}", x);
+            print_usage(program_name.as_slice(), opts);
+            return;
+        },
     };
 
-    let d = package.as_document();
+    let xpath_str = arguments.opt_str("xpath").unwrap();
+    let xpath = build_xpath(xpath_str.as_slice());
 
-    let mut functions = HashMap::new();
-    xpath::function::register_core_functions(& mut functions);
-    let variables = HashMap::new();
-    let mut namespaces = HashMap::new();
+    for filename in arguments.free.iter() {
+        let package = load_xml(filename.as_slice());
+        let doc = package.as_document();
+        let root = doc.root().to_node();
 
-    for pair in args.as_slice().chunks(2) {
-        namespaces.insert(pair[0].clone(), pair[1].clone());
+        let functions = build_functions();
+        let variables = build_variables();
+        let namespaces = build_namespaces(&arguments);
+
+        let mut context = EvaluationContext::new(root,
+                                                 &functions,
+                                                 &variables,
+                                                 &namespaces);
+        context.next(root);
+
+        let res = xpath.evaluate(&context);
+
+        println!("{}", res);
     }
-
-    let mut context = EvaluationContext::new(d.root().to_node(),
-                                             &functions,
-                                             &variables,
-                                             &namespaces);
-    context.next(d.root().to_node());
-
-    let res = expr.evaluate(&context);
-
-    println!("{}", res);
 }
