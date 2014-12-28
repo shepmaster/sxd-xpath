@@ -20,8 +20,10 @@ fn pretty_error(xml: &str, position: uint) -> &str {
 fn main() {
     let mut args = std::os::args();
 
-    let filename = args.remove(1).expect("File required");
-    let xpath_str = args.remove(1).expect("XPath required");
+    args.remove(0); // Executable name
+
+    let filename = args.remove(0).expect("File required");
+    let xpath_str = args.remove(0).expect("XPath required");
 
     let factory = Factory::new();
 
@@ -51,7 +53,12 @@ fn main() {
     let mut functions = HashMap::new();
     xpath::function::register_core_functions(& mut functions);
     let variables = HashMap::new();
-    let namespaces = HashMap::new();
+    let mut namespaces = HashMap::new();
+
+    for pair in args.as_slice().chunks(2) {
+        namespaces.insert(pair[0].clone(), pair[1].clone());
+    }
+
     let mut context = EvaluationContext::new(d.root().to_node(),
                                              &functions,
                                              &variables,
