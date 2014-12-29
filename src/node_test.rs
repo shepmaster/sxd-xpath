@@ -18,17 +18,23 @@ pub struct NameTest {
 
 impl NameTest {
     fn matches(&self, context: &EvaluationContext, node_name: QName) -> bool {
-        if let Some(ref p) = self.prefix {
+        let test_local = self.local_part.as_slice();
+        let is_wildcard = test_local == "*";
+
+        let test_uri = self.prefix.as_ref().map(|p| {
             // TODO: Error for undefined prefix
-            let prefix_uri = context.namespace_for(p.as_slice()).expect("No namespace for prefix");
+            context.namespace_for(p.as_slice())
+                .expect("No namespace for prefix")
+        });
 
-            if node_name.namespace_uri() != Some(prefix_uri) {
-                return false;
-            }
+        match (is_wildcard, test_uri) {
+            (true, None) => true,
+            (true, Some(..)) => test_uri == node_name.namespace_uri(),
+            _ => {
+                test_uri == node_name.namespace_uri() &&
+                    test_local == node_name.local_part()
+            },
         }
-
-        let name = self.local_part.as_slice();
-        name == "*" || name == node_name.local_part()
     }
 }
 
@@ -251,6 +257,16 @@ mod test {
         assert_eq!(nodeset![attribute], result);
     }
 
+    #[test]
+    fn attribute_test_does_not_match_when_attribute_has_namespace_but_without_prefix() {
+        let package = Package::new();
+        let mut setup = Setup::new(&package);
+        let (_, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
+
+        let result = run_attribute(&context, None, "name");
+        assert_eq!(nodeset![], result);
+    }
+
     fn run_element<'d>(context: &EvaluationContext<'d, 'd>, prefix: Option<&str>, local: &str)
                        -> Nodeset<'d>
     {
@@ -333,5 +349,15 @@ mod test {
 
         let result = run_element(&context, None, "*");
         assert_eq!(nodeset![element], result);
+    }
+
+    #[test]
+    fn element_test_does_not_match_when_element_has_namespace_but_without_prefix() {
+        let package = Package::new();
+        let mut setup = Setup::new(&package);
+        let (_, context) = setup.context_for_ns_element("prefix", "uri", "name");
+
+        let result = run_element(&context, None, "name");
+        assert_eq!(nodeset![], result);
     }
 }
