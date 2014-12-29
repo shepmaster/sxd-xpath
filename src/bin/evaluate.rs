@@ -76,6 +76,7 @@ fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
     namespaces
 }
 
+#[allow(dead_code)]
 fn main() {
     let args = std::os::args();
     let program_name = &args[0];
