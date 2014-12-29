@@ -49,6 +49,7 @@ impl<'d> Value<'d> {
         match *self {
             Number(val) => val,
             String(ref s) => s.trim().parse().unwrap_or(Float::nan()),
+            Boolean(val) => if val { 1.0 } else { 0.0 },
             _ => unimplemented!(),
         }
     }
@@ -281,5 +282,17 @@ mod test {
     fn number_of_garbage_string_is_nan() {
         let v = Value::String("I am not an IEEE 754 number".to_string());
         assert!(v.number().is_nan());
+    }
+
+    #[test]
+    fn number_of_boolean_true_is_1() {
+        let v = Value::Boolean(true);
+        assert_eq!(1.0, v.number());
+    }
+
+    #[test]
+    fn number_of_boolean_false_is_0() {
+        let v = Value::Boolean(false);
+        assert_eq!(0.0, v.number());
     }
 }
