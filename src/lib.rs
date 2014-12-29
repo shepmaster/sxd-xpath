@@ -48,7 +48,7 @@ impl<'d> Value<'d> {
     pub fn number(&self) -> f64 {
         match *self {
             Number(val) => val,
-            String(ref s) => s.parse().unwrap_or(Float::nan()),
+            String(ref s) => s.trim().parse().unwrap_or(Float::nan()),
             _ => unimplemented!(),
         }
     }
@@ -196,6 +196,8 @@ mod test {
     use document::Package;
     use super::nodeset::ToNode;
     use super::StringValue;
+    use super::Value;
+    use std::num::Float;
 
     #[test]
     fn string_value_of_element_node_is_concatenation_of_descendant_text_nodes() {
@@ -255,5 +257,29 @@ mod test {
         let doc = package.as_document();
         let text = doc.create_text("hello world").to_node();
         assert_eq!("hello world", text.string_value().as_slice());
+    }
+
+    #[test]
+    fn number_of_string_is_ieee_754_number() {
+        let v = Value::String("1.5".to_string());
+        assert_eq!(1.5, v.number());
+    }
+
+    #[test]
+    fn number_of_string_with_negative_is_negative_number() {
+        let v = Value::String("-1.5".to_string());
+        assert_eq!(-1.5, v.number());
+    }
+
+    #[test]
+    fn number_of_string_with_surrounding_whitespace_is_number_without_whitespace() {
+        let v = Value::String("\r\n1.5 \t".to_string());
+        assert_eq!(1.5, v.number());
+    }
+
+    #[test]
+    fn number_of_garbage_string_is_nan() {
+        let v = Value::String("I am not an IEEE 754 number".to_string());
+        assert!(v.number().is_nan());
     }
 }
