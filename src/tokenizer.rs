@@ -66,19 +66,20 @@ static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
     ("*",   Token::Multiply),
 ];
 
+// These will be matched in order, so substrings should come later.
 static AXES: [Identifier<'static, AxisName>, ..13] = [
-    ("ancestor", AxisName::Ancestor),
     ("ancestor-or-self", AxisName::AncestorOrSelf),
+    ("ancestor", AxisName::Ancestor),
     ("attribute", AxisName::Attribute),
     ("child", AxisName::Child),
-    ("descendant", AxisName::Descendant),
     ("descendant-or-self", AxisName::DescendantOrSelf),
-    ("following", AxisName::Following),
+    ("descendant", AxisName::Descendant),
     ("following-sibling", AxisName::FollowingSibling),
+    ("following", AxisName::Following),
     ("namespace", AxisName::Namespace),
     ("parent", AxisName::Parent),
-    ("preceding", AxisName::Preceding),
     ("preceding-sibling", AxisName::PrecedingSibling),
+    ("preceding", AxisName::Preceding),
     ("self", AxisName::Self),
 ];
 
@@ -157,6 +158,8 @@ fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
 }
 
 fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+    // Ideally, we would check for the pair of the name and the ::,
+    // then loop. This would prevent us from having to order AXES.
     let (axis, p) = try_parse!(p.consume_identifier(AXES.as_slice()));
     let (_, p) = try_parse!(p.consume_literal("::"));
 
@@ -491,6 +494,15 @@ mod test {
         let tokenizer = Tokenizer::new("ancestor::world");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::Ancestor),
+                                               name_test("world")));
+    }
+
+    #[test]
+    fn tokenizes_axis_selector_that_contains_another_axis()
+    {
+        let tokenizer = Tokenizer::new("ancestor-or-self::world");
+
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::AncestorOrSelf),
                                                name_test("world")));
     }
 
