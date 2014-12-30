@@ -49,6 +49,21 @@ impl Axis for Ancestor {
 }
 
 #[allow(missing_copy_implementations)]
+pub struct AncestorOrSelf;
+
+impl Axis for AncestorOrSelf {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        node_test.test(context, result);
+        Ancestor.select_nodes(context, node_test, result)
+    }
+}
+
+
+#[allow(missing_copy_implementations)]
 pub struct Attribute;
 
 impl Axis for Attribute {
@@ -171,15 +186,33 @@ mod test {
 
     use super::super::EvaluationContext;
     use super::super::node_test::NodeTest;
-    use super::super::nodeset::Nodeset;
+    use super::super::nodeset::{Nodeset,ToNode};
 
-    use super::{Axis,Ancestor};
+    use super::{Axis,Ancestor,AncestorOrSelf};
 
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
         fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
             result.add(context.node)
         }
+    }
+
+    fn execute<'n, A, N>(axis: A, node: N)
+        -> Nodeset<'n>
+        where A: Axis,
+              N: ToNode<'n>,
+    {
+        let functions = &HashMap::new();
+        let variables = &HashMap::new();
+        let namespaces = &HashMap::new();
+
+        let context = &EvaluationContext::new(node, functions, variables, namespaces);
+        let node_test = &DummyNodeTest;
+        let mut result = Nodeset::new();
+
+        axis.select_nodes(context, node_test, &mut result);
+
+        result
     }
 
     #[test]
@@ -194,16 +227,25 @@ mod test {
         level0.append_child(level1);
         level1.append_child(level2);
 
-        let functions = &HashMap::new();
-        let variables = &HashMap::new();
-        let namespaces = &HashMap::new();
+        let result = execute(Ancestor, level2);
 
-        let context = &EvaluationContext::new(level2, functions, variables, namespaces);
-        let node_test = &DummyNodeTest;
-        let result = &mut Nodeset::new();
+        assert_eq!(result, nodeset![level1, level0]);
+    }
 
-        let axis = Ancestor;
-        axis.select_nodes(context, node_test, result);
-        assert_eq!(*result, nodeset![level1, level0]);
+    #[test]
+    fn ancestor_or_self_also_includes_self() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let level0 = doc.root();
+        let level1 = doc.create_element("b");
+        let level2 = doc.create_text("c");
+
+        level0.append_child(level1);
+        level1.append_child(level2);
+
+        let result = execute(AncestorOrSelf, level2);
+
+        assert_eq!(result, nodeset![level2, level1, level0]);
     }
 }

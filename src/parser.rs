@@ -177,6 +177,7 @@ impl<I : Iterator<TokenResult>> Parser {
                 AxisName::DescendantOrSelf => Ok(axis::DescendantOrSelf::new()),
                 AxisName::Attribute => Ok(box axis::Attribute as SubAxis),
                 AxisName::Ancestor => Ok(box axis::Ancestor as SubAxis),
+                AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf as SubAxis),
                 _ => unimplemented!(),
             }
         } else {
