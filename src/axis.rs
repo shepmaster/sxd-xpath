@@ -29,6 +29,26 @@ pub trait Axis {
 pub type SubAxis = Box<Axis + 'static>;
 
 #[allow(missing_copy_implementations)]
+pub struct Ancestor;
+
+impl Axis for Ancestor {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        let mut node = context.node;
+        while let Some(parent) = node.parent() {
+            let mut child_context = context.new_context_for(1);
+            child_context.next(parent);
+
+            node_test.test(&child_context, result);
+            node = parent;
+        }
+    }
+}
+
+#[allow(missing_copy_implementations)]
 pub struct Attribute;
 
 impl Axis for Attribute {
@@ -140,5 +160,50 @@ impl Axis for Self {
                             result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use document::Package;
+
+    use super::super::EvaluationContext;
+    use super::super::node_test::NodeTest;
+    use super::super::nodeset::Nodeset;
+
+    use super::{Axis,Ancestor};
+
+    struct DummyNodeTest;
+    impl NodeTest for DummyNodeTest {
+        fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+            result.add(context.node)
+        }
+    }
+
+    #[test]
+    fn ancestor_includes_parents() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let level0 = doc.root();
+        let level1 = doc.create_element("b");
+        let level2 = doc.create_text("c");
+
+        level0.append_child(level1);
+        level1.append_child(level2);
+
+        let functions = &HashMap::new();
+        let variables = &HashMap::new();
+        let namespaces = &HashMap::new();
+
+        let context = &EvaluationContext::new(level2, functions, variables, namespaces);
+        let node_test = &DummyNodeTest;
+        let result = &mut Nodeset::new();
+
+        let axis = Ancestor;
+        axis.select_nodes(context, node_test, result);
+        assert_eq!(*result, nodeset![level1, level0]);
     }
 }
