@@ -102,9 +102,9 @@ conversion_trait!(ToNode, to_node, Node, {
 impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
     fn to_node(self) -> Node<'d> {
         match self {
-            dom4::ChildOfRoot::ElementCOR(n)               => ElementNode(n),
-            dom4::ChildOfRoot::CommentCOR(n)               => CommentNode(n),
-            dom4::ChildOfRoot::ProcessingInstructionCOR(n) => ProcessingInstructionNode(n),
+            dom4::ChildOfRoot::Element(n)               => ElementNode(n),
+            dom4::ChildOfRoot::Comment(n)               => CommentNode(n),
+            dom4::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstructionNode(n),
         }
     }
 }
@@ -112,10 +112,10 @@ impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
 impl<'d> ToNode<'d> for dom4::ChildOfElement<'d> {
     fn to_node(self) -> Node<'d> {
         match self {
-            dom4::ChildOfElement::ElementCOE(n)               => ElementNode(n),
-            dom4::ChildOfElement::TextCOE(n)                  => TextNode(n),
-            dom4::ChildOfElement::CommentCOE(n)               => CommentNode(n),
-            dom4::ChildOfElement::ProcessingInstructionCOE(n) => ProcessingInstructionNode(n),
+            dom4::ChildOfElement::Element(n)               => ElementNode(n),
+            dom4::ChildOfElement::Text(n)                  => TextNode(n),
+            dom4::ChildOfElement::Comment(n)               => CommentNode(n),
+            dom4::ChildOfElement::ProcessingInstruction(n) => ProcessingInstructionNode(n),
         }
     }
 }
@@ -123,8 +123,8 @@ impl<'d> ToNode<'d> for dom4::ChildOfElement<'d> {
 impl<'d> ToNode<'d> for dom4::ParentOfChild<'d> {
     fn to_node(self) -> Node<'d> {
         match self {
-            dom4::ParentOfChild::RootPOC(n)    => RootNode(n),
-            dom4::ParentOfChild::ElementPOC(n) => ElementNode(n),
+            dom4::ParentOfChild::Root(n)    => RootNode(n),
+            dom4::ParentOfChild::Element(n) => ElementNode(n),
         }
     }
 }
