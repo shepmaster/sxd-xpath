@@ -205,6 +205,55 @@ impl Axis for FollowingSibling {
     }
 }
 
+fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
+             node_test: &NodeTest,
+             result:    &mut Nodeset<'d>,
+             f: fn(&Node<'d>) -> Vec<Node<'d>>)
+{
+    let mut node = context.node;
+
+    loop {
+        let sibs = f(&node);
+        for sibling in sibs.iter() {
+            let mut child_context = context.new_context_for(1);
+            child_context.next(*sibling);
+
+            node_test.test(&child_context, result);
+        }
+
+        match node.parent() {
+            Some(parent) => node = parent,
+            None => break
+        }
+    }
+}
+
+#[allow(missing_copy_implementations)]
+pub struct Preceding;
+
+impl Axis for Preceding {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        preceding_following(context, node_test, result, Node::preceding_siblings)
+    }
+}
+
+#[allow(missing_copy_implementations)]
+pub struct Following;
+
+impl Axis for Following {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        preceding_following(context, node_test, result, Node::following_siblings)
+    }
+}
+
 #[allow(missing_copy_implementations)]
 pub struct Self;
 
@@ -223,12 +272,21 @@ mod test {
     use std::collections::HashMap;
 
     use document::Package;
+    use document::dom4;
 
     use super::super::EvaluationContext;
     use super::super::node_test::NodeTest;
     use super::super::nodeset::{Nodeset,ToNode};
 
-    use super::{Axis,Ancestor,AncestorOrSelf,PrecedingSibling,FollowingSibling};
+    use super::{
+        Axis,
+        Ancestor,
+        AncestorOrSelf,
+        PrecedingSibling,
+        FollowingSibling,
+        Preceding,
+        Following,
+    };
 
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
@@ -325,5 +383,49 @@ mod test {
         let result = execute(FollowingSibling, child1);
 
         assert_eq!(result, nodeset![child2, child3]);
+    }
+
+    fn setup_preceding_following<'d>(doc: &'d dom4::Document<'d>) -> [dom4::Element<'d>; 5] {
+        let parent = doc.create_element("parent");
+
+        let a1 = doc.create_element("a1");
+        let a2 = doc.create_element("a2");
+        let a3 = doc.create_element("a3");
+
+        let b1 = doc.create_element("b1");
+        let b2 = doc.create_element("b2");
+        let b3 = doc.create_element("b3");
+
+        parent.append_child(a1);
+        parent.append_child(a2);
+        parent.append_child(a3);
+
+        a2.append_child(b1);
+        a2.append_child(b2);
+        a2.append_child(b3);
+
+        [a1, b1, b2, b3, a3]
+    }
+
+    #[test]
+    fn preceding_selects_in_reverse_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let [a1, b1, b2, _, _] = setup_preceding_following(&doc);
+
+        let result = execute(Preceding, b2);
+
+        assert_eq!(result, nodeset![b1, a1]);
+    }
+
+    #[test]
+    fn following_selects_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let [_, _, b2, b3, a3] = setup_preceding_following(&doc);
+
+        let result = execute(Following, b2);
+
+        assert_eq!(result, nodeset![b3, a3]);
     }
 }

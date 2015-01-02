@@ -180,6 +180,8 @@ impl<I : Iterator<TokenResult>> Parser {
                 AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf as SubAxis),
                 AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling as SubAxis),
                 AxisName::FollowingSibling => Ok(box axis::FollowingSibling as SubAxis),
+                AxisName::Preceding => Ok(box axis::Preceding as SubAxis),
+                AxisName::Following => Ok(box axis::Following as SubAxis),
                 _ => unimplemented!(),
             }
         } else {
