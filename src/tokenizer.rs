@@ -378,10 +378,7 @@ impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
             }
         }
 
-        match self.buffer.remove(0) {
-            Some(t) => Some(Ok(t)),
-            None => panic!("No tokens left to return"), // Can't happen, we always add one
-        }
+        Some(Ok(self.buffer.remove(0)))
     }
 }
 
