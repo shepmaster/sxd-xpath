@@ -2,7 +2,7 @@ extern crate document;
 
 use super::EvaluationContext;
 use super::node_test::NodeTest;
-use super::nodeset::Nodeset;
+use super::nodeset::{Nodeset,Node};
 use super::nodeset::Node::ElementNode;
 
 #[allow(missing_copy_implementations)]
@@ -165,6 +165,46 @@ impl Axis for Parent {
     }
 }
 
+fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
+                                       node_test: &NodeTest,
+                                       result:    &mut Nodeset<'d>,
+                                       f: fn(&Node<'d>) -> Vec<Node<'d>>)
+{
+    let sibs = f(&context.node);
+    for sibling in sibs.iter() {
+        let mut child_context = context.new_context_for(1);
+        child_context.next(*sibling);
+
+        node_test.test(&child_context, result);
+    }
+}
+
+#[allow(missing_copy_implementations)]
+pub struct PrecedingSibling;
+
+impl Axis for PrecedingSibling {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        preceding_following_sibling(context, node_test, result, Node::preceding_siblings)
+    }
+}
+
+#[allow(missing_copy_implementations)]
+pub struct FollowingSibling;
+
+impl Axis for FollowingSibling {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        preceding_following_sibling(context, node_test, result, Node::following_siblings)
+    }
+}
+
 #[allow(missing_copy_implementations)]
 pub struct Self;
 
@@ -188,7 +228,7 @@ mod test {
     use super::super::node_test::NodeTest;
     use super::super::nodeset::{Nodeset,ToNode};
 
-    use super::{Axis,Ancestor,AncestorOrSelf};
+    use super::{Axis,Ancestor,AncestorOrSelf,PrecedingSibling,FollowingSibling};
 
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
@@ -247,5 +287,43 @@ mod test {
         let result = execute(AncestorOrSelf, level2);
 
         assert_eq!(result, nodeset![level2, level1, level0]);
+    }
+
+    #[test]
+    fn preceding_sibling_selects_in_reverse_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let root = doc.root();
+        let child1 = doc.create_element("a");
+        let child2 = doc.create_comment("b");
+        let child3 = doc.create_processing_instruction("c", None);
+
+        root.append_child(child1);
+        root.append_child(child2);
+        root.append_child(child3);
+
+        let result = execute(PrecedingSibling, child3);
+
+        assert_eq!(result, nodeset![child2, child1]);
+    }
+
+    #[test]
+    fn following_sibling_selects_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let root = doc.root();
+        let child1 = doc.create_element("a");
+        let child2 = doc.create_comment("b");
+        let child3 = doc.create_processing_instruction("c", None);
+
+        root.append_child(child1);
+        root.append_child(child2);
+        root.append_child(child3);
+
+        let result = execute(FollowingSibling, child1);
+
+        assert_eq!(result, nodeset![child2, child3]);
     }
 }

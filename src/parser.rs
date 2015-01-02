@@ -178,6 +178,8 @@ impl<I : Iterator<TokenResult>> Parser {
                 AxisName::Attribute => Ok(box axis::Attribute as SubAxis),
                 AxisName::Ancestor => Ok(box axis::Ancestor as SubAxis),
                 AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf as SubAxis),
+                AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling as SubAxis),
+                AxisName::FollowingSibling => Ok(box axis::FollowingSibling as SubAxis),
                 _ => unimplemented!(),
             }
         } else {

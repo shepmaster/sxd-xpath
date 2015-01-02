@@ -88,6 +88,28 @@ impl<'d> Node<'d> {
             &ProcessingInstructionNode(_) => Vec::new(),
         }
     }
+
+    pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
+        match self {
+            &RootNode(_)                  => Vec::new(),
+            &ElementNode(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &AttributeNode(_)             => Vec::new(),
+            &TextNode(n)                  => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &CommentNode(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &ProcessingInstructionNode(n) => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+        }
+    }
+
+    pub fn following_siblings(&self) -> Vec<Node<'d>> {
+        match self {
+            &RootNode(_)                  => Vec::new(),
+            &ElementNode(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &AttributeNode(_)             => Vec::new(),
+            &TextNode(n)                  => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &CommentNode(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &ProcessingInstructionNode(n) => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+        }
+    }
 }
 
 conversion_trait!(ToNode, to_node, Node, {
