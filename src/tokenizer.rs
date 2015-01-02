@@ -35,7 +35,7 @@ impl<'a> XPathParseExt<'a> for Point<'a> {
     }
 }
 
-static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..12] = [
+static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>; 12] = [
     ("/", Token::Slash),
     ("(", Token::LeftParen),
     (")", Token::RightParen),
@@ -50,7 +50,7 @@ static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>, ..12] = [
     (">", Token::GreaterThan),
 ];
 
-static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..5] = [
+static TWO_CHAR_TOKENS: [Identifier<'static, Token>; 5] = [
     ("<=", Token::LessThanOrEqual),
     (">=", Token::GreaterThanOrEqual),
     ("!=", Token::NotEqual),
@@ -58,7 +58,7 @@ static TWO_CHAR_TOKENS: [Identifier<'static, Token>, ..5] = [
     ("..", Token::ParentNode),
 ];
 
-static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
+static NAMED_OPERATORS: [Identifier<'static, Token>; 5] = [
     ("and", Token::And),
     ("or",  Token::Or),
     ("mod", Token::Remainder),
@@ -67,7 +67,7 @@ static NAMED_OPERATORS: [Identifier<'static, Token>, ..5] = [
 ];
 
 // These will be matched in order, so substrings should come later.
-static AXES: [Identifier<'static, AxisName>, ..13] = [
+static AXES: [Identifier<'static, AxisName>; 13] = [
     ("ancestor-or-self", AxisName::AncestorOrSelf),
     ("ancestor", AxisName::Ancestor),
     ("attribute", AxisName::Attribute),
@@ -83,7 +83,7 @@ static AXES: [Identifier<'static, AxisName>, ..13] = [
     ("self", AxisName::Self),
 ];
 
-static NODE_TESTS_WITHOUT_ARG : [Identifier<'static, NodeTestName>, .. 3] = [
+static NODE_TESTS_WITHOUT_ARG : [Identifier<'static, NodeTestName>; 3] = [
     ("comment", NodeTestName::Comment),
     ("text", NodeTestName::Text),
     ("node", NodeTestName::Node),
