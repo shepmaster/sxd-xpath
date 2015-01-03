@@ -10,7 +10,7 @@ pub trait NodeTest {
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
-#[deriving(Clone,PartialEq,Show)]
+#[derive(Clone,PartialEq,Show)]
 pub struct NameTest {
     pub prefix: Option<String>,
     pub local_part: String,

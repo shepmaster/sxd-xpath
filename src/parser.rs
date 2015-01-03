@@ -20,7 +20,7 @@ impl Parser {
     }
 }
 
-#[deriving(Show,PartialEq,Clone)]
+#[derive(Show,PartialEq,Clone)]
 pub enum ParseErr {
     EmptyPredicate,
     ExtraUnparsedTokens,

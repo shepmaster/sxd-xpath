@@ -27,7 +27,7 @@ pub mod parser;
 mod token;
 pub mod tokenizer;
 
-#[deriving(PartialEq,Show,Clone)]
+#[derive(PartialEq,Show,Clone)]
 pub enum Value<'d> {
     Boolean(bool),
     Number(f64),

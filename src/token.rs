@@ -1,7 +1,7 @@
 use std::string;
 use super::node_test;
 
-#[deriving(Copy,Clone,PartialEq,Show)]
+#[derive(Copy,Clone,PartialEq,Show)]
 pub enum AxisName {
     Ancestor,
     AncestorOrSelf,
@@ -18,7 +18,7 @@ pub enum AxisName {
     Self,
 }
 
-#[deriving(Clone,PartialEq,Show)]
+#[derive(Clone,PartialEq,Show)]
 pub enum NodeTestName {
     Comment,
     Text,
@@ -26,7 +26,7 @@ pub enum NodeTestName {
     Node,
 }
 
-#[deriving(PartialEq,Show,Clone)]
+#[derive(PartialEq,Show,Clone)]
 pub enum Token {
     And,
     AtSign,

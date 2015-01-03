@@ -763,7 +763,7 @@ impl Expression for Variable {
         assert_eq!(res, Nodes(nodeset![setup.doc.root()]));
     }
 
-    #[deriving(Clone)]
+    #[derive(Clone)]
     struct MockAxis {
         calls: Rc<RefCell<uint>>,
     }
