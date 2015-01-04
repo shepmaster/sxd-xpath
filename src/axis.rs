@@ -282,6 +282,7 @@ mod test {
         Following,
     };
 
+    #[derive(Show)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
         fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {

@@ -1,10 +1,12 @@
+use std::fmt;
+
 use document::QName;
 
 use super::EvaluationContext;
 use super::nodeset::Nodeset;
 use super::nodeset::Node::{AttributeNode,ElementNode,TextNode};
 
-pub trait NodeTest {
+pub trait NodeTest: fmt::Show {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
@@ -38,6 +40,7 @@ impl NameTest {
     }
 }
 
+#[derive(Show)]
 pub struct Attribute {
     name_test: NameTest,
 }
@@ -60,6 +63,7 @@ impl NodeTest for Attribute {
     }
 }
 
+#[derive(Show)]
 pub struct Element {
     name_test: NameTest,
 }
@@ -83,6 +87,7 @@ impl NodeTest for Element {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Node;
 
 impl NodeTest for Node {
@@ -92,6 +97,7 @@ impl NodeTest for Node {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Text;
 
 impl NodeTest for Text {

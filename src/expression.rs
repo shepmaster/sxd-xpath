@@ -788,8 +788,8 @@ mod test {
         }
     }
 
+    #[derive(Show)]
     struct DummyNodeTest;
-
     impl NodeTest for DummyNodeTest {
         fn test(&self, _context: &EvaluationContext, _result: &mut Nodeset) {
         }
