@@ -763,7 +763,7 @@ mod test {
         assert_eq!(res, Nodes(nodeset![setup.doc.root()]));
     }
 
-    #[derive(Clone)]
+    #[derive(Clone,Show)]
     struct MockAxis {
         calls: Rc<RefCell<uint>>,
     }

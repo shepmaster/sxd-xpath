@@ -1,5 +1,7 @@
 extern crate document;
 
+use std::fmt;
+
 use super::EvaluationContext;
 use super::node_test::NodeTest;
 use super::nodeset::{Nodeset,Node};
@@ -12,7 +14,7 @@ pub enum PrincipalNodeType {
 }
 
 /// A directed traversal of Nodes.
-pub trait Axis {
+pub trait Axis: fmt::Show {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
     fn select_nodes<'a, 'd>(&self,
@@ -29,6 +31,7 @@ pub trait Axis {
 pub type SubAxis = Box<Axis + 'static>;
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Ancestor;
 
 impl Axis for Ancestor {
@@ -49,6 +52,7 @@ impl Axis for Ancestor {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct AncestorOrSelf;
 
 impl Axis for AncestorOrSelf {
@@ -64,6 +68,7 @@ impl Axis for AncestorOrSelf {
 
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Attribute;
 
 impl Axis for Attribute {
@@ -88,6 +93,7 @@ impl Axis for Attribute {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Child;
 
 impl Axis for Child {
@@ -108,6 +114,7 @@ impl Axis for Child {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Descendant;
 
 impl Axis for Descendant {
@@ -129,6 +136,7 @@ impl Axis for Descendant {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct DescendantOrSelf;
 
 impl Axis for DescendantOrSelf {
@@ -143,6 +151,7 @@ impl Axis for DescendantOrSelf {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Parent;
 
 impl Axis for Parent {
@@ -174,6 +183,7 @@ fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct PrecedingSibling;
 
 impl Axis for PrecedingSibling {
@@ -187,6 +197,7 @@ impl Axis for PrecedingSibling {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct FollowingSibling;
 
 impl Axis for FollowingSibling {
@@ -223,6 +234,7 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Preceding;
 
 impl Axis for Preceding {
@@ -236,6 +248,7 @@ impl Axis for Preceding {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Following;
 
 impl Axis for Following {
@@ -249,6 +262,7 @@ impl Axis for Following {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct Self;
 
 impl Axis for Self {
