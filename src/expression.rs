@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt;
 
 use super::nodeset::Nodeset;
 
@@ -15,7 +16,7 @@ use super::node_test::NodeTest;
 // TODO: Figure out how to use HOFs to get rid of returning a Box here
 // all the time.
 
-pub trait Expression {
+pub trait Expression: fmt::Show {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d>;
 }
 
@@ -31,6 +32,7 @@ macro_rules! binary_constructor(
     );
 );
 
+#[derive(Show)]
 pub struct And {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -46,6 +48,7 @@ impl Expression for And {
 }
 
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct ContextNode;
 
 impl Expression for ContextNode {
@@ -54,6 +57,7 @@ impl Expression for ContextNode {
     }
 }
 
+#[derive(Show)]
 pub struct Equal {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -109,6 +113,7 @@ impl Expression for Equal {
     }
 }
 
+#[derive(Show)]
 pub struct NotEqual {
     equal: Equal,
 }
@@ -127,6 +132,7 @@ impl Expression for NotEqual {
     }
 }
 
+#[derive(Show)]
 pub struct Function {
     pub name: String,
     pub arguments: Vec<SubExpression>,
@@ -146,12 +152,14 @@ impl Expression for Function {
     }
 }
 
+#[derive(Show)]
 pub enum LiteralValue {
     BooleanLiteral(bool),
     NumberLiteral(f64),
     StringLiteral(String),
 }
 
+#[derive(Show)]
 pub struct Literal {
     pub value: LiteralValue,
 }
@@ -209,6 +217,13 @@ impl Expression for Math {
     }
 }
 
+impl fmt::Show for Math {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Math {{ left: {}, right: {} }}", self.left, self.right)
+    }
+}
+
+#[derive(Show)]
 pub struct Negation {
     pub expression: SubExpression,
 }
@@ -220,6 +235,7 @@ impl Expression for Negation {
     }
 }
 
+#[derive(Show)]
 pub struct Or {
     left:  SubExpression,
     right: SubExpression,
@@ -234,6 +250,7 @@ impl Expression for Or {
     }
 }
 
+#[derive(Show)]
 pub struct Path {
     start_point: SubExpression,
     steps: Vec<SubExpression>,
@@ -268,6 +285,7 @@ impl Expression for Path {
     }
 }
 
+#[derive(Show)]
 pub struct Predicate {
     node_selector: SubExpression,
     predicate: SubExpression,
@@ -350,7 +368,14 @@ impl Expression for Relational {
     }
 }
 
+impl fmt::Show for Relational {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Relational {{ left: {}, right: {} }}", self.left, self.right)
+    }
+}
+
 #[allow(missing_copy_implementations)]
+#[derive(Show)]
 pub struct RootNode;
 
 impl Expression for RootNode {
@@ -362,6 +387,7 @@ impl Expression for RootNode {
 pub type StepAxis = Box<Axis + 'static>;
 pub type StepTest = Box<NodeTest + 'static>;
 
+#[derive(Show)]
 pub struct Step {
     axis: StepAxis,
     node_test: StepTest,
@@ -381,6 +407,7 @@ impl Expression for Step {
     }
 }
 
+#[derive(Show)]
 pub struct Union {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -397,6 +424,7 @@ impl Expression for Union {
     }
 }
 
+#[derive(Show)]
 pub struct Variable {
     pub name: String,
 }
@@ -445,8 +473,8 @@ mod test {
     };
     use super::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
+    #[derive(Show)]
     struct FailExpression;
-
     impl Expression for FailExpression {
         fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
             panic!("Should never be called");
