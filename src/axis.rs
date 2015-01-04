@@ -129,13 +129,7 @@ impl Axis for Descendant {
 }
 
 #[allow(missing_copy_implementations)]
-pub struct DescendantOrSelf {
-    descendant: Descendant,
-}
-
-impl DescendantOrSelf {
-    pub fn new() -> SubAxis { box DescendantOrSelf{descendant: Descendant} }
-}
+pub struct DescendantOrSelf;
 
 impl Axis for DescendantOrSelf {
     fn select_nodes<'a, 'd>(&self,
@@ -144,7 +138,7 @@ impl Axis for DescendantOrSelf {
                             result:    &mut Nodeset<'d>)
     {
         node_test.test(context, result);
-        self.descendant.select_nodes(context, node_test, result);
+        Descendant.select_nodes(context, node_test, result);
     }
 }
 
