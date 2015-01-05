@@ -253,11 +253,11 @@ impl Expression for Or {
 #[derive(Show)]
 pub struct Path {
     start_point: SubExpression,
-    steps: Vec<SubExpression>,
+    steps: Vec<Step>,
 }
 
 impl Path {
-    pub fn new(start_point: SubExpression, steps: Vec<SubExpression>) -> SubExpression {
+    pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
         box Path {start_point: start_point, steps: steps}
     }
 }
@@ -267,18 +267,7 @@ impl Expression for Path {
         let mut result = self.start_point.evaluate(context).nodeset();
 
         for step in self.steps.iter() {
-            let mut step_result = Nodeset::new();
-
-            let mut sub_context = context.new_context_for(result.size());
-
-            for current_node in result.iter() {
-                sub_context.next(*current_node);
-                let selected = step.evaluate(&sub_context);
-                // TODO: What if it is not a nodeset?
-                step_result.add_nodeset(&selected.nodeset());
-            }
-
-            result = step_result;
+            result = step.evaluate(context, result);
         }
 
         Nodes(result)
@@ -286,43 +275,22 @@ impl Expression for Path {
 }
 
 #[derive(Show)]
-pub struct Predicate {
+pub struct Filter {
     node_selector: SubExpression,
-    predicate: SubExpression,
+    predicate: Predicate,
 }
 
-impl Predicate {
+impl Filter {
     pub fn new(node_selector: SubExpression, predicate: SubExpression) -> SubExpression {
-        box Predicate { node_selector: node_selector, predicate: predicate }
-    }
-
-    fn include<'a, 'd>(value: &Value, context: &EvaluationContext<'a, 'd>) -> bool {
-        match value {
-            &Number(v) => context.position() == v as uint,
-            _ => value.boolean()
-        }
+        let predicate = Predicate { expression: predicate };
+        box Filter { node_selector: node_selector, predicate: predicate }
     }
 }
 
-impl Expression for Predicate {
+impl Expression for Filter {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let mut selected = Nodeset::new();
-
         let nodes = self.node_selector.evaluate(context).nodeset();
-
-        let mut sub_context = context.new_context_for(nodes.size());
-
-        for current_node in nodes.iter() {
-            sub_context.next(*current_node);
-
-            let value = self.predicate.evaluate(&sub_context);
-
-            if Predicate::include(&value, &sub_context) {
-                selected.add(*current_node);
-            }
-        }
-
-        Nodes(selected)
+        Nodes(self.predicate.select(context, nodes))
     }
 }
 
@@ -384,6 +352,37 @@ impl Expression for RootNode {
     }
 }
 
+#[derive(Show)]
+struct Predicate {
+    pub expression: SubExpression
+}
+
+impl Predicate {
+    fn select<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, nodes: Nodeset<'d>) -> Nodeset<'d> {
+        let mut selected = Nodeset::new();
+        let mut sub_context = context.new_context_for(nodes.size());
+
+        for current_node in nodes.iter() {
+            sub_context.next(*current_node);
+
+            if self.matches(&sub_context) {
+                selected.add(*current_node);
+            }
+        }
+
+        selected
+    }
+
+    fn matches(&self, context: &EvaluationContext) -> bool {
+        let value = self.expression.evaluate(context);
+
+        match value {
+            Number(v) => context.position() == v as uint,
+            _ => value.boolean()
+        }
+    }
+}
+
 pub type StepAxis = Box<Axis + 'static>;
 pub type StepTest = Box<NodeTest + 'static>;
 
@@ -391,19 +390,52 @@ pub type StepTest = Box<NodeTest + 'static>;
 pub struct Step {
     axis: StepAxis,
     node_test: StepTest,
+    predicates: Vec<Predicate>,
 }
 
 impl Step {
-    pub fn new(axis: StepAxis, node_test: StepTest) -> SubExpression {
-        box Step {axis: axis, node_test: node_test}
+    pub fn new(axis: StepAxis, node_test: StepTest, predicates: Vec<SubExpression>) -> Step {
+        let mut predicates = predicates;
+        let preds = predicates.drain().map(|p| Predicate { expression: p }).collect();
+        Step { axis: axis, node_test: node_test, predicates: preds }
     }
-}
 
-impl Expression for Step {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
+                        -> Nodeset<'d>
+    {
+        // For every starting node, we collect new nodes based on the
+        // axis and node-test. We evaluate the predicates on the total
+        // set of new nodes.
+
+        self.apply_predicates(context, self.apply_axis(context, starting_nodes))
+    }
+
+    fn apply_axis<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
+                        -> Nodeset<'d>
+    {
         let mut result = Nodeset::new();
-        self.axis.select_nodes(context, &*self.node_test, &mut result);
-        Nodes(result)
+        let mut sub_context = context.new_context_for(starting_nodes.size());
+
+        for node in starting_nodes.iter() {
+            sub_context.next(*node);
+            self.axis.select_nodes(&sub_context, &*self.node_test, &mut result);
+        }
+
+        result
+    }
+
+    fn apply_predicates<'a, 'd>(&self,
+                                context: &EvaluationContext<'a, 'd>,
+                                nodes: Nodeset<'d>)
+                                -> Nodeset<'d>
+    {
+        let mut nodes = nodes;
+
+        for predicate in self.predicates.iter() {
+            nodes = predicate.select(context, nodes);
+        }
+
+        nodes
     }
 }
 
@@ -464,7 +496,7 @@ mod test {
         NotEqual,
         Literal,
         Math,
-        Predicate,
+        Filter,
         Relational,
         RootNode,
         Step,
@@ -720,7 +752,7 @@ mod test {
     }
 
     #[test]
-    fn expression_step_numeric_predicate_selects_that_node() {
+    fn filter_with_numeric_predicate_selects_that_node() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
@@ -733,7 +765,7 @@ mod test {
         let selected_nodes = box Variable{name: "nodes".to_string()};
         let predicate = box Literal{value: NumberLiteral(1.0)};
 
-        let expr = Predicate::new(selected_nodes, predicate);
+        let expr = Filter::new(selected_nodes, predicate);
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -742,7 +774,7 @@ mod test {
     }
 
     #[test]
-    fn expression_step_false_predicate_selects_no_nodes() {
+    fn filter_with_false_predicate_selects_no_nodes() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
@@ -755,7 +787,7 @@ mod test {
         let selected_nodes = box Variable{name: "nodes".to_string()};
         let predicate = box Literal{value: BooleanLiteral(false)};
 
-        let expr = Predicate::new(selected_nodes, predicate);
+        let expr = Filter::new(selected_nodes, predicate);
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -824,17 +856,17 @@ mod test {
     }
 
     #[test]
-    fn expression_step_delegates_to_the_axis() {
+    fn step_delegates_to_the_axis() {
         let package = Package::new();
         let setup = Setup::new(&package);
 
         let axis = MockAxis::new();
         let node_test = DummyNodeTest;
 
-        let expr = Step::new(box axis.clone(), box node_test);
+        let expr = Step::new(box axis.clone(), box node_test, vec![]);
 
         let context = setup.context();
-        expr.evaluate(&context);
+        expr.evaluate(&context, nodeset![context.node]);
 
         assert_eq!(1, axis.calls());
     }

@@ -298,7 +298,19 @@ impl<I : Iterator<TokenResult>> Parser {
         }
     }
 
-    fn parse_step(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_predicates(&self, source: TokenSource<I>)
+                        -> Result<Vec<SubExpression>,ParseErr>
+    {
+        let mut predicates = Vec::new();
+
+        while let Some(predicate) = try!(self.parse_predicate_expression(source)) {
+            predicates.push(predicate)
+        }
+
+        Ok(predicates)
+    }
+
+    fn parse_step(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, ParseErr> {
         let axis = try!(self.parse_axis(source));
 
         let node_test = match try!(self.parse_node_test(source)) {
@@ -306,29 +318,14 @@ impl<I : Iterator<TokenResult>> Parser {
             None => try!(self.default_node_test(source, &*axis)),
         };
 
-        match node_test {
-            Some(test) => Ok(Some(expression::Step::new(axis, test))),
-            None => Ok(None)
-        }
-    }
+        let node_test = match node_test {
+            Some(test) => test,
+            None => return Ok(None),
+        };
 
-    fn parse_and_add_predicates(&self,
-                                source: TokenSource<I>,
-                                node_selecting_expr: SubExpression)
-                                -> Result<SubExpression,ParseErr>
-    {
-        let mut predicates = Vec::new();
+        let predicates = try!(self.parse_predicates(source));
 
-        loop {
-            match try!(self.parse_predicate_expression(source)) {
-                Some(predicate) => predicates.push(predicate),
-                None => break,
-            }
-        }
-
-        Ok(predicates.into_iter().fold(node_selecting_expr, |expr, pred| {
-            expression::Predicate::new(expr, pred)
-        }))
+        Ok(Some(expression::Step::new(axis, node_test, predicates)))
     }
 
     fn parse_relative_location_path_raw(&self,
@@ -337,19 +334,13 @@ impl<I : Iterator<TokenResult>> Parser {
     {
         match try!(self.parse_step(source)) {
             Some(step) => {
-                let mut steps = Vec::new();
-
-                let step = try!(self.parse_and_add_predicates(source, step));
-                steps.push(step);
+                let mut steps = vec![step];
 
                 while source.next_token_is(&Token::Slash) {
                     try!(source.consume(&Token::Slash));
 
                     match try!(self.parse_step(source)) {
-                        Some(next) => {
-                            let next = try!(self.parse_and_add_predicates(source, next));
-                            steps.push(next);
-                        },
+                        Some(next) => steps.push(next),
                         None => return Err(TrailingSlash),
                     }
                 }
@@ -390,7 +381,13 @@ impl<I : Iterator<TokenResult>> Parser {
 
     fn parse_filter_expression(&self, source: TokenSource<I>) -> ParseResult {
         match try!(self.parse_primary_expression(source)) {
-            Some(expr) => Ok(Some(try!(self.parse_and_add_predicates(source, expr)))),
+            Some(expr) => {
+                let mut predicates = try!(self.parse_predicates(source));
+
+                Ok(Some(predicates.drain().fold(expr, |expr, pred| {
+                    expression::Filter::new(expr, pred)
+                })))
+            },
             None => Ok(None),
         }
     }

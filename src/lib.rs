@@ -138,6 +138,8 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         }
     }
 
+    // TODO: "only predicates change the context position and context
+    // size", but we always set the size and next...
     fn new_context_for(&self, _size: uint) -> EvaluationContext<'a, 'd> {
         EvaluationContext {
             node: self.node,
