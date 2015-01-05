@@ -411,7 +411,7 @@ impl Expression for Variable {
 }
 
 #[cfg(test)]
-    mod test {
+mod test {
     use std::cell::RefCell;
     use std::rc::Rc;
     use std::collections::HashMap;
@@ -430,19 +430,19 @@ impl Expression for Variable {
 
     use super::super::expression;
     use super::Expression;
-        use super::{
-            And,
-            Equal,
-            NotEqual,
-            Literal,
-            Math,
-            Predicate,
-            Relational,
-            RootNode,
-            Step,
-            Union,
-            Variable
-        };
+    use super::{
+        And,
+        Equal,
+        NotEqual,
+        Literal,
+        Math,
+        Predicate,
+        Relational,
+        RootNode,
+        Step,
+        Union,
+        Variable
+    };
     use super::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
     struct FailExpression;
