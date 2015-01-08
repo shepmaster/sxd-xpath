@@ -1,9 +1,6 @@
 #![crate_name = "xpath"]
-#![feature(macro_rules)]
-#![feature(phase)]
-#![feature(globs)]
 
-#[phase(plugin, link)]
+#[macro_use]
 extern crate document;
 
 use self::Value::*;
@@ -17,6 +14,7 @@ use std::num::Float;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 use parser::Parser;
 
+#[macro_use]
 pub mod macros;
 pub mod nodeset;
 pub mod axis;

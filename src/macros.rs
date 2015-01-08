@@ -1,5 +1,3 @@
-#![macro_escape]
-
 /// Convenience constructor for a nodeset
 #[macro_export]
 macro_rules! nodeset(
