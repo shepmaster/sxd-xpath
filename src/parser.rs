@@ -109,10 +109,9 @@ impl<I : Iterator<TokenResult>> LeftAssociativeBinaryParser<I> {
         }
     }
 
-    fn parse(&self,
-             source: TokenSource<I>,
-             child_parse: |TokenSource<I>| -> ParseResult)
-             -> ParseResult {
+    fn parse<F>(&self, source: TokenSource<I>, child_parse: F) -> ParseResult
+        where F: Fn(TokenSource<I>) -> ParseResult
+    {
         let left = try!(child_parse(source));
 
         let mut left = match left {
@@ -150,7 +149,7 @@ impl<I : Iterator<TokenResult>> LeftAssociativeBinaryParser<I> {
 
 fn first_matching_rule
     <I : Iterator<TokenResult>>
-    (child_parses: &mut Vec<|TokenSource<I>| -> ParseResult>,
+    (child_parses: &[&Fn(TokenSource<I>) -> ParseResult],
      source: TokenSource<I>)
      -> ParseResult
 {
