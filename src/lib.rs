@@ -1,4 +1,5 @@
 #![crate_name = "xpath"]
+#![feature(box_syntax)]
 
 #[macro_use]
 extern crate document;
