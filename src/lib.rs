@@ -116,8 +116,8 @@ pub struct EvaluationContext<'a, 'd : 'a> {
     functions: &'a Functions,
     variables: &'a Variables<'d>,
     namespaces: &'a Namespaces,
-    position: uint,
-    size: uint,
+    position: usize,
+    size: usize,
 }
 
 impl<'a, 'd> EvaluationContext<'a, 'd> {
@@ -140,7 +140,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
 
     // TODO: "only predicates change the context position and context
     // size", but we always set the size and next...
-    fn new_context_for(&self, size: uint) -> EvaluationContext<'a, 'd> {
+    fn new_context_for(&self, size: usize) -> EvaluationContext<'a, 'd> {
         EvaluationContext {
             node: self.node,
             functions: self.functions,
@@ -156,11 +156,11 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         self.position += 1;
     }
 
-    fn position(&self) -> uint {
+    fn position(&self) -> usize {
         self.position
     }
 
-    fn size(&self) -> uint {
+    fn size(&self) -> usize {
         self.size
     }
 

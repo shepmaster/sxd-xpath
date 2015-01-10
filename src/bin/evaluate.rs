@@ -19,7 +19,7 @@ fn print_usage(program: &str, opts: &[OptGroup]) {
     print!("{}", usage(brief.as_slice(), opts));
 }
 
-fn pretty_error(xml: &str, position: uint) -> &str {
+fn pretty_error(xml: &str, position: usize) -> &str {
     let s = xml.slice_from(position);
     let l = s.chars().count();
     s.slice_chars(0, min(l, 15))

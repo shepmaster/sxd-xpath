@@ -174,7 +174,7 @@ impl<'d> Nodeset<'d> {
         self.nodes.push_all(other.nodes.as_slice());
     }
 
-    pub fn size(&self) -> uint {
+    pub fn size(&self) -> usize {
         self.nodes.len()
     }
 }

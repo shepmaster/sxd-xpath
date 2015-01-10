@@ -377,7 +377,7 @@ impl Predicate {
         let value = self.expression.evaluate(context);
 
         match value {
-            Number(v) => context.position() == v as uint,
+            Number(v) => context.position() == v as usize,
             _ => value.boolean()
         }
     }
@@ -825,7 +825,7 @@ mod test {
 
     #[derive(Clone,Show)]
     struct MockAxis {
-        calls: Rc<RefCell<uint>>,
+        calls: Rc<RefCell<usize>>,
     }
 
     impl MockAxis {
@@ -833,7 +833,7 @@ mod test {
             MockAxis{ calls: Rc::new(RefCell::new(0)) }
         }
 
-        fn calls(&self) -> uint {
+        fn calls(&self) -> usize {
             *self.calls.borrow()
         }
     }

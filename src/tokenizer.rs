@@ -12,7 +12,7 @@ use super::token::Token::*;
 
 pub struct Tokenizer {
     xpath: string::String,
-    start: uint,
+    start: usize,
     prefer_recognition_of_operator_names: bool,
 }
 
