@@ -151,12 +151,13 @@ impl<I> LeftAssociativeBinaryParser<I>
     }
 }
 
-fn first_matching_rule<I>(child_parses: &[&Fn(TokenSource<I>) -> ParseResult],
+type Rule<'a, I> = Fn(TokenSource<I>) -> ParseResult + 'a;
+fn first_matching_rule<I>(child_parses: &[&Rule<I>],
                           source: TokenSource<I>)
                           -> ParseResult
     where I: Iterator<Item=TokenResult>
 {
-    for child_parse in child_parses.iter_mut() {
+    for child_parse in child_parses.iter() {
         let expr = try!((*child_parse)(source));
         if expr.is_some() {
             return Ok(expr);
@@ -276,14 +277,19 @@ impl<I> Parser
     }
 
     fn parse_primary_expression(&self, source: TokenSource<I>) -> ParseResult {
-        let mut child_parses = vec![
-            |src: TokenSource<I>| self.parse_variable_reference(src),
-            |src: TokenSource<I>| self.parse_string_literal(src),
-            |src: TokenSource<I>| self.parse_numeric_literal(src),
-            |src: TokenSource<I>| self.parse_function_call(src),
+        let rule1 = |&: src: TokenSource<I>| self.parse_variable_reference(src);
+        let rule2 = |&: src: TokenSource<I>| self.parse_string_literal(src);
+        let rule3 = |&: src: TokenSource<I>| self.parse_numeric_literal(src);
+        let rule4 = |&: src: TokenSource<I>| self.parse_function_call(src);
+
+        let rules = &[
+            &rule1 as &Rule<I>,
+            &rule2 as &Rule<I>,
+            &rule3 as &Rule<I>,
+            &rule4 as &Rule<I>,
         ];
 
-        first_matching_rule(&mut child_parses, source)
+        first_matching_rule(rules, source)
     }
 
     fn parse_predicate_expression(&self, source: TokenSource<I>) -> ParseResult {
@@ -375,12 +381,15 @@ impl<I> Parser
     }
 
     fn parse_location_path(&self, source: TokenSource<I>) -> ParseResult {
-        let mut child_parses = vec![
-            |source: TokenSource<I>| self.parse_relative_location_path(source),
-            |source: TokenSource<I>| self.parse_absolute_location_path(source),
+        let rule1 = |&: source: TokenSource<I>| self.parse_relative_location_path(source);
+        let rule2 = |&: source: TokenSource<I>| self.parse_absolute_location_path(source);
+
+        let rules = &[
+            &rule1 as &Rule<I>,
+            &rule2 as &Rule<I>,
         ];
 
-        first_matching_rule(&mut child_parses, source)
+        first_matching_rule(rules, source)
     }
 
     fn parse_filter_expression(&self, source: TokenSource<I>) -> ParseResult {
