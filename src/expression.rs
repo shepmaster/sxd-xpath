@@ -219,7 +219,7 @@ impl Expression for Math {
 
 impl fmt::Show for Math {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Math {{ left: {}, right: {} }}", self.left, self.right)
+        write!(f, "Math {{ left: {:?}, right: {:?} }}", self.left, self.right)
     }
 }
 
@@ -338,7 +338,7 @@ impl Expression for Relational {
 
 impl fmt::Show for Relational {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Relational {{ left: {}, right: {} }}", self.left, self.right)
+        write!(f, "Relational {{ left: {:?}, right: {:?} }}", self.left, self.right)
     }
 }
 

@@ -605,7 +605,7 @@ mod test {
         ($a:expr, $b:expr) => ({
             let (a, b) = (&$a, &$b);
             assert!(a.is_approx_eq(b),
-                    "{} is not approximately equal to {}", *a, *b);
+                    "{:?} is not approximately equal to {:?}", *a, *b);
         })
     );
 

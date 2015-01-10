@@ -417,7 +417,7 @@ mod test {
     {
         match all_tokens_raw(tokenizer) {
             Ok(toks) => toks,
-            Err(msg) => panic!("{}", msg),
+            Err(msg) => panic!("{:?}", msg),
         }
     }
 

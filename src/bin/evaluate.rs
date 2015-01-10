@@ -29,7 +29,7 @@ fn build_xpath(xpath_str: &str) -> Box<xpath::expression::Expression> {
     let factory = Factory::new();
 
     match factory.build(xpath_str) {
-        Err(x) => panic!("Unable to compile XPath: {}", x),
+        Err(x) => panic!("Unable to compile XPath: {:?}", x),
         Ok(None) => panic!("Unable to compile XPath"),
         Ok(Some(x)) => x,
     }
@@ -115,6 +115,6 @@ fn main() {
 
         let res = xpath.evaluate(&context);
 
-        println!("{}", res);
+        println!("{:?}", res);
     }
 }
