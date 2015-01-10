@@ -167,11 +167,10 @@ fn first_matching_rule<I>(child_parses: &[&Rule<I>],
     Ok(None)
 }
 
-#[old_impl_check]
-impl<I> Parser
-    where I: Iterator<Item=TokenResult>
-{
-    fn parse_axis(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr> {
+impl Parser {
+    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr>
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
 
@@ -194,7 +193,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_node_test(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, ParseErr> {
+    fn parse_node_test<I>(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, ParseErr>
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::NodeTest) {
             let name = consume_value!(source, Token::NodeTest);
 
@@ -208,8 +209,9 @@ impl<I> Parser
         }
     }
 
-    fn default_node_test(&self, source: TokenSource<I>, axis: &Axis)
-                         -> Result<Option<SubNodeTest>,ParseErr>
+    fn default_node_test<I>(&self, source: TokenSource<I>, axis: &Axis)
+                            -> Result<Option<SubNodeTest>,ParseErr>
+        where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::NameTest) {
             let name = consume_value!(source, Token::NameTest);
@@ -227,7 +229,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_variable_reference(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_variable_reference<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::Variable) {
             let name = consume_value!(source, Token::Variable);
             Ok(Some(box expression::Variable { name: name } as SubExpression))
@@ -236,7 +240,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_string_literal(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_string_literal<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
             Ok(Some(box expression::Literal { value: LiteralValue::StringLiteral(value) } as SubExpression))
@@ -245,7 +251,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_numeric_literal(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_numeric_literal<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
             Ok(Some(box expression::Literal { value: LiteralValue::NumberLiteral(value) } as SubExpression))
@@ -254,7 +262,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_function_call(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_function_call<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if next_token_is!(source, Token::Function) {
             let name = consume_value!(source, Token::Function);
 
@@ -276,7 +286,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_primary_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_primary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rule1 = |&: src: TokenSource<I>| self.parse_variable_reference(src);
         let rule2 = |&: src: TokenSource<I>| self.parse_string_literal(src);
         let rule3 = |&: src: TokenSource<I>| self.parse_numeric_literal(src);
@@ -292,7 +304,9 @@ impl<I> Parser
         first_matching_rule(rules, source)
     }
 
-    fn parse_predicate_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_predicate_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if source.next_token_is(&Token::LeftBracket) {
             try!(source.consume(&Token::LeftBracket));
 
@@ -308,8 +322,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_predicates(&self, source: TokenSource<I>)
-                        -> Result<Vec<SubExpression>,ParseErr>
+    fn parse_predicates<I>(&self, source: TokenSource<I>)
+                           -> Result<Vec<SubExpression>,ParseErr>
+        where I: Iterator<Item=TokenResult>
     {
         let mut predicates = Vec::new();
 
@@ -320,7 +335,9 @@ impl<I> Parser
         Ok(predicates)
     }
 
-    fn parse_step(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, ParseErr> {
+    fn parse_step<I>(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, ParseErr>
+        where I: Iterator<Item=TokenResult>
+    {
         let axis = try!(self.parse_axis(source));
 
         let node_test = match try!(self.parse_node_test(source)) {
@@ -338,9 +355,10 @@ impl<I> Parser
         Ok(Some(expression::Step::new(axis, node_test, predicates)))
     }
 
-    fn parse_relative_location_path_raw(&self,
-                                        source: TokenSource<I>,
-                                        start_point: SubExpression) -> ParseResult
+    fn parse_relative_location_path_raw<I>(&self,
+                                           source: TokenSource<I>,
+                                           start_point: SubExpression) -> ParseResult
+        where I: Iterator<Item=TokenResult>
     {
         match try!(self.parse_step(source)) {
             Some(step) => {
@@ -361,12 +379,16 @@ impl<I> Parser
         }
     }
 
-    fn parse_relative_location_path(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_relative_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let start_point = box expression::ContextNode;
         self.parse_relative_location_path_raw(source, start_point)
     }
 
-    fn parse_absolute_location_path(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_absolute_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         if source.next_token_is(&Token::Slash) {
             try!(source.consume(&Token::Slash));
 
@@ -380,7 +402,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_location_path(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rule1 = |&: source: TokenSource<I>| self.parse_relative_location_path(source);
         let rule2 = |&: source: TokenSource<I>| self.parse_absolute_location_path(source);
 
@@ -392,7 +416,9 @@ impl<I> Parser
         first_matching_rule(rules, source)
     }
 
-    fn parse_filter_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_filter_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         match try!(self.parse_primary_expression(source)) {
             Some(expr) => {
                 let mut predicates = try!(self.parse_predicates(source));
@@ -405,7 +431,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_path_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_path_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let expr = try!(self.parse_location_path(source));
         if expr.is_some() {
             return Ok(expr);
@@ -427,7 +455,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_union_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_union_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::Pipe, builder: expression::Union::new }
         ];
@@ -436,7 +466,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_path_expression(source))
     }
 
-    fn parse_unary_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_unary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let expr = try!(self.parse_union_expression(source));
         if expr.is_some() {
             return Ok(expr);
@@ -459,7 +491,9 @@ impl<I> Parser
         }
     }
 
-    fn parse_multiplicative_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_multiplicative_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::Multiply,  builder: expression::Math::multiplication },
             BinaryRule { token: Token::Divide,    builder: expression::Math::division },
@@ -470,7 +504,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_unary_expression(source))
     }
 
-    fn parse_additive_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_additive_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::PlusSign,  builder: expression::Math::addition },
             BinaryRule { token: Token::MinusSign, builder: expression::Math::subtraction }
@@ -480,7 +516,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_multiplicative_expression(source))
     }
 
-    fn parse_relational_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_relational_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::LessThan,
                          builder: expression::Relational::less_than },
@@ -496,7 +534,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_additive_expression(source))
     }
 
-    fn parse_equality_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_equality_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::Equal,    builder: expression::Equal::new },
             BinaryRule { token: Token::NotEqual, builder: expression::NotEqual::new },
@@ -506,7 +546,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_relational_expression(source))
     }
 
-    fn parse_and_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_and_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::And, builder: expression::And::new }
         ];
@@ -515,7 +557,9 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_equality_expression(source))
     }
 
-    fn parse_or_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_or_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let rules = vec![
             BinaryRule { token: Token::Or, builder: expression::Or::new }
         ];
@@ -524,11 +568,15 @@ impl<I> Parser
         parser.parse(source, |source| self.parse_and_expression(source))
     }
 
-    fn parse_expression(&self, source: TokenSource<I>) -> ParseResult {
+    fn parse_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         self.parse_or_expression(source)
     }
 
-    pub fn parse(&self, source: I) -> ParseResult {
+    pub fn parse<I>(&self, source: I) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
         let mut source = source.peekable();
 
         let expr = try!(self.parse_or_expression(&mut source));
