@@ -313,7 +313,9 @@ impl Tokenizer {
     }
 }
 
-impl Iterator<TokenResult> for Tokenizer {
+impl Iterator for Tokenizer {
+    type Item = TokenResult;
+
     fn next(&mut self) -> Option<TokenResult> {
         if self.has_more_tokens() {
             Some(self.next_token())
@@ -366,7 +368,11 @@ impl<I> TokenDeabbreviator<I> {
     }
 }
 
-impl<I: Iterator<TokenResult>> Iterator<TokenResult> for TokenDeabbreviator<I> {
+impl<I> Iterator for TokenDeabbreviator<I>
+    where I: Iterator<Item=TokenResult>
+{
+    type Item = TokenResult;
+
     fn next(&mut self) -> Option<TokenResult> {
         if self.buffer.is_empty() {
             let token = self.source.next();
@@ -400,11 +406,15 @@ mod test {
         ! tokenizer.has_more_tokens()
     }
 
-    fn all_tokens_raw<I: Iterator<TokenResult>>(tokenizer: I) -> Result<Vec<Token>, TokenizerErr> {
+    fn all_tokens_raw<I>(tokenizer: I) -> Result<Vec<Token>, TokenizerErr>
+        where I: Iterator<Item=TokenResult>
+    {
         tokenizer.collect()
     }
 
-    fn all_tokens<I: Iterator<TokenResult>>(tokenizer: I) -> Vec<Token> {
+    fn all_tokens<I>(tokenizer: I) -> Vec<Token>
+        where I: Iterator<Item=TokenResult>
+    {
         match all_tokens_raw(tokenizer) {
             Ok(toks) => toks,
             Err(msg) => panic!("{}", msg),

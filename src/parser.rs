@@ -52,7 +52,9 @@ trait XCompat {
     fn consume(&mut self, token: &Token) -> Result<(), ParseErr>;
 }
 
-impl<I: Iterator<TokenResult>> XCompat for Peekable<TokenResult, I> {
+impl<I> XCompat for Peekable<TokenResult, I>
+    where I: Iterator<Item=TokenResult>
+{
     fn has_more_tokens(&mut self) -> bool {
         self.peek().is_some()
     }
@@ -102,7 +104,9 @@ macro_rules! next_token_is(
     );
 );
 
-impl<I : Iterator<TokenResult>> LeftAssociativeBinaryParser<I> {
+impl<I> LeftAssociativeBinaryParser<I>
+    where I: Iterator<Item=TokenResult>
+{
     fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser<I> {
         LeftAssociativeBinaryParser {
             rules: rules,
@@ -147,11 +151,10 @@ impl<I : Iterator<TokenResult>> LeftAssociativeBinaryParser<I> {
     }
 }
 
-fn first_matching_rule
-    <I : Iterator<TokenResult>>
-    (child_parses: &[&Fn(TokenSource<I>) -> ParseResult],
-     source: TokenSource<I>)
-     -> ParseResult
+fn first_matching_rule<I>(child_parses: &[&Fn(TokenSource<I>) -> ParseResult],
+                          source: TokenSource<I>)
+                          -> ParseResult
+    where I: Iterator<Item=TokenResult>
 {
     for child_parse in child_parses.iter_mut() {
         let expr = try!((*child_parse)(source));
@@ -163,8 +166,10 @@ fn first_matching_rule
     Ok(None)
 }
 
-impl<I : Iterator<TokenResult>> Parser {
-
+#[old_impl_check]
+impl<I> Parser
+    where I: Iterator<Item=TokenResult>
+{
     fn parse_axis(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr> {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
