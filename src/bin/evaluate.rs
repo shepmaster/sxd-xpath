@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate document;
 extern crate xpath;
 extern crate getopts;
