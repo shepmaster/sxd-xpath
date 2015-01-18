@@ -18,6 +18,16 @@ fn axis_is_fully_applied_before_predicates_filter() {
     assert_eq!(Value::Number(1.0), result);
 }
 
+#[test]
+fn position_function_in_predicate() {
+    let package = parse("<a><b/><b/></a>");
+    let doc = package.as_document();
+
+    let result = evaluate(&doc, "count(//a/*[position() = 2])");
+
+    assert_eq!(Value::Number(1.0), result);
+}
+
 fn parse(xml: &str) -> Package {
     Parser::new().parse(xml).unwrap()
 }
