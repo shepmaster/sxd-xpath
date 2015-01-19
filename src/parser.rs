@@ -752,11 +752,12 @@ mod test {
 
         fn evaluate_on<N : ToNode<'d>>(&self, expr: &Expression, node: N) -> Value<'d> {
             let node = node.to_node();
-            let mut context = EvaluationContext::new(node,
-                                                     &self.functions,
-                                                     &self.variables,
-                                                     &self.namespaces);
-            context.next(node);
+            let context = EvaluationContext::new(
+                node,
+                &self.functions,
+                &self.variables,
+                &self.namespaces,
+            );
             expr.evaluate(&context)
         }
     }

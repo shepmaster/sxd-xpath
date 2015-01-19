@@ -1,5 +1,8 @@
+use std::vec;
+use std::iter::FromIterator;
 use document::dom4;
 
+use super::EvaluationContext;
 use self::Node::*;
 use std::slice::Iter;
 
@@ -176,6 +179,21 @@ impl<'d> Nodeset<'d> {
 
     pub fn size(&self) -> usize {
         self.nodes.len()
+    }
+
+    pub fn into_iter(self) -> vec::IntoIter<Node<'d>> {
+        self.nodes.into_iter()
+    }
+}
+
+impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
+    fn from_iter<T>(iterator: T) -> Nodeset<'d>
+        where T: Iterator<Item=EvaluationContext<'a, 'd>>
+    {
+        let mut iterator = iterator;
+        let mut ns = Nodeset::new();
+        for n in iterator { ns.add(n.node) };
+        ns
     }
 }
 

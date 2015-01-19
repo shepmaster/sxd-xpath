@@ -48,11 +48,12 @@ impl<'d> Setup<'d> {
 
     fn evaluate(&self, doc: &'d Document<'d>, xpath: &str) -> Value<'d> {
         let root = doc.root();
-        let mut context = EvaluationContext::new(root,
-                                                 &self.functions,
-                                                 &self.variables,
-                                                 &self.namespaces);
-        context.next(root);
+        let context = EvaluationContext::new(
+            root,
+            &self.functions,
+            &self.variables,
+            &self.namespaces,
+        );
 
         let xpath = self.factory.build(xpath).unwrap().unwrap();
         xpath.evaluate(&context)

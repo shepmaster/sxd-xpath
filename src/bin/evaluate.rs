@@ -109,11 +109,12 @@ fn main() {
         let variables = build_variables();
         let namespaces = build_namespaces(&arguments);
 
-        let mut context = EvaluationContext::new(root,
-                                                 &functions,
-                                                 &variables,
-                                                 &namespaces);
-        context.next(root);
+        let context = EvaluationContext::new(
+            root,
+            &functions,
+            &variables,
+            &namespaces,
+        );
 
         let res = xpath.evaluate(&context);
 

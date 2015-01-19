@@ -10,8 +10,10 @@ use self::nodeset::Nodeset;
 use self::nodeset::{Node,ToNode};
 
 use std::collections::HashMap;
+use std::iter;
 use std::string;
 use std::num::Float;
+use std::vec;
 
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 use parser::Parser;
@@ -113,6 +115,7 @@ pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 pub type Namespaces = HashMap<string::String, string::String>;
 
+#[derive(Copy,Clone)]
 pub struct EvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
     functions: &'a Functions,
@@ -135,27 +138,18 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
             functions: functions,
             variables: variables,
             namespaces: namespaces,
-            position: 0,
+            position: 1,
             size: 1,
         }
     }
 
-    // TODO: "only predicates change the context position and context
-    // size", but we always set the size and next...
-    fn new_context_for(&self, size: usize) -> EvaluationContext<'a, 'd> {
+    fn new_context_for<N>(&self, node: N) -> EvaluationContext<'a, 'd>
+        where N: ToNode<'d>
+    {
         EvaluationContext {
-            node: self.node,
-            functions: self.functions,
-            variables: self.variables,
-            namespaces: self.namespaces,
-            position: 0,
-            size: size,
+            node: node.to_node(),
+            .. *self
         }
-    }
-
-    pub fn next<N: ToNode<'d>>(&mut self, node: N) {
-        self.node = node.to_node();
-        self.position += 1;
     }
 
     fn position(&self) -> usize {
@@ -176,6 +170,38 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
 
     fn namespace_for(&self, prefix: &str) -> Option<&str> {
         self.namespaces.get(prefix).map(|ns| ns.as_slice())
+    }
+
+    fn predicate_iter<'p>(&'p self, nodes: Nodeset<'d>)
+                          -> EvaluationContextPredicateIter<'a, 'd, 'p>
+    {
+        let sz = nodes.size();
+        EvaluationContextPredicateIter {
+            parent: self,
+            nodes: nodes.into_iter().enumerate(),
+            size: sz,
+        }
+    }
+}
+
+struct EvaluationContextPredicateIter<'a : 'p, 'd : 'a + 'p, 'p> {
+    parent: &'p EvaluationContext<'a, 'd>,
+    nodes: iter::Enumerate<vec::IntoIter<Node<'d>>>,
+    size: usize,
+}
+
+impl<'a, 'd, 'p> Iterator for EvaluationContextPredicateIter<'a, 'd, 'p> {
+    type Item = EvaluationContext<'a, 'd>;
+
+    fn next(&mut self) -> Option<EvaluationContext<'a, 'd>> {
+        self.nodes.next().map(|(idx, node)| {
+            EvaluationContext {
+                node: node,
+                position: idx + 1,
+                size: self.size,
+                .. *self.parent
+            }
+        })
     }
 }
 

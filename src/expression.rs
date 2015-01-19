@@ -359,18 +359,7 @@ struct Predicate {
 
 impl Predicate {
     fn select<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, nodes: Nodeset<'d>) -> Nodeset<'d> {
-        let mut selected = Nodeset::new();
-        let mut sub_context = context.new_context_for(nodes.size());
-
-        for current_node in nodes.iter() {
-            sub_context.next(*current_node);
-
-            if self.matches(&sub_context) {
-                selected.add(*current_node);
-            }
-        }
-
-        selected
+        context.predicate_iter(nodes).filter(|ctx| self.matches(ctx)).collect()
     }
 
     fn matches(&self, context: &EvaluationContext) -> bool {
@@ -414,11 +403,10 @@ impl Step {
                         -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
-        let mut sub_context = context.new_context_for(starting_nodes.size());
 
         for node in starting_nodes.iter() {
-            sub_context.next(*node);
-            self.axis.select_nodes(&sub_context, &*self.node_test, &mut result);
+            let child_context = context.new_context_for(*node);
+            self.axis.select_nodes(&child_context, &*self.node_test, &mut result);
         }
 
         result

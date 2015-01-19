@@ -42,9 +42,7 @@ impl Axis for Ancestor {
     {
         let mut node = context.node;
         while let Some(parent) = node.parent() {
-            let mut child_context = context.new_context_for(1);
-            child_context.next(parent);
-
+            let child_context = context.new_context_for(parent);
             node_test.test(&child_context, result);
             node = parent;
         }
@@ -79,9 +77,7 @@ impl Axis for Attribute {
     {
         if let ElementNode(ref e) = context.node {
             for attr in e.attributes().iter() {
-                let mut attr_context = context.new_context_for(1);
-                attr_context.next(*attr);
-
+                let attr_context = context.new_context_for(*attr);
                 node_test.test(&attr_context, result);
             }
         }
@@ -105,9 +101,7 @@ impl Axis for Child {
         let n = context.node;
 
         for child in n.children().iter() {
-            let mut child_context = context.new_context_for(1);
-            child_context.next(*child);
-
+            let child_context = context.new_context_for(*child);
             node_test.test(&child_context, result);
         }
     }
@@ -126,9 +120,7 @@ impl Axis for Descendant {
         let n = context.node;
 
         for child in n.children().iter() {
-            let mut child_context = context.new_context_for(1);
-            child_context.next(*child);
-
+            let child_context = context.new_context_for(*child);
             node_test.test(&child_context, result);
             self.select_nodes(&child_context, node_test, result);
         }
@@ -161,8 +153,7 @@ impl Axis for Parent {
                             result:    &mut Nodeset<'d>)
     {
         if let Some(p) = context.node.parent() {
-            let mut parent_context = context.new_context_for(1);
-            parent_context.next(p);
+            let parent_context = context.new_context_for(p);
             node_test.test(&parent_context, result);
         }
     }
@@ -175,9 +166,7 @@ fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 {
     let sibs = f(&context.node);
     for sibling in sibs.iter() {
-        let mut child_context = context.new_context_for(1);
-        child_context.next(*sibling);
-
+        let child_context = context.new_context_for(*sibling);
         node_test.test(&child_context, result);
     }
 }
@@ -220,9 +209,7 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
     loop {
         let sibs = f(&node);
         for sibling in sibs.iter() {
-            let mut child_context = context.new_context_for(1);
-            child_context.next(*sibling);
-
+            let child_context = context.new_context_for(*sibling);
             node_test.test(&child_context, result);
         }
 
