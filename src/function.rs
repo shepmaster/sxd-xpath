@@ -37,6 +37,15 @@ impl Error {
     }
 }
 
+fn minimum_arg_count<T>(args: &Vec<T>, minimum: usize) -> Result<(), Error> {
+    let actual = args.len();
+    if actual < minimum {
+        Err(Error::NotEnoughArguments{expected: minimum, actual: actual})
+    } else {
+        Ok(())
+    }
+}
+
 fn exact_arg_count<T>(args: &Vec<T>, expected: usize) -> Result<(), Error> {
     let actual = args.len();
     if actual < expected {
@@ -46,6 +55,17 @@ fn exact_arg_count<T>(args: &Vec<T>, expected: usize) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+fn string_args(args: Vec<Value>) -> Result<Vec<String>, Error> {
+    fn string_arg(v: Value) -> Result<String, Error> {
+        match v {
+            Value::String(s) => Ok(s),
+            _ => Err(Error::wrong_type(&v, ArgumentType::String)),
+        }
+    }
+
+    args.into_iter().map(string_arg).collect()
 }
 
 struct Last;
@@ -85,6 +105,19 @@ impl Function for Count {
             &Value::Nodes(ref nodeset) => Ok(Value::Number(nodeset.size() as f64)),
             _ => Err(Error::wrong_type(arg, ArgumentType::Nodeset)),
         }
+    }
+}
+
+struct Concat;
+
+impl Function for Concat {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(minimum_arg_count(&args, 2));
+        let args = try!(string_args(args));
+        Ok(Value::String(args.concat()))
     }
 }
 
@@ -132,6 +165,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
+    functions.insert("concat".to_string(), box Concat);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
@@ -142,7 +176,7 @@ mod test {
     use std::collections::HashMap;
     use document::Package;
     use super::super::{EvaluationContext,Function,Value};
-    use super::{Last,Position,Count};
+    use super::{Last,Position,Count,Concat};
 
     #[test]
     fn last_returns_context_size() {
@@ -191,5 +225,23 @@ mod test {
         let r = Count.evaluate(&context, args);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
+    }
+
+    #[test]
+    fn concat_combines_strings() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let functions = HashMap::new();
+        let variables = HashMap::new();
+        let namespaces = HashMap::new();
+
+        let context = EvaluationContext::new(doc.root(), &functions, &variables, &namespaces);
+        let args = vec![Value::String("hello".to_string()),
+                        Value::String(" ".to_string()),
+                        Value::String("world".to_string())];
+        let r = Concat.evaluate(&context, args);
+
+        assert_eq!(Ok(Value::String("hello world".to_string())), r);
     }
 }
