@@ -35,7 +35,7 @@ impl<'a> XPathParseExt<'a> for Point<'a> {
     }
 }
 
-static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>; 12] = [
+static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>; 13] = [
     ("/", Token::Slash),
     ("(", Token::LeftParen),
     (")", Token::RightParen),
@@ -48,6 +48,7 @@ static SINGLE_CHAR_TOKENS: [Identifier<'static, Token>; 12] = [
     ("=", Token::Equal),
     ("<", Token::LessThan),
     (">", Token::GreaterThan),
+    (",", Token::Comma),
 ];
 
 static TWO_CHAR_TOKENS: [Identifier<'static, Token>; 5] = [
@@ -788,6 +789,28 @@ mod test {
 
         assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
                                                Token::LeftParen,
+                                               Token::RightParen]);
+    }
+
+    #[test]
+    fn tokenizes_function_call_with_argument() {
+        let tokenizer = Tokenizer::new("hello(1)");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+                                               Token::LeftParen,
+                                               Token::Number(1.0),
+                                               Token::RightParen]);
+    }
+
+    #[test]
+    fn tokenizes_function_call_with_multiple_arguments() {
+        let tokenizer = Tokenizer::new("hello(1, 2)");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+                                               Token::LeftParen,
+                                               Token::Number(1.0),
+                                               Token::Comma,
+                                               Token::Number(2.0),
                                                Token::RightParen]);
     }
 

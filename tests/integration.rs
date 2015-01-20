@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate document;
 extern crate xpath;
 
@@ -7,6 +9,16 @@ use document::dom4::Document;
 use document::parser::Parser;
 use xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext};
 use xpath::expression::Expression;
+
+#[test]
+fn functions_accept_arguments() {
+    let package = parse("<a/>");
+    let doc = package.as_document();
+
+    let result = evaluate(&doc, "concat('hello', ' ', 'world')");
+
+    assert_eq!(Value::String("hello world".to_string()), result);
+}
 
 #[test]
 fn axis_is_fully_applied_before_predicates_filter() {

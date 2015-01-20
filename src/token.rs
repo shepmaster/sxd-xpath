@@ -30,6 +30,7 @@ pub enum NodeTestName {
 pub enum Token {
     And,
     AtSign,
+    Comma,
     CurrentNode,
     Divide,
     DoubleSlash,

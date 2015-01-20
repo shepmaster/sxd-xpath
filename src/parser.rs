@@ -26,6 +26,7 @@ pub enum ParseErr {
     ExtraUnparsedTokens,
     RanOutOfInput,
     RightHandSideExpressionMissing,
+    ArgumentMissing,
     TokenizerError(TokenizerErr),
     TrailingSlash,
     UnexpectedToken(Token),
@@ -262,22 +263,44 @@ impl Parser {
         }
     }
 
+    fn parse_function_args_tail<I>(&self, source: TokenSource<I>, mut arguments: Vec<SubExpression>)
+                                   -> Result<Vec<SubExpression>, ParseErr>
+        where I: Iterator<Item=TokenResult>
+    {
+        while source.next_token_is(&Token::Comma) {
+            try!(source.consume(&Token::Comma));
+
+            match try!(self.parse_expression(source)) {
+                Some(arg) => arguments.push(arg),
+                None => return Err(ArgumentMissing),
+            }
+        }
+
+        Ok(arguments)
+    }
+
+    fn parse_function_args<I>(&self, source: TokenSource<I>)
+                              -> Result<Vec<SubExpression>, ParseErr>
+        where I: Iterator<Item=TokenResult>
+    {
+        let mut arguments = Vec::new();
+
+        match try!(self.parse_expression(source)) {
+            Some(arg) => arguments.push(arg),
+            None => return Ok(arguments),
+        }
+
+        self.parse_function_args_tail(source, arguments)
+    }
+
     fn parse_function_call<I>(&self, source: TokenSource<I>) -> ParseResult
         where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::Function) {
             let name = consume_value!(source, Token::Function);
 
-            let mut arguments = Vec::new();
-
             try!(source.consume(&Token::LeftParen));
-            while ! source.next_token_is(&Token::RightParen) {
-                let arg = try!(self.parse_expression(source));
-                match arg {
-                    Some(arg) => arguments.push(arg),
-                    None => break,
-                }
-            }
+            let arguments = try!(self.parse_function_args(source));
             try!(source.consume(&Token::RightParen));
 
             Ok(Some(box expression::Function{ name: name, arguments: arguments } as SubExpression))
