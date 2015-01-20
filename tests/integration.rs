@@ -66,6 +66,6 @@ impl<'d> Setup<'d> {
         );
 
         let xpath = self.factory.build(xpath).unwrap().unwrap();
-        xpath.evaluate(&context)
+        xpath.evaluate(&context).ok().unwrap()
     }
 }

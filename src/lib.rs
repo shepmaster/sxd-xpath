@@ -17,6 +17,7 @@ use std::vec;
 
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 use parser::Parser;
+pub use function::Function;
 
 #[macro_use]
 pub mod macros;
@@ -102,12 +103,6 @@ impl<'d> StringValue for Node<'d> {
             &Node::TextNode(n) => string::String::from_str(n.text()),
         }
     }
-}
-
-pub trait Function {
-    fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
-                        args: Vec<Value<'d>>) -> Value<'d>;
 }
 
 type BoxFunc = Box<Function + 'static>;

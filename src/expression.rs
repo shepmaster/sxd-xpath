@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use super::nodeset::Nodeset;
-
 use self::LiteralValue::*;
 
 use super::EvaluationContext;
@@ -11,13 +9,19 @@ use super::Value::{Boolean,Number,Nodes};
 use super::StringValue;
 
 use super::axis::Axis;
+use super::function;
 use super::node_test::NodeTest;
+use super::nodeset::Nodeset;
 
-// TODO: Figure out how to use HOFs to get rid of returning a Box here
-// all the time.
+#[derive(Clone,Show,PartialEq,Hash)]
+pub enum Error {
+    UnknownFunction(String),
+    UnknownVariable(String),
+    FunctionEvaluation(function::Error),
+}
 
 pub trait Expression: fmt::Show {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d>;
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
 pub type SubExpression = Box<Expression + 'static>;
@@ -41,9 +45,10 @@ pub struct And {
 binary_constructor!(And);
 
 impl Expression for And {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        Boolean(self.left.evaluate(context).boolean() &&
-                self.right.evaluate(context).boolean())
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let left = try!(self.left.evaluate(context)).boolean();
+        let v = left && try!(self.right.evaluate(context)).boolean();
+        Ok(Boolean(v))
     }
 }
 
@@ -52,8 +57,8 @@ impl Expression for And {
 pub struct ContextNode;
 
 impl Expression for ContextNode {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        Nodes(nodeset![context.node])
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        Ok(Nodes(nodeset![context.node]))
     }
 }
 
@@ -66,9 +71,9 @@ pub struct Equal {
 binary_constructor!(Equal);
 
 impl Equal {
-    fn boolean_evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> bool {
-        let left_val = self.left.evaluate(context);
-        let right_val = self.right.evaluate(context);
+    fn boolean_evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<bool, Error> {
+        let left_val = try!(self.left.evaluate(context));
+        let right_val = try!(self.right.evaluate(context));
 
         fn str_vals(nodes: &Nodeset) -> HashSet<String> {
             nodes.iter().map(|n| n.string_value()).collect()
@@ -82,7 +87,7 @@ impl Equal {
                 .collect()
         }
 
-        match (&left_val, &right_val) {
+        let v = match (&left_val, &right_val) {
             (&Nodes(ref left_nodes), &Nodes(ref right_nodes)) => {
                 let left_strings = str_vals(left_nodes);
                 let right_strings = str_vals(right_nodes);
@@ -103,13 +108,15 @@ impl Equal {
             (&Number(_), _) |
             (_, &Number(_)) => left_val.number() == right_val.number(),
             _ => left_val.string() == right_val.string()
-        }
+        };
+
+        Ok(v)
     }
 }
 
 impl Expression for Equal {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        Boolean(self.boolean_evaluate(context))
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        self.boolean_evaluate(context).map(|v| Boolean(v))
     }
 }
 
@@ -127,8 +134,8 @@ impl NotEqual {
 }
 
 impl Expression for NotEqual {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        Boolean(!self.equal.boolean_evaluate(context))
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        self.equal.boolean_evaluate(context).map(|v| Boolean(!v))
     }
 }
 
@@ -139,15 +146,13 @@ pub struct Function {
 }
 
 impl Expression for Function {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        match context.function_for_name(self.name.as_slice()) {
-            Some(fun) => {
-                // TODO: Error when argument count mismatch
-                let args = self.arguments.iter().map(|ref arg| arg.evaluate(context)).collect();
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        if let Some(fun) = context.function_for_name(self.name.as_slice()) {
+            let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
 
-                fun.evaluate(context, args)
-            },
-            None => panic!("throw UnknownFunctionException(_name)"),
+            fun.evaluate(context, args).map_err(|e| Error::FunctionEvaluation(e))
+        } else {
+            Err(Error::UnknownFunction(self.name.clone()))
         }
     }
 }
@@ -165,12 +170,13 @@ pub struct Literal {
 }
 
 impl Expression for Literal {
-    fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        match &self.value {
+    fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let v = match &self.value {
             &BooleanLiteral(b) => Boolean(b),
             &NumberLiteral(b) => Number(b),
             &StringLiteral(ref b) => Value::String(b.clone()),
-        }
+        };
+        Ok(v)
     }
 }
 
@@ -209,11 +215,11 @@ impl Math {
 }
 
 impl Expression for Math {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let left = self.left.evaluate(context);
-        let right = self.right.evaluate(context);
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let left = try!(self.left.evaluate(context));
+        let right = try!(self.right.evaluate(context));
         let op = self.operation;
-        return Number(op(left.number(), right.number()));
+        Ok(Number(op(left.number(), right.number())))
     }
 }
 
@@ -229,9 +235,8 @@ pub struct Negation {
 }
 
 impl Expression for Negation {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let result = self.expression.evaluate(context);
-        return Number(-result.number());
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        self.expression.evaluate(context).map(|r| Number(-r.number()))
     }
 }
 
@@ -244,9 +249,10 @@ pub struct Or {
 binary_constructor!(Or);
 
 impl Expression for Or {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        return Boolean(self.left.evaluate(context).boolean() ||
-                       self.right.evaluate(context).boolean())
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let left = try!(self.left.evaluate(context)).boolean();
+        let v = left || try!(self.right.evaluate(context)).boolean();
+        Ok(Boolean(v))
     }
 }
 
@@ -263,14 +269,14 @@ impl Path {
 }
 
 impl Expression for Path {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let mut result = self.start_point.evaluate(context).nodeset();
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let mut result = try!(self.start_point.evaluate(context)).nodeset();
 
         for step in self.steps.iter() {
-            result = step.evaluate(context, result);
+            result = try!(step.evaluate(context, result));
         }
 
-        Nodes(result)
+        Ok(Nodes(result))
     }
 }
 
@@ -288,9 +294,10 @@ impl Filter {
 }
 
 impl Expression for Filter {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let nodes = self.node_selector.evaluate(context).nodeset();
-        Nodes(self.predicate.select(context, nodes))
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let nodes = try!(self.node_selector.evaluate(context)).nodeset();
+        let nodes = try!(self.predicate.select(context, nodes));
+        Ok(Nodes(nodes))
     }
 }
 
@@ -328,11 +335,11 @@ impl Relational {
 }
 
 impl Expression for Relational {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let left_val = self.left.evaluate(context);
-        let right_val = self.right.evaluate(context);
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let left_val = try!(self.left.evaluate(context));
+        let right_val = try!(self.right.evaluate(context));
         let op = self.operation;
-        Boolean(op(left_val.number(), right_val.number()))
+        Ok(Boolean(op(left_val.number(), right_val.number())))
     }
 }
 
@@ -347,8 +354,8 @@ impl fmt::Show for Relational {
 pub struct RootNode;
 
 impl Expression for RootNode {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        Nodes(nodeset![context.node.document().root()])
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        Ok(Nodes(nodeset![context.node.document().root()]))
     }
 }
 
@@ -358,17 +365,27 @@ struct Predicate {
 }
 
 impl Predicate {
-    fn select<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, nodes: Nodeset<'d>) -> Nodeset<'d> {
-        context.predicate_iter(nodes).filter(|ctx| self.matches(ctx)).collect()
+    fn select<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, nodes: Nodeset<'d>)
+                      -> Result<Nodeset<'d>, Error>
+    {
+        context.predicate_iter(nodes).filter_map(|ctx| {
+            match self.matches(&ctx) {
+                Ok(true) => Some(Ok(ctx)),
+                Ok(false) => None,
+                Err(e) => Some(Err(e)),
+            }
+        }).collect()
     }
 
-    fn matches(&self, context: &EvaluationContext) -> bool {
-        let value = self.expression.evaluate(context);
+    fn matches(&self, context: &EvaluationContext) -> Result<bool, Error> {
+        let value = try!(self.expression.evaluate(context));
 
-        match value {
+        let v = match value {
             Number(v) => context.position() == v as usize,
             _ => value.boolean()
-        }
+        };
+
+        Ok(v)
     }
 }
 
@@ -390,7 +407,7 @@ impl Step {
     }
 
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
-                        -> Nodeset<'d>
+                        -> Result<Nodeset<'d>, Error>
     {
         // For every starting node, we collect new nodes based on the
         // axis and node-test. We evaluate the predicates on the total
@@ -415,15 +432,15 @@ impl Step {
     fn apply_predicates<'a, 'd>(&self,
                                 context: &EvaluationContext<'a, 'd>,
                                 nodes: Nodeset<'d>)
-                                -> Nodeset<'d>
+                                -> Result<Nodeset<'d>, Error>
     {
         let mut nodes = nodes;
 
         for predicate in self.predicates.iter() {
-            nodes = predicate.select(context, nodes);
+            nodes = try!(predicate.select(context, nodes));
         }
 
-        nodes
+        Ok(nodes)
     }
 }
 
@@ -436,11 +453,11 @@ pub struct Union {
 binary_constructor!(Union);
 
 impl Expression for Union {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        let mut left_val = self.left.evaluate(context).nodeset();
-        let right_val = self.right.evaluate(context).nodeset();
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        let mut left_val = try!(self.left.evaluate(context)).nodeset();
+        let right_val = try!(self.right.evaluate(context)).nodeset();
         left_val.add_nodeset(&right_val);
-        Nodes(left_val)
+        Ok(Nodes(left_val))
     }
 }
 
@@ -450,10 +467,11 @@ pub struct Variable {
 }
 
 impl Expression for Variable {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
-        match context.value_of(self.name.as_slice()) {
-            Some(v) => v.clone(),
-            None => panic!("throw UnknownVariableException(_name)"),
+    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        if let Some(v) = context.value_of(self.name.as_slice()) {
+            Ok(v.clone())
+        } else {
+            Err(Error::UnknownVariable(self.name.clone()))
         }
     }
 }
@@ -474,10 +492,11 @@ mod test {
     use super::super::EvaluationContext;
     use super::super::nodeset::Nodeset;
     use super::super::axis::Axis;
+    use super::super::function;
     use super::super::node_test::NodeTest;
 
     use super::super::expression;
-    use super::Expression;
+    use super::{Expression,Error};
     use super::{
         And,
         Equal,
@@ -496,7 +515,7 @@ mod test {
     #[derive(Show)]
     struct FailExpression;
     impl Expression for FailExpression {
-        fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Value<'d> {
+        fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
             panic!("Should never be called");
         }
     }
@@ -537,7 +556,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(true));
+        assert_eq!(res, Ok(Boolean(true)));
     }
 
     #[test]
@@ -551,8 +570,7 @@ mod test {
         let expr = And{left: left, right: right};
 
         let context = setup.context();
-        expr.evaluate(&context);
-        // assert_not_fail
+        expr.evaluate(&context).ok().unwrap();
     }
 
     #[test]
@@ -574,7 +592,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(true));
+        assert_eq!(res, Ok(Boolean(true)));
     }
 
     #[test]
@@ -593,7 +611,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(false));
+        assert_eq!(res, Ok(Boolean(false)));
     }
 
     #[test]
@@ -613,7 +631,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(true));
+        assert_eq!(res, Ok(Boolean(true)));
     }
 
     #[test]
@@ -629,7 +647,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(false));
+        assert_eq!(res, Ok(Boolean(false)));
     }
 
     #[test]
@@ -645,7 +663,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(true));
+        assert_eq!(res, Ok(Boolean(true)));
     }
 
     #[test]
@@ -661,7 +679,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(false));
+        assert_eq!(res, Ok(Boolean(false)));
     }
 
     #[test]
@@ -677,7 +695,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Boolean(true));
+        assert_eq!(res, Ok(Boolean(true)));
     }
 
     struct StubFunction {
@@ -687,9 +705,9 @@ mod test {
     impl Function for StubFunction {
         fn evaluate<'a, 'd>(&self,
                             _: &EvaluationContext<'a, 'd>,
-                            _: Vec<Value<'d>>) -> Value<'d>
+                            _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
         {
-            String(self.value.to_string())
+            Ok(String(self.value.to_string()))
         }
     }
 
@@ -707,10 +725,9 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, String("the function ran".to_string()));
+        assert_eq!(res, Ok(String("the function ran".to_string())));
     }
 
-    #[ignore]
     #[test]
     fn expression_function_unknown_function_is_reported_as_an_error() {
         let package = Package::new();
@@ -719,8 +736,9 @@ mod test {
         let expr = expression::Function{name: "unknown-fn".to_string(), arguments: vec!()};
 
         let context = setup.context();
-        expr.evaluate(&context);
-        // TODO: report errors better
+        let res = expr.evaluate(&context);
+
+        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".to_string())));
     }
 
     #[test]
@@ -736,7 +754,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Number(50.0));
+        assert_eq!(res, Ok(Number(50.0)));
     }
 
     #[test]
@@ -758,7 +776,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Nodes(nodeset![input_node_1]));
+        assert_eq!(res, Ok(Nodes(nodeset![input_node_1])));
     }
 
     #[test]
@@ -780,7 +798,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Nodes(nodeset![]));
+        assert_eq!(res, Ok(Nodes(nodeset![])));
     }
 
     #[test]
@@ -795,7 +813,7 @@ mod test {
 
         let context = setup.context();
         let res = expr.evaluate(&context);
-        assert_eq!(res, Boolean(false));
+        assert_eq!(res, Ok(Boolean(false)));
     }
 
     #[test]
@@ -808,7 +826,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Nodes(nodeset![setup.doc.root()]));
+        assert_eq!(res, Ok(Nodes(nodeset![setup.doc.root()])));
     }
 
     #[derive(Clone,Show)]
@@ -854,7 +872,7 @@ mod test {
         let expr = Step::new(box axis.clone(), box node_test, vec![]);
 
         let context = setup.context();
-        expr.evaluate(&context, nodeset![context.node]);
+        expr.evaluate(&context, nodeset![context.node]).ok().unwrap();
 
         assert_eq!(1, axis.calls());
     }
@@ -879,7 +897,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(Nodes(nodeset![left_node, right_node]), res);
+        assert_eq!(res, Ok(Nodes(nodeset![left_node, right_node])));
     }
 
     #[test]
@@ -893,6 +911,6 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(Boolean(true), res);
+        assert_eq!(res, Ok(Boolean(true)));
     }
 }

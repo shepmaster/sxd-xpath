@@ -758,7 +758,7 @@ mod test {
                 &self.variables,
                 &self.namespaces,
             );
-            expr.evaluate(&context)
+            expr.evaluate(&context).ok().unwrap()
         }
     }
 
