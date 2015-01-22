@@ -169,6 +169,27 @@ impl Function for SubstringBefore {
     }
 }
 
+struct SubstringAfter;
+
+impl Function for SubstringAfter {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 2));
+        let args = try!(string_args(args));
+        let haystack = &args[0];
+        let needle = &*args[1];
+
+        let s = match haystack.find_str(needle) {
+            Some(pos) => haystack.slice_from(pos + needle.len()),
+            None => "",
+        };
+
+        Ok(Value::String(s.to_string()))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -217,6 +238,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("starts-with".to_string(), box StartsWith);
     functions.insert("contains".to_string(), box Contains);
     functions.insert("substring-before".to_string(), box SubstringBefore);
+    functions.insert("substring-after".to_string(), box SubstringAfter);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
@@ -238,6 +260,7 @@ mod test {
         StartsWith,
         Contains,
         SubstringBefore,
+        SubstringAfter,
     };
 
     struct Setup<'d> {
@@ -352,5 +375,18 @@ mod test {
         let r = setup.evaluate(doc.root(), SubstringBefore, args);
 
         assert_eq!(Ok(Value::String("1999".to_string())), r);
+    }
+
+    #[test]
+    fn substring_after_slices_after() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let args = vec![Value::String("1999/04/01".to_string()),
+                        Value::String("/".to_string())];
+        let r = setup.evaluate(doc.root(), SubstringAfter, args);
+
+        assert_eq!(Ok(Value::String("04/01".to_string())), r);
     }
 }
