@@ -175,21 +175,44 @@ pub fn register_core_functions(functions: &mut Functions) {
 mod test {
     use std::collections::HashMap;
     use document::Package;
-    use super::super::{EvaluationContext,Function,Value};
-    use super::{Last,Position,Count,Concat};
+    use super::super::{EvaluationContext,Value,Functions,Variables,Namespaces};
+    use super::super::nodeset::ToNode;
+    use super::{Function,Error,Last,Position,Count,Concat};
+
+    struct Setup<'d> {
+        functions: Functions,
+        variables: Variables<'d>,
+        namespaces: Namespaces,
+    }
+
+    impl<'d> Setup<'d> {
+        fn new() -> Setup<'d> {
+            Setup {
+                functions: HashMap::new(),
+                variables: HashMap::new(),
+                namespaces: HashMap::new(),
+            }
+        }
+
+        fn evaluate<N, F>(&self, node: N, f: F, args: Vec<Value<'d>>)
+            -> Result<Value<'d>, Error>
+            where N: ToNode<'d>,
+                  F: Function
+        {
+            let context = EvaluationContext::new(
+                node, &self.functions, &self.variables, &self.namespaces
+            );
+            f.evaluate(&context, args)
+        }
+    }
 
     #[test]
     fn last_returns_context_size() {
         let package = Package::new();
         let doc = package.as_document();
+        let setup = Setup::new();
 
-        let functions = HashMap::new();
-        let variables = HashMap::new();
-        let namespaces = HashMap::new();
-
-        let context = EvaluationContext::new(doc.root(), &functions, &variables, &namespaces);
-        let args = vec![];
-        let r = Last.evaluate(&context, args);
+        let r = setup.evaluate(doc.root(), Last, vec![]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
     }
@@ -198,14 +221,9 @@ mod test {
     fn position_returns_context_position() {
         let package = Package::new();
         let doc = package.as_document();
+        let setup = Setup::new();
 
-        let functions = HashMap::new();
-        let variables = HashMap::new();
-        let namespaces = HashMap::new();
-
-        let context = EvaluationContext::new(doc.root(), &functions, &variables, &namespaces);
-        let args = vec![];
-        let r = Position.evaluate(&context, args);
+        let r = setup.evaluate(doc.root(), Position, vec![]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
     }
@@ -214,15 +232,10 @@ mod test {
     fn count_counts_nodes_in_nodeset() {
         let package = Package::new();
         let doc = package.as_document();
+        let setup = Setup::new();
+
         let nodeset = nodeset![doc.root()];
-
-        let functions = HashMap::new();
-        let variables = HashMap::new();
-        let namespaces = HashMap::new();
-
-        let context = EvaluationContext::new(doc.root(), &functions, &variables, &namespaces);
-        let args = vec![Value::Nodes(nodeset)];
-        let r = Count.evaluate(&context, args);
+        let r = setup.evaluate(doc.root(), Count, vec![Value::Nodes(nodeset)]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
     }
@@ -231,16 +244,12 @@ mod test {
     fn concat_combines_strings() {
         let package = Package::new();
         let doc = package.as_document();
+        let setup = Setup::new();
 
-        let functions = HashMap::new();
-        let variables = HashMap::new();
-        let namespaces = HashMap::new();
-
-        let context = EvaluationContext::new(doc.root(), &functions, &variables, &namespaces);
         let args = vec![Value::String("hello".to_string()),
                         Value::String(" ".to_string()),
                         Value::String("world".to_string())];
-        let r = Concat.evaluate(&context, args);
+        let r = setup.evaluate(doc.root(), Concat, args);
 
         assert_eq!(Ok(Value::String("hello world".to_string())), r);
     }
