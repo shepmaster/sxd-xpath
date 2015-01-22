@@ -3,12 +3,13 @@ use std::iter::Peekable;
 
 use self::ParseErr::*;
 
+use super::LiteralValue;
 use super::token::{Token,AxisName,NodeTestName};
 use super::tokenizer::{TokenResult,TokenizerErr};
 use super::axis;
 use super::axis::{Axis,SubAxis,PrincipalNodeType};
 use super::expression;
-use super::expression::{SubExpression,LiteralValue};
+use super::expression::SubExpression;
 use super::node_test;
 use super::node_test::SubNodeTest;
 
@@ -287,7 +288,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(box expression::Literal { value: LiteralValue::StringLiteral(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::String(value) } as SubExpression))
         } else {
             Ok(None)
         }
@@ -298,7 +299,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(box expression::Literal { value: LiteralValue::NumberLiteral(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::Number(value) } as SubExpression))
         } else {
             Ok(None)
         }

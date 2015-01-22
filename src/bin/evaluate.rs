@@ -11,8 +11,7 @@ use std::io::File;
 use document::parser::Parser;
 
 use xpath::nodeset::ToNode;
-use xpath::{EvaluationContext,Factory};
-use xpath::expression::Expression;
+use xpath::{EvaluationContext,Factory,Expression};
 
 use getopts::{reqopt,optmulti,getopts,OptGroup,usage};
 
@@ -27,7 +26,7 @@ fn pretty_error(xml: &str, position: usize) -> &str {
     s.slice_chars(0, min(l, 15))
 }
 
-fn build_xpath(xpath_str: &str) -> Box<xpath::expression::Expression> {
+fn build_xpath(xpath_str: &str) -> Box<Expression> {
     let factory = Factory::new();
 
     match factory.build(xpath_str) {

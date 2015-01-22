@@ -1,10 +1,8 @@
 use std::collections::HashSet;
 use std::{error,fmt};
 
-use self::LiteralValue::*;
-
 use super::EvaluationContext;
-use super::Value;
+use super::{LiteralValue,Value};
 use super::Value::{Boolean,Number,Nodes};
 use super::StringValue;
 
@@ -187,25 +185,13 @@ impl Expression for Function {
 }
 
 #[derive(Debug)]
-pub enum LiteralValue {
-    BooleanLiteral(bool),
-    NumberLiteral(f64),
-    StringLiteral(String),
-}
-
-#[derive(Debug)]
 pub struct Literal {
     pub value: LiteralValue,
 }
 
 impl Expression for Literal {
     fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        let v = match &self.value {
-            &BooleanLiteral(b) => Boolean(b),
-            &NumberLiteral(b) => Number(b),
-            &StringLiteral(ref b) => Value::String(b.clone()),
-        };
-        Ok(v)
+        Ok(self.value.clone().into_value())
     }
 }
 
@@ -514,7 +500,7 @@ mod test {
     use document::Package;
     use document::dom4::Document;
 
-    use super::super::Value;
+    use super::super::{LiteralValue,Value};
     use super::super::Value::{Boolean, Number, String, Nodes};
     use super::super::{Functions,Variables,Namespaces};
     use super::super::Function;
@@ -539,7 +525,6 @@ mod test {
         Union,
         Variable
     };
-    use super::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
     #[derive(Debug)]
     struct FailExpression;
@@ -577,8 +562,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: BooleanLiteral(true)};
-        let right = box Literal{value: BooleanLiteral(true)};
+        let left  = box Literal{value: LiteralValue::Boolean(true)};
+        let right = box Literal{value: LiteralValue::Boolean(true)};
 
         let expr = And{left: left, right: right};
 
@@ -593,7 +578,7 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: BooleanLiteral(false)};
+        let left  = box Literal{value: LiteralValue::Boolean(false)};
         let right = box FailExpression;
 
         let expr = And{left: left, right: right};
@@ -633,7 +618,7 @@ mod test {
         setup.vars.insert("left".to_string(), Nodes(nodeset![string_value]));
 
         let left  = box Variable{name: "left".to_string()};
-        let right = box Literal{value: NumberLiteral(6.28)};
+        let right = box Literal{value: LiteralValue::Number(6.28)};
 
         let expr = Equal{left: left, right: right};
 
@@ -653,7 +638,7 @@ mod test {
         setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1, string_value_2]));
 
         let left  = box Variable{name: "left".to_string()};
-        let right = box Literal{value: StringLiteral("boat".to_string())};
+        let right = box Literal{value: LiteralValue::String("boat".to_string())};
 
         let expr = Equal{left: left, right: right};
 
@@ -668,8 +653,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_bool = box Literal{value: BooleanLiteral(false)};
-        let truthy_str = box Literal{value: StringLiteral("hello".to_string())};
+        let actual_bool = box Literal{value: LiteralValue::Boolean(false)};
+        let truthy_str = box Literal{value: LiteralValue::String("hello".to_string())};
 
         let expr = Equal{left: actual_bool, right: truthy_str};
 
@@ -684,8 +669,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_number = box Literal{value: NumberLiteral(-42.0)};
-        let number_str = box Literal{value: StringLiteral("-42.0".to_string())};
+        let actual_number = box Literal{value: LiteralValue::Number(-42.0)};
+        let number_str = box Literal{value: LiteralValue::String("-42.0".to_string())};
 
         let expr = Equal{left: number_str, right: actual_number};
 
@@ -700,8 +685,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = box Literal{value: StringLiteral("hello".to_string())};
-        let b_str = box Literal{value: StringLiteral("World".to_string())};
+        let a_str = box Literal{value: LiteralValue::String("hello".to_string())};
+        let b_str = box Literal{value: LiteralValue::String("World".to_string())};
 
         let expr = Equal{left: a_str, right: b_str};
 
@@ -716,8 +701,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = box Literal{value: BooleanLiteral(true)};
-        let b_str = box Literal{value: BooleanLiteral(false)};
+        let a_str = box Literal{value: LiteralValue::Boolean(true)};
+        let b_str = box Literal{value: LiteralValue::Boolean(false)};
 
         let expr = NotEqual::new(a_str, b_str);
 
@@ -745,7 +730,7 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
-        let arg_expr: Box<Expression> = box Literal{value: BooleanLiteral(true)};
+        let arg_expr: Box<Expression> = box Literal{value: LiteralValue::Boolean(true)};
         let fun = box StubFunction{value: "the function ran"};
         setup.funs.insert("test-fn".to_string(), fun);
 
@@ -775,8 +760,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: NumberLiteral(10.0)};
-        let right = box Literal{value: NumberLiteral(5.0)};
+        let left  = box Literal{value: LiteralValue::Number(10.0)};
+        let right = box Literal{value: LiteralValue::Number(5.0)};
 
         let expr = Math::multiplication(left, right);
 
@@ -798,7 +783,7 @@ mod test {
         setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
         let selected_nodes = box Variable{name: "nodes".to_string()};
-        let predicate = box Literal{value: NumberLiteral(1.0)};
+        let predicate = box Literal{value: LiteralValue::Number(1.0)};
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -820,7 +805,7 @@ mod test {
         setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
 
         let selected_nodes = box Variable{name: "nodes".to_string()};
-        let predicate = box Literal{value: BooleanLiteral(false)};
+        let predicate = box Literal{value: LiteralValue::Boolean(false)};
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -835,8 +820,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: NumberLiteral(10.0)};
-        let right = box Literal{value: NumberLiteral(5.0)};
+        let left  = box Literal{value: LiteralValue::Number(10.0)};
+        let right = box Literal{value: LiteralValue::Number(5.0)};
 
         let expr = Relational::less_than(left, right);
 

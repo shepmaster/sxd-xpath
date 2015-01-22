@@ -7,8 +7,7 @@ use std::collections::HashMap;
 use document::Package;
 use document::dom4::Document;
 use document::parser::Parser;
-use xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext};
-use xpath::expression::Expression;
+use xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
 
 #[test]
 fn functions_accept_arguments() {

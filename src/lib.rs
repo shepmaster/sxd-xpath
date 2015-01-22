@@ -18,17 +18,35 @@ use std::vec;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 use parser::Parser;
 pub use function::Function;
+pub use expression::Expression;
 
 #[macro_use]
 pub mod macros;
 pub mod nodeset;
 pub mod axis;
-pub mod expression;
+mod expression;
 pub mod function;
 mod node_test;
 pub mod parser;
 mod token;
 pub mod tokenizer;
+
+#[derive(PartialEq,Debug,Clone)]
+enum LiteralValue {
+    Boolean(bool),
+    Number(f64),
+    String(string::String),
+}
+
+impl LiteralValue {
+    fn into_value<'d>(self) -> Value<'d> {
+        match self {
+            LiteralValue::Boolean(v) => Boolean(v),
+            LiteralValue::Number(v)  => Number(v),
+            LiteralValue::String(v)  => String(v),
+        }
+    }
+}
 
 #[derive(PartialEq,Debug,Clone)]
 pub enum Value<'d> {
@@ -68,6 +86,16 @@ impl<'d> Value<'d> {
         match *self {
             Nodes(ref ns) => ns.clone(),
             _ => panic!("Did not evaluate to a nodeset!"),
+        }
+    }
+
+    #[allow(dead_code)]
+    fn into_literal_value(self) -> LiteralValue {
+        match self {
+            Boolean(v) => LiteralValue::Boolean(v),
+            Number(v)  => LiteralValue::Number(v),
+            String(v)  => LiteralValue::String(v),
+            Nodes(_)   => panic!("Cannot convert a nodeset to a literal"),
         }
     }
 }
