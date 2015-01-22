@@ -135,6 +135,20 @@ impl Function for StartsWith {
     }
 }
 
+struct Contains;
+
+impl Function for Contains {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 2));
+        let args = try!(string_args(args));
+        let v = args[0].contains(&*args[1]);
+        Ok(Value::Boolean(v))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -181,6 +195,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("count".to_string(), box Count);
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box StartsWith);
+    functions.insert("contains".to_string(), box Contains);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
@@ -192,7 +207,7 @@ mod test {
     use document::Package;
     use super::super::{EvaluationContext,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
-    use super::{Function,Error,Last,Position,Count,Concat,StartsWith};
+    use super::{Function,Error,Last,Position,Count,Concat,StartsWith,Contains};
 
     struct Setup<'d> {
         functions: Functions,
@@ -278,6 +293,19 @@ mod test {
         let args = vec![Value::String("hello".to_string()),
                         Value::String("he".to_string())];
         let r = setup.evaluate(doc.root(), StartsWith, args);
+
+        assert_eq!(Ok(Value::Boolean(true)), r);
+    }
+
+    #[test]
+    fn contains_looks_for_a_needle() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let args = vec![Value::String("astronomer".to_string()),
+                        Value::String("ono".to_string())];
+        let r = setup.evaluate(doc.root(), Contains, args);
 
         assert_eq!(Ok(Value::Boolean(true)), r);
     }
