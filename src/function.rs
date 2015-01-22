@@ -278,7 +278,7 @@ pub fn register_core_functions(functions: &mut Functions) {
 mod test {
     use std::collections::HashMap;
     use document::Package;
-    use super::super::{EvaluationContext,Value,Functions,Variables,Namespaces};
+    use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
     use super::{
         Function,
@@ -320,26 +320,31 @@ mod test {
         }
     }
 
-    #[test]
-    fn last_returns_context_size() {
+    fn evaluate_literal<F>(f: F, args: Vec<LiteralValue>) -> Result<LiteralValue, Error>
+        where F: Function
+    {
         let package = Package::new();
         let doc = package.as_document();
         let setup = Setup::new();
 
-        let r = setup.evaluate(doc.root(), Last, vec![]);
+        let args = args.into_iter().map(|a| a.into_value()).collect();
 
-        assert_eq!(Ok(Value::Number(1.0)), r);
+        let r = setup.evaluate(doc.root(), f, args);
+
+        r.map(|r| r.into_literal_value())
+    }
+
+    #[test]
+    fn last_returns_context_size() {
+        let r = evaluate_literal(Last, vec![]);
+        assert_eq!(Ok(LiteralValue::Number(1.0)), r);
     }
 
     #[test]
     fn position_returns_context_position() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let r = evaluate_literal(Position, vec![]);
 
-        let r = setup.evaluate(doc.root(), Position, vec![]);
-
-        assert_eq!(Ok(Value::Number(1.0)), r);
+        assert_eq!(Ok(LiteralValue::Number(1.0)), r);
     }
 
     #[test]
@@ -356,67 +361,47 @@ mod test {
 
     #[test]
     fn concat_combines_strings() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let args = vec![LiteralValue::String("hello".to_string()),
+                        LiteralValue::String(" ".to_string()),
+                        LiteralValue::String("world".to_string())];
+        let r = evaluate_literal(Concat, args);
 
-        let args = vec![Value::String("hello".to_string()),
-                        Value::String(" ".to_string()),
-                        Value::String("world".to_string())];
-        let r = setup.evaluate(doc.root(), Concat, args);
-
-        assert_eq!(Ok(Value::String("hello world".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
     }
 
     #[test]
     fn starts_with_checks_prefixes() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let args = vec![LiteralValue::String("hello".to_string()),
+                        LiteralValue::String("he".to_string())];
+        let r = evaluate_literal(StartsWith, args);
 
-        let args = vec![Value::String("hello".to_string()),
-                        Value::String("he".to_string())];
-        let r = setup.evaluate(doc.root(), StartsWith, args);
-
-        assert_eq!(Ok(Value::Boolean(true)), r);
+        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
 
     #[test]
     fn contains_looks_for_a_needle() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let args = vec![LiteralValue::String("astronomer".to_string()),
+                        LiteralValue::String("ono".to_string())];
+        let r = evaluate_literal(Contains, args);
 
-        let args = vec![Value::String("astronomer".to_string()),
-                        Value::String("ono".to_string())];
-        let r = setup.evaluate(doc.root(), Contains, args);
-
-        assert_eq!(Ok(Value::Boolean(true)), r);
+        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
 
     #[test]
     fn substring_before_slices_before() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let args = vec![LiteralValue::String("1999/04/01".to_string()),
+                        LiteralValue::String("/".to_string())];
+        let r = evaluate_literal(SubstringBefore, args);
 
-        let args = vec![Value::String("1999/04/01".to_string()),
-                        Value::String("/".to_string())];
-        let r = setup.evaluate(doc.root(), SubstringBefore, args);
-
-        assert_eq!(Ok(Value::String("1999".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("1999".to_string())), r);
     }
 
     #[test]
     fn substring_after_slices_after() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
+        let args = vec![LiteralValue::String("1999/04/01".to_string()),
+                        LiteralValue::String("/".to_string())];
+        let r = evaluate_literal(SubstringAfter, args);
 
-        let args = vec![Value::String("1999/04/01".to_string()),
-                        Value::String("/".to_string())];
-        let r = setup.evaluate(doc.root(), SubstringAfter, args);
-
-        assert_eq!(Ok(Value::String("04/01".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
     }
 }
