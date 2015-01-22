@@ -1,4 +1,5 @@
 use std::{error,fmt};
+use std::num::Float;
 
 use super::{EvaluationContext,Functions,Value};
 
@@ -96,6 +97,13 @@ fn string_args(args: Vec<Value>) -> Result<Vec<String>, Error> {
     }
 
     args.into_iter().map(string_arg).collect()
+}
+
+fn one_number(args: Vec<Value>) -> Result<f64, Error> {
+    match &args[0] {
+        &Value::Number(v) => Ok(v),
+        a => Err(Error::wrong_type(a, ArgumentType::Number)),
+    }
 }
 
 struct Last;
@@ -260,6 +268,19 @@ impl Function for False {
     }
 }
 
+struct Floor;
+
+impl Function for Floor {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 1));
+        let arg = try!(one_number(args));
+        Ok(Value::Number(arg.floor()))
+    }
+}
+
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
@@ -272,6 +293,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
+    functions.insert("floor".to_string(), box Floor);
 }
 
 #[cfg(test)]
@@ -291,6 +313,7 @@ mod test {
         Contains,
         SubstringBefore,
         SubstringAfter,
+        Floor,
     };
 
     struct Setup<'d> {
@@ -403,5 +426,12 @@ mod test {
         let r = evaluate_literal(SubstringAfter, args);
 
         assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
+    }
+
+    #[test]
+    fn floor_rounds_down() {
+        let r = evaluate_literal(Floor, vec![LiteralValue::Number(199.99)]);
+
+        assert_eq!(Ok(LiteralValue::Number(199.0)), r);
     }
 }
