@@ -149,6 +149,26 @@ impl Function for Contains {
     }
 }
 
+struct SubstringBefore;
+
+impl Function for SubstringBefore {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 2));
+        let args = try!(string_args(args));
+        let haystack = &args[0];
+
+        let s = match haystack.find_str(&*args[1]) {
+            Some(pos) => haystack.slice_to(pos),
+            None => "",
+        };
+
+        Ok(Value::String(s.to_string()))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -196,6 +216,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box StartsWith);
     functions.insert("contains".to_string(), box Contains);
+    functions.insert("substring-before".to_string(), box SubstringBefore);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
@@ -207,7 +228,17 @@ mod test {
     use document::Package;
     use super::super::{EvaluationContext,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
-    use super::{Function,Error,Last,Position,Count,Concat,StartsWith,Contains};
+    use super::{
+        Function,
+        Error,
+        Last,
+        Position,
+        Count,
+        Concat,
+        StartsWith,
+        Contains,
+        SubstringBefore,
+    };
 
     struct Setup<'d> {
         functions: Functions,
@@ -308,5 +339,18 @@ mod test {
         let r = setup.evaluate(doc.root(), Contains, args);
 
         assert_eq!(Ok(Value::Boolean(true)), r);
+    }
+
+    #[test]
+    fn substring_before_slices_before() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let args = vec![Value::String("1999/04/01".to_string()),
+                        Value::String("/".to_string())];
+        let r = setup.evaluate(doc.root(), SubstringBefore, args);
+
+        assert_eq!(Ok(Value::String("1999".to_string())), r);
     }
 }
