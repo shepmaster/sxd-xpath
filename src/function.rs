@@ -121,6 +121,20 @@ impl Function for Concat {
     }
 }
 
+struct StartsWith;
+
+impl Function for StartsWith {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 2));
+        let args = try!(string_args(args));
+        let v = args[0].starts_with(&*args[1]);
+        Ok(Value::Boolean(v))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -166,6 +180,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
     functions.insert("concat".to_string(), box Concat);
+    functions.insert("starts-with".to_string(), box StartsWith);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
@@ -177,7 +192,7 @@ mod test {
     use document::Package;
     use super::super::{EvaluationContext,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
-    use super::{Function,Error,Last,Position,Count,Concat};
+    use super::{Function,Error,Last,Position,Count,Concat,StartsWith};
 
     struct Setup<'d> {
         functions: Functions,
@@ -252,5 +267,18 @@ mod test {
         let r = setup.evaluate(doc.root(), Concat, args);
 
         assert_eq!(Ok(Value::String("hello world".to_string())), r);
+    }
+
+    #[test]
+    fn starts_with_checks_prefixes() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let args = vec![Value::String("hello".to_string()),
+                        Value::String("he".to_string())];
+        let r = setup.evaluate(doc.root(), StartsWith, args);
+
+        assert_eq!(Ok(Value::Boolean(true)), r);
     }
 }
