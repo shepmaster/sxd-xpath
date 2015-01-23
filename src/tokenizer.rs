@@ -1,4 +1,4 @@
-use std::string;
+use std::{error,fmt,string};
 
 use document::peresil;
 use document::peresil::{Point,Identifier};
@@ -22,6 +22,29 @@ pub type TokenResult = Result<Token, TokenizerErr>;
 pub enum TokenizerErr {
     MismatchedQuoteCharacters,
     UnableToCreateToken,
+}
+
+impl error::Error for TokenizerErr {
+    fn description(&self) -> &str {
+        use self::TokenizerErr::*;
+        match self {
+            &MismatchedQuoteCharacters => "mismatched quote character",
+            &UnableToCreateToken       => "unable to create token",
+        }
+    }
+}
+
+impl fmt::Display for TokenizerErr {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use self::TokenizerErr::*;
+        let as_err = self as &error::Error;
+        match self {
+            &MismatchedQuoteCharacters |
+            &UnableToCreateToken       => {
+                as_err.description().fmt(fmt)
+            },
+        }
+    }
 }
 
 trait XPathParseExt<'a> {

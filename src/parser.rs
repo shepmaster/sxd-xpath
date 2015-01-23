@@ -1,3 +1,4 @@
+use std::{error,fmt};
 use std::iter::Peekable;
 
 use self::ParseErr::*;
@@ -30,6 +31,46 @@ pub enum ParseErr {
     TokenizerError(TokenizerErr),
     TrailingSlash,
     UnexpectedToken(Token),
+}
+
+impl error::Error for ParseErr {
+    fn description(&self) -> &str {
+        use self::ParseErr::*;
+        match self {
+            &EmptyPredicate                 => "empty predicate",
+            &ExtraUnparsedTokens            => "extra unparsed tokens",
+            &RanOutOfInput                  => "ran out of input",
+            &RightHandSideExpressionMissing => "right hand side of expression is missing",
+            &ArgumentMissing                => "function argument is missing",
+            &TokenizerError(ref e)          => e.description(),
+            &TrailingSlash                  => "trailing slash",
+            &UnexpectedToken(..)            => "unexpected token",
+        }
+    }
+}
+
+impl fmt::Display for ParseErr {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use self::ParseErr::*;
+        let as_err = self as &error::Error;
+        match self {
+            &EmptyPredicate                 |
+            &ExtraUnparsedTokens            |
+            &RanOutOfInput                  |
+            &RightHandSideExpressionMissing |
+            &ArgumentMissing                |
+            &TrailingSlash                  => {
+                as_err.description().fmt(fmt)
+            },
+            &UnexpectedToken(ref t) => {
+                write!(fmt, "unexpected token: {:?}", t)
+            },
+            &TokenizerError(ref e) => {
+                try!(write!(fmt, "tokenizer error: "));
+                e.fmt(fmt)
+            },
+        }
+    }
 }
 
 pub type ParseResult = Result<Option<SubExpression>, ParseErr>;

@@ -1,3 +1,5 @@
+use std::{error,fmt};
+
 use super::{EvaluationContext,Functions,Value};
 
 pub trait Function {
@@ -33,6 +35,34 @@ impl Error {
         Error::WrongType {
             expected: expected,
             actual: actual
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        use self::Error::*;
+        match *self {
+            TooManyArguments{..}   => "too many arguments",
+            NotEnoughArguments{..} => "not enough arguments",
+            WrongType{..}          => "argument of wrong type",
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use self::Error::*;
+        match *self {
+            TooManyArguments{expected, actual} => {
+                write!(fmt, "too many arguments, expected {} but had {}", expected, actual)
+            },
+            NotEnoughArguments{expected, actual} => {
+                write!(fmt, "not enough arguments, expected {} but had {}", expected, actual)
+            },
+            WrongType{expected, actual} => {
+                write!(fmt, "argument was the wrong type, expected {:?} but had {:?}", expected, actual)
+            },
         }
     }
 }

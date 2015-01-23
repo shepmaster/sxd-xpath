@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fmt;
+use std::{error,fmt};
 
 use self::LiteralValue::*;
 
@@ -18,6 +18,35 @@ pub enum Error {
     UnknownFunction(String),
     UnknownVariable(String),
     FunctionEvaluation(function::Error),
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        use self::Error::*;
+        match self {
+            &UnknownFunction(..)       => "unknown function",
+            &UnknownVariable(..)       => "unknown variable",
+            &FunctionEvaluation(ref f) => f.description(),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use self::Error::*;
+        match self {
+            &UnknownFunction(ref f) => {
+                write!(fmt, "unknown function {}", f)
+            },
+            &UnknownVariable(ref v) => {
+                write!(fmt, "unknown variable {}", v)
+            },
+            &FunctionEvaluation(ref f) => {
+                try!(write!(fmt, "error while evaluating function: "));
+                f.fmt(fmt)
+            },
+        }
+    }
 }
 
 pub trait Expression: fmt::Debug {
