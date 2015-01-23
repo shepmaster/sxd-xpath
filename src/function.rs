@@ -191,7 +191,7 @@ impl Function for SubstringBefore {
         let haystack = &args[0];
 
         let s = match haystack.find_str(&*args[1]) {
-            Some(pos) => haystack.slice_to(pos),
+            Some(pos) => &haystack[..pos],
             None => "",
         };
 
@@ -212,7 +212,7 @@ impl Function for SubstringAfter {
         let needle = &*args[1];
 
         let s = match haystack.find_str(needle) {
-            Some(pos) => haystack.slice_from(pos + needle.len()),
+            Some(pos) => &haystack[pos + needle.len()..],
             None => "",
         };
 

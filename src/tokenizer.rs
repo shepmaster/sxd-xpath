@@ -304,7 +304,7 @@ impl Tokenizer {
     }
 
     fn raw_next_token(&mut self) -> TokenResult {
-        let p = Point { s: self.xpath.slice_from(self.start), offset: self.start };
+        let p = Point { s: &self.xpath[self.start..], offset: self.start };
 
         match self.parse_token(p) {
             peresil::Result::Success(p) => {
