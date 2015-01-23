@@ -6,13 +6,13 @@ use super::EvaluationContext;
 use super::nodeset::Nodeset;
 use super::nodeset::Node::{AttributeNode,ElementNode,TextNode};
 
-pub trait NodeTest: fmt::Show {
+pub trait NodeTest: fmt::Debug {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
-#[derive(Clone,PartialEq,Show)]
+#[derive(Clone,PartialEq,Debug)]
 pub struct NameTest {
     pub prefix: Option<String>,
     pub local_part: String,
@@ -40,7 +40,7 @@ impl NameTest {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Attribute {
     name_test: NameTest,
 }
@@ -63,7 +63,7 @@ impl NodeTest for Attribute {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Element {
     name_test: NameTest,
 }
@@ -87,7 +87,7 @@ impl NodeTest for Element {
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Node;
 
 impl NodeTest for Node {
@@ -97,7 +97,7 @@ impl NodeTest for Node {
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Text;
 
 impl NodeTest for Text {

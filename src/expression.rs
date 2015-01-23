@@ -13,14 +13,14 @@ use super::function;
 use super::node_test::NodeTest;
 use super::nodeset::Nodeset;
 
-#[derive(Clone,Show,PartialEq,Hash)]
+#[derive(Clone,Debug,PartialEq,Hash)]
 pub enum Error {
     UnknownFunction(String),
     UnknownVariable(String),
     FunctionEvaluation(function::Error),
 }
 
-pub trait Expression: fmt::Show {
+pub trait Expression: fmt::Debug {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
@@ -36,7 +36,7 @@ macro_rules! binary_constructor(
     );
 );
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct And {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -53,7 +53,7 @@ impl Expression for And {
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Show)]
+#[derive(Debug)]
 pub struct ContextNode;
 
 impl Expression for ContextNode {
@@ -62,7 +62,7 @@ impl Expression for ContextNode {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Equal {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -120,7 +120,7 @@ impl Expression for Equal {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct NotEqual {
     equal: Equal,
 }
@@ -139,7 +139,7 @@ impl Expression for NotEqual {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Function {
     pub name: String,
     pub arguments: Vec<SubExpression>,
@@ -157,14 +157,14 @@ impl Expression for Function {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum LiteralValue {
     BooleanLiteral(bool),
     NumberLiteral(f64),
     StringLiteral(String),
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Literal {
     pub value: LiteralValue,
 }
@@ -223,13 +223,13 @@ impl Expression for Math {
     }
 }
 
-impl fmt::Show for Math {
+impl fmt::Debug for Math {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Math {{ left: {:?}, right: {:?} }}", self.left, self.right)
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Negation {
     pub expression: SubExpression,
 }
@@ -240,7 +240,7 @@ impl Expression for Negation {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Or {
     left:  SubExpression,
     right: SubExpression,
@@ -256,7 +256,7 @@ impl Expression for Or {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Path {
     start_point: SubExpression,
     steps: Vec<Step>,
@@ -280,7 +280,7 @@ impl Expression for Path {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Filter {
     node_selector: SubExpression,
     predicate: Predicate,
@@ -343,14 +343,14 @@ impl Expression for Relational {
     }
 }
 
-impl fmt::Show for Relational {
+impl fmt::Debug for Relational {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Relational {{ left: {:?}, right: {:?} }}", self.left, self.right)
     }
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Show)]
+#[derive(Debug)]
 pub struct RootNode;
 
 impl Expression for RootNode {
@@ -359,7 +359,7 @@ impl Expression for RootNode {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 struct Predicate {
     pub expression: SubExpression
 }
@@ -392,7 +392,7 @@ impl Predicate {
 pub type StepAxis = Box<Axis + 'static>;
 pub type StepTest = Box<NodeTest + 'static>;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Step {
     axis: StepAxis,
     node_test: StepTest,
@@ -444,7 +444,7 @@ impl Step {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Union {
     pub left:  SubExpression,
     pub right: SubExpression,
@@ -461,7 +461,7 @@ impl Expression for Union {
     }
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Variable {
     pub name: String,
 }
@@ -512,7 +512,7 @@ mod test {
     };
     use super::LiteralValue::{BooleanLiteral,NumberLiteral,StringLiteral};
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct FailExpression;
     impl Expression for FailExpression {
         fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
@@ -829,7 +829,7 @@ mod test {
         assert_eq!(res, Ok(Nodes(nodeset![setup.doc.root()])));
     }
 
-    #[derive(Clone,Show)]
+    #[derive(Clone,Debug)]
     struct MockAxis {
         calls: Rc<RefCell<usize>>,
     }
@@ -854,7 +854,7 @@ mod test {
         }
     }
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
         fn test(&self, _context: &EvaluationContext, _result: &mut Nodeset) {

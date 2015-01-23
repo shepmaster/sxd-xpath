@@ -6,7 +6,7 @@ pub trait Function {
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
 }
 
-#[derive(Copy,Clone,Show,PartialEq,Hash)]
+#[derive(Copy,Clone,Debug,PartialEq,Hash)]
 pub enum ArgumentType {
     Nodeset,
     Boolean,
@@ -14,7 +14,7 @@ pub enum ArgumentType {
     String,
 }
 
-#[derive(Copy,Clone,Show,PartialEq,Hash)]
+#[derive(Copy,Clone,Debug,PartialEq,Hash)]
 pub enum Error {
     TooManyArguments{ expected: usize, actual: usize },
     NotEnoughArguments{ expected: usize, actual: usize },

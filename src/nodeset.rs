@@ -41,7 +41,7 @@ macro_rules! conversion_trait(
     )
 );
 
-#[derive(Clone,PartialEq,Show,Copy)]
+#[derive(Clone,PartialEq,Debug,Copy)]
 pub enum Node<'d> {
     RootNode(dom4::Root<'d>),
     ElementNode(dom4::Element<'d>),
@@ -155,7 +155,7 @@ impl<'d> ToNode<'d> for dom4::ParentOfChild<'d> {
 }
 
 /// A collection of nodes
-#[derive(PartialEq,Show,Clone)]
+#[derive(PartialEq,Debug,Clone)]
 pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }

@@ -30,7 +30,7 @@ pub mod parser;
 mod token;
 pub mod tokenizer;
 
-#[derive(PartialEq,Show,Clone)]
+#[derive(PartialEq,Debug,Clone)]
 pub enum Value<'d> {
     Boolean(bool),
     Number(f64),

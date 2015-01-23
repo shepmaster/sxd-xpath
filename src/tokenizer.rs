@@ -18,7 +18,7 @@ pub struct Tokenizer {
 
 pub type TokenResult = Result<Token, TokenizerErr>;
 
-#[derive(Show,PartialEq,Clone,Copy)]
+#[derive(Debug,PartialEq,Clone,Copy)]
 pub enum TokenizerErr {
     MismatchedQuoteCharacters,
     UnableToCreateToken,
