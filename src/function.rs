@@ -281,6 +281,19 @@ impl Function for Floor {
     }
 }
 
+struct Ceiling;
+
+impl Function for Ceiling {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 1));
+        let arg = try!(one_number(args));
+        Ok(Value::Number(arg.ceil()))
+    }
+}
+
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
@@ -294,6 +307,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("true".to_string(), box True);
     functions.insert("false".to_string(), box False);
     functions.insert("floor".to_string(), box Floor);
+    functions.insert("ceiling".to_string(), box Ceiling);
 }
 
 #[cfg(test)]
@@ -314,6 +328,7 @@ mod test {
         SubstringBefore,
         SubstringAfter,
         Floor,
+        Ceiling,
     };
 
     struct Setup<'d> {
@@ -433,5 +448,12 @@ mod test {
         let r = evaluate_literal(Floor, vec![LiteralValue::Number(199.99)]);
 
         assert_eq!(Ok(LiteralValue::Number(199.0)), r);
+    }
+
+    #[test]
+    fn ceiling_rounds_up() {
+        let r = evaluate_literal(Ceiling, vec![LiteralValue::Number(199.99)]);
+
+        assert_eq!(Ok(LiteralValue::Number(200.0)), r);
     }
 }
