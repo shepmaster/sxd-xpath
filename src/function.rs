@@ -159,73 +159,55 @@ impl Function for Concat {
     }
 }
 
-struct StartsWith;
+struct TwoStringPredicate(fn(&str, &str) -> bool);
 
-impl Function for StartsWith {
+impl Function for TwoStringPredicate {
     fn evaluate<'a, 'd>(&self,
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         try!(exact_arg_count(&args, 2));
         let args = try!(string_args(args));
-        let v = args[0].starts_with(&*args[1]);
+        let v = self.0(&*args[0], &*args[1]);
         Ok(Value::Boolean(v))
     }
 }
 
-struct Contains;
+fn starts_with() -> TwoStringPredicate { TwoStringPredicate(StrExt::starts_with) }
+fn contains() -> TwoStringPredicate { TwoStringPredicate(StrExt::contains) }
 
-impl Function for Contains {
+struct Substring(for<'s> fn(&'s str, &'s str) -> &'s str);
+
+impl Function for Substring {
     fn evaluate<'a, 'd>(&self,
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         try!(exact_arg_count(&args, 2));
         let args = try!(string_args(args));
-        let v = args[0].contains(&*args[1]);
-        Ok(Value::Boolean(v))
+        let s = self.0(&*args[0], &*args[1]);
+        Ok(Value::String(s.to_string()))
     }
 }
 
-struct SubstringBefore;
-
-impl Function for SubstringBefore {
-    fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
-        try!(exact_arg_count(&args, 2));
-        let args = try!(string_args(args));
-        let haystack = &args[0];
-
-        let s = match haystack.find_str(&*args[1]) {
+fn substring_before() -> Substring {
+    fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
+        match haystack.find_str(needle) {
             Some(pos) => &haystack[..pos],
             None => "",
-        };
-
-        Ok(Value::String(s.to_string()))
+        }
     }
+    Substring(inner)
 }
 
-struct SubstringAfter;
-
-impl Function for SubstringAfter {
-    fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
-        try!(exact_arg_count(&args, 2));
-        let args = try!(string_args(args));
-        let haystack = &args[0];
-        let needle = &*args[1];
-
-        let s = match haystack.find_str(needle) {
+fn substring_after() -> Substring {
+    fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
+        match haystack.find_str(needle) {
             Some(pos) => &haystack[pos + needle.len()..],
             None => "",
-        };
-
-        Ok(Value::String(s.to_string()))
+        }
     }
+    Substring(inner)
 }
 
 struct Not;
@@ -244,70 +226,51 @@ impl Function for Not {
     }
 }
 
-struct True;
+struct BooleanLiteral(bool);
 
-impl Function for True {
+impl Function for BooleanLiteral {
     fn evaluate<'a, 'd>(&self,
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         try!(exact_arg_count(&args, 0));
-        Ok(Value::Boolean(true))
+        Ok(Value::Boolean(self.0))
     }
 }
 
-struct False;
+fn true_fn() -> BooleanLiteral { BooleanLiteral(true) }
+fn false_fn() -> BooleanLiteral { BooleanLiteral(false) }
 
-impl Function for False {
-    fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
-        try!(exact_arg_count(&args, 0));
-        Ok(Value::Boolean(false))
-    }
-}
+struct NumberConvert(fn(f64) -> f64);
 
-struct Floor;
-
-impl Function for Floor {
+impl Function for NumberConvert {
     fn evaluate<'a, 'd>(&self,
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         try!(exact_arg_count(&args, 1));
         let arg = try!(one_number(args));
-        Ok(Value::Number(arg.floor()))
+        Ok(Value::Number(self.0(arg)))
     }
 }
 
-struct Ceiling;
-
-impl Function for Ceiling {
-    fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
-        try!(exact_arg_count(&args, 1));
-        let arg = try!(one_number(args));
-        Ok(Value::Number(arg.ceil()))
-    }
-}
+fn floor() -> NumberConvert { NumberConvert(Float::floor) }
+fn ceiling() -> NumberConvert { NumberConvert(Float::ceil) }
 
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
     functions.insert("concat".to_string(), box Concat);
-    functions.insert("starts-with".to_string(), box StartsWith);
-    functions.insert("contains".to_string(), box Contains);
-    functions.insert("substring-before".to_string(), box SubstringBefore);
-    functions.insert("substring-after".to_string(), box SubstringAfter);
+    functions.insert("starts-with".to_string(), box starts_with());
+    functions.insert("contains".to_string(), box contains());
+    functions.insert("substring-before".to_string(), box substring_before());
+    functions.insert("substring-after".to_string(), box substring_after());
     functions.insert("not".to_string(), box Not);
-    functions.insert("true".to_string(), box True);
-    functions.insert("false".to_string(), box False);
-    functions.insert("floor".to_string(), box Floor);
-    functions.insert("ceiling".to_string(), box Ceiling);
+    functions.insert("true".to_string(), box true_fn());
+    functions.insert("false".to_string(), box false_fn());
+    functions.insert("floor".to_string(), box floor());
+    functions.insert("ceiling".to_string(), box ceiling());
 }
 
 #[cfg(test)]
@@ -323,12 +286,6 @@ mod test {
         Position,
         Count,
         Concat,
-        StartsWith,
-        Contains,
-        SubstringBefore,
-        SubstringAfter,
-        Floor,
-        Ceiling,
     };
 
     struct Setup<'d> {
@@ -411,7 +368,7 @@ mod test {
     fn starts_with_checks_prefixes() {
         let args = vec![LiteralValue::String("hello".to_string()),
                         LiteralValue::String("he".to_string())];
-        let r = evaluate_literal(StartsWith, args);
+        let r = evaluate_literal(super::starts_with(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
@@ -420,7 +377,7 @@ mod test {
     fn contains_looks_for_a_needle() {
         let args = vec![LiteralValue::String("astronomer".to_string()),
                         LiteralValue::String("ono".to_string())];
-        let r = evaluate_literal(Contains, args);
+        let r = evaluate_literal(super::contains(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
@@ -429,7 +386,7 @@ mod test {
     fn substring_before_slices_before() {
         let args = vec![LiteralValue::String("1999/04/01".to_string()),
                         LiteralValue::String("/".to_string())];
-        let r = evaluate_literal(SubstringBefore, args);
+        let r = evaluate_literal(super::substring_before(), args);
 
         assert_eq!(Ok(LiteralValue::String("1999".to_string())), r);
     }
@@ -438,21 +395,21 @@ mod test {
     fn substring_after_slices_after() {
         let args = vec![LiteralValue::String("1999/04/01".to_string()),
                         LiteralValue::String("/".to_string())];
-        let r = evaluate_literal(SubstringAfter, args);
+        let r = evaluate_literal(super::substring_after(), args);
 
         assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
     }
 
     #[test]
     fn floor_rounds_down() {
-        let r = evaluate_literal(Floor, vec![LiteralValue::Number(199.99)]);
+        let r = evaluate_literal(super::floor(), vec![LiteralValue::Number(199.99)]);
 
         assert_eq!(Ok(LiteralValue::Number(199.0)), r);
     }
 
     #[test]
     fn ceiling_rounds_up() {
-        let r = evaluate_literal(Ceiling, vec![LiteralValue::Number(199.99)]);
+        let r = evaluate_literal(super::ceiling(), vec![LiteralValue::Number(199.99)]);
 
         assert_eq!(Ok(LiteralValue::Number(200.0)), r);
     }
