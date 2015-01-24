@@ -257,6 +257,19 @@ impl Function for NumberConvert {
 fn floor() -> NumberConvert { NumberConvert(Float::floor) }
 fn ceiling() -> NumberConvert { NumberConvert(Float::ceil) }
 
+// http://stackoverflow.com/a/28124775/155423
+fn round_ties_to_positive_infinity(x: f64) -> f64 {
+    let y = x.floor();
+    if x == y {
+        x
+    } else {
+        let z = (2.0*x-y).floor();
+        z * x.signum() // Should use copysign
+    }
+}
+
+fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
+
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
@@ -271,11 +284,13 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("false".to_string(), box false_fn());
     functions.insert("floor".to_string(), box floor());
     functions.insert("ceiling".to_string(), box ceiling());
+    functions.insert("round".to_string(), box round());
 }
 
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
+    use std::num::Float;
     use document::Package;
     use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
@@ -400,17 +415,63 @@ mod test {
         assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
     }
 
+    fn assert_number<F>(f: F, val: f64, expected: f64)
+        where F: Function
+    {
+        let r = evaluate_literal(f, vec![LiteralValue::Number(val)]);
+
+        if expected.is_nan() {
+            match r {
+                Ok(LiteralValue::Number(a)) => assert!(a.is_nan(), "{} should be NaN", a),
+                _ => assert!(false, "{:?} did not evaluate correctly", r),
+            }
+        } else {
+            assert_eq!(Ok(LiteralValue::Number(expected)), r);
+        }
+    }
+
     #[test]
     fn floor_rounds_down() {
-        let r = evaluate_literal(super::floor(), vec![LiteralValue::Number(199.99)]);
-
-        assert_eq!(Ok(LiteralValue::Number(199.0)), r);
+        assert_number(super::floor(), 199.99, 199.0);
     }
 
     #[test]
     fn ceiling_rounds_up() {
-        let r = evaluate_literal(super::ceiling(), vec![LiteralValue::Number(199.99)]);
+        assert_number(super::ceiling(), 199.99, 200.0);
+    }
 
-        assert_eq!(Ok(LiteralValue::Number(200.0)), r);
+    #[test]
+    fn round_nan_to_nan() {
+        assert_number(super::round(), Float::nan(), Float::nan());
+    }
+
+    #[test]
+    fn round_pos_inf_to_pos_inf() {
+        assert_number(super::round(), Float::infinity(), Float::infinity());
+    }
+
+    #[test]
+    fn round_neg_inf_to_neg_inf() {
+        assert_number(super::round(), Float::neg_infinity(), Float::neg_infinity());
+    }
+
+    #[test]
+    fn round_pos_zero_to_pos_zero() {
+        assert_number(super::round(), Float::zero(), Float::zero());
+    }
+
+    #[test]
+    fn round_neg_zero_to_neg_zero() {
+        assert_number(super::round(), Float::neg_zero(), Float::neg_zero());
+    }
+
+    #[test]
+    fn round_neg_zero_point_five_to_neg_zero() {
+        assert_number(super::round(), -0.5, Float::neg_zero());
+    }
+
+    #[test]
+    fn round_pos_zero_point_five_to_pos_one() {
+        assert_number(super::round(), 0.5, 1.0);
     }
 }
