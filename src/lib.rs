@@ -81,8 +81,23 @@ impl<'d> Value<'d> {
 
     pub fn string(&self) -> string::String {
         match *self {
+            Boolean(v) => v.to_string(),
+            Number(n) => {
+                if n.is_infinite() {
+                    if n.signum() < 0.0 {
+                        "-Infinity".to_string()
+                    } else {
+                        "Infinity".to_string()
+                    }
+                } else {
+                    n.to_string()
+                }
+            },
             String(ref val) => val.clone(),
-            _ => unimplemented!(),
+            Nodes(ref ns) => match ns.document_order_first() {
+                Some(n) => n.string_value(),
+                None => "".to_string(),
+            },
         }
     }
 
@@ -356,5 +371,73 @@ mod test {
     fn number_of_boolean_false_is_0() {
         let v = Value::Boolean(false);
         assert_eq!(0.0, v.number());
+    }
+
+    #[test]
+    fn string_of_true_is_true() {
+        let v = Value::Boolean(true);
+        assert_eq!("true", v.string());
+    }
+
+    #[test]
+    fn string_of_false_is_false() {
+        let v = Value::Boolean(false);
+        assert_eq!("false", v.string());
+    }
+
+    #[test]
+    fn string_of_nan_is_nan() {
+        let v = Value::Number(Float::nan());
+        assert_eq!("NaN", v.string());
+    }
+
+    #[test]
+    fn string_of_positive_zero_is_zero() {
+        let v = Value::Number(Float::zero());
+        assert_eq!("0", v.string());
+    }
+
+    #[test]
+    fn string_of_negative_zero_is_zero() {
+        let v = Value::Number(Float::neg_zero());
+        assert_eq!("0", v.string());
+    }
+
+    #[test]
+    fn string_of_positive_infinity_is_infinity() {
+        let v = Value::Number(Float::infinity());
+        assert_eq!("Infinity", v.string());
+    }
+
+    #[test]
+    fn string_of_negative_infinity_is_minus_infinity() {
+        let v = Value::Number(Float::neg_infinity());
+        assert_eq!("-Infinity", v.string());
+    }
+
+    #[test]
+    fn string_of_integer_has_no_decimal() {
+        let v = Value::Number(-42.0);
+        assert_eq!("-42", v.string());
+    }
+
+    #[test]
+    fn string_of_decimal_has_fractional_part() {
+        let v = Value::Number(1.2);
+        assert_eq!("1.2", v.string());
+    }
+
+    #[test]
+    fn string_of_nodeset_is_string_value_of_first_node_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let c1 = doc.create_comment("comment 1");
+        let c2 = doc.create_comment("comment 2");
+        doc.root().append_child(c1);
+        doc.root().append_child(c2);
+
+        let v = Value::Nodes(nodeset![c2, c1]);
+        assert_eq!("comment 1", v.string());
     }
 }
