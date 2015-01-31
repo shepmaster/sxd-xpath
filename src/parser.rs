@@ -811,7 +811,7 @@ mod test {
             self.parse_raw(tokens).unwrap().unwrap()
         }
 
-        fn evaluate(&'d self, expr: &Expression) -> Value<'d> {
+        fn evaluate(&self, expr: &Expression) -> Value<'d> {
             self.evaluate_on(expr, self.doc.top_node())
         }
 
