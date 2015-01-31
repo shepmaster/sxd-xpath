@@ -160,7 +160,7 @@ fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
                             .or_else(|| without_integer(p)));
 
     let num = before_p.to(p);
-    let num = num.parse().expect("Unable to parse number");
+    let num = num.parse().unwrap();
 
     peresil::Result::success(Token::Number(num), p)
 }
