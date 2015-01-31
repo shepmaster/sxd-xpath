@@ -174,7 +174,7 @@ pub struct Function {
 
 impl Expression for Function {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        if let Some(fun) = context.function_for_name(self.name.as_slice()) {
+        if let Some(fun) = context.function_for_name(&self.name) {
             let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
 
             fun.evaluate(context, args).map_err(|e| Error::FunctionEvaluation(e))
@@ -483,7 +483,7 @@ pub struct Variable {
 
 impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        if let Some(v) = context.value_of(self.name.as_slice()) {
+        if let Some(v) = context.value_of(&self.name) {
             Ok(v.clone())
         } else {
             Err(Error::UnknownVariable(self.name.clone()))

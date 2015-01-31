@@ -175,7 +175,7 @@ fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
                           -> peresil::Result<'a, Token, TokenizerErr>
 {
     if prefer_named_ops {
-        p.consume_identifier(NAMED_OPERATORS.as_slice())
+        p.consume_identifier(&NAMED_OPERATORS)
     } else {
         peresil::Result::failure(None, p)
     }
@@ -184,7 +184,7 @@ fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
 fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
-    let (axis, p) = try_parse!(p.consume_identifier(AXES.as_slice()));
+    let (axis, p) = try_parse!(p.consume_identifier(&AXES));
     let (_, p) = try_parse!(p.consume_literal("::"));
 
     peresil::Result::success(Token::Axis(axis), p)
@@ -192,7 +192,7 @@ fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenize
 
 fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     fn without_arg<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
-        let (node_type, p) = try_parse!(p.consume_identifier(NODE_TESTS_WITHOUT_ARG.as_slice()));
+        let (node_type, p) = try_parse!(p.consume_identifier(&NODE_TESTS_WITHOUT_ARG));
         let (_, p) = try_parse!(p.consume_literal("()"));
 
         peresil::Result::success(Token::NodeTest(node_type), p)
@@ -285,8 +285,8 @@ impl Tokenizer {
         let (_, p) = p.consume_space().optional(p);
 
         let (tok, p) = try_parse!({
-            p.consume_identifier(TWO_CHAR_TOKENS.as_slice())
-                .or_else(|| p.consume_identifier(SINGLE_CHAR_TOKENS.as_slice()))
+            p.consume_identifier(&TWO_CHAR_TOKENS)
+                .or_else(|| p.consume_identifier(&SINGLE_CHAR_TOKENS))
                 .or_else(|| parse_quoted_literal(p))
                 .or_else(|| parse_number(p))
                 .or_else(|| parse_current_node(p))

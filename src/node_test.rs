@@ -20,12 +20,11 @@ pub struct NameTest {
 
 impl NameTest {
     fn matches(&self, context: &EvaluationContext, node_name: QName) -> bool {
-        let test_local = self.local_part.as_slice();
-        let is_wildcard = test_local == "*";
+        let is_wildcard = self.local_part == "*";
 
         let test_uri = self.prefix.as_ref().map(|p| {
             // TODO: Error for undefined prefix
-            context.namespace_for(p.as_slice())
+            context.namespace_for(p)
                 .expect("No namespace for prefix")
         });
 
@@ -34,7 +33,7 @@ impl NameTest {
             (true, Some(..)) => test_uri == node_name.namespace_uri(),
             _ => {
                 test_uri == node_name.namespace_uri() &&
-                    test_local == node_name.local_part()
+                    self.local_part == node_name.local_part()
             },
         }
     }

@@ -174,7 +174,7 @@ impl<'d> Nodeset<'d> {
     }
 
     pub fn add_nodeset(& mut self, other: &Nodeset<'d>) {
-        self.nodes.push_all(other.nodes.as_slice());
+        self.nodes.push_all(&other.nodes);
     }
 
     pub fn size(&self) -> usize {

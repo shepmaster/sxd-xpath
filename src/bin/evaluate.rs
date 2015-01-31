@@ -22,7 +22,7 @@ use getopts::{reqopt,optmulti,getopts,OptGroup,usage};
 
 fn print_usage(program: &str, opts: &[OptGroup]) {
     let brief = format!("Usage: {} [options] FILE...", program);
-    print!("{}", usage(brief.as_slice(), opts));
+    print!("{}", usage(&brief, opts));
 }
 
 fn pretty_error(xml: &str, position: usize) -> &str {
@@ -51,9 +51,9 @@ fn load_xml(filename: &str) -> document::Package {
         Err(x) => panic!("Can't read: {}", x),
     };
 
-    match p.parse(data.as_slice()) {
+    match p.parse(&data) {
         Ok(d) => d,
-        Err(point) => panic!("Unable to parse: {}", pretty_error(data.as_slice(), point)),
+        Err(point) => panic!("Unable to parse: {}", pretty_error(&data, point)),
     }
 }
 
@@ -96,16 +96,16 @@ fn main() {
         Ok(x) => x,
         Err(x) => {
             println!("{}", x);
-            print_usage(program_name.as_slice(), opts);
+            print_usage(program_name, opts);
             return;
         },
     };
 
     let xpath_str = arguments.opt_str("xpath").unwrap();
-    let xpath = build_xpath(xpath_str.as_slice());
+    let xpath = build_xpath(&xpath_str);
 
     for filename in arguments.free.iter() {
-        let package = load_xml(filename.as_slice());
+        let package = load_xml(filename);
         let doc = package.as_document();
         let root = doc.root().to_node();
 

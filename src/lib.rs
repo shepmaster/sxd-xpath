@@ -278,7 +278,7 @@ mod test {
         child.append_child(text2);
         element.append_child(text3);
 
-        assert_eq!("Presenting: Earth!", element.to_node().string_value().as_slice());
+        assert_eq!("Presenting: Earth!", element.to_node().string_value());
     }
 
     #[test]
@@ -287,7 +287,7 @@ mod test {
         let doc = package.as_document();
         let element = doc.create_element("hello");
         let attribute = element.set_attribute_value("world", "Earth").to_node();
-        assert_eq!("Earth", attribute.string_value().as_slice());
+        assert_eq!("Earth", attribute.string_value());
     }
 
     #[test]
@@ -295,7 +295,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let pi = doc.create_processing_instruction("hello", None).to_node();
-        assert_eq!("", pi.string_value().as_slice());
+        assert_eq!("", pi.string_value());
     }
 
     #[test]
@@ -303,7 +303,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let pi = doc.create_processing_instruction("hello", Some("world")).to_node();
-        assert_eq!("world", pi.string_value().as_slice());
+        assert_eq!("world", pi.string_value());
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let comment = doc.create_comment("hello world").to_node();
-        assert_eq!("hello world", comment.string_value().as_slice());
+        assert_eq!("hello world", comment.string_value());
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let text = doc.create_text("hello world").to_node();
-        assert_eq!("hello world", text.string_value().as_slice());
+        assert_eq!("hello world", text.string_value());
     }
 
     #[test]
