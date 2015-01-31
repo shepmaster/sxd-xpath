@@ -11,7 +11,7 @@ extern crate getopts;
 
 use std::cmp::min;
 use std::collections::HashMap;
-use std::io::File;
+use std::old_io::File;
 
 use document::parser::Parser;
 
