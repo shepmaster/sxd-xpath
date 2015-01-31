@@ -1,4 +1,9 @@
-#![allow(unstable)]
+#![feature(collections)]
+#![feature(core)]
+#![feature(io)]
+#![feature(os)]
+#![feature(path)]
+#![feature(rustc_private)]
 
 extern crate document;
 extern crate xpath;

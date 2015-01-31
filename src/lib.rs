@@ -1,6 +1,10 @@
 #![crate_name = "xpath"]
+
 #![feature(box_syntax)]
-#![allow(unstable)]
+#![feature(collections)]
+#![feature(core)]
+#![feature(hash)]
+#![feature(std_misc)]
 
 #[macro_use]
 extern crate document;
