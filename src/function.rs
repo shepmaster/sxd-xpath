@@ -324,6 +324,19 @@ impl Function for BooleanLiteral {
 fn true_fn() -> BooleanLiteral { BooleanLiteral(true) }
 fn false_fn() -> BooleanLiteral { BooleanLiteral(false) }
 
+struct NumberFn;
+
+impl Function for NumberFn {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(maximum_arg_count(&args, 1));
+        let arg = value_or_context_node(context, args);
+        Ok(Value::Number(arg.number()))
+    }
+}
+
 struct NumberConvert(fn(f64) -> f64);
 
 impl Function for NumberConvert {
@@ -369,6 +382,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box true_fn());
     functions.insert("false".to_string(), box false_fn());
+    functions.insert("number".to_string(), box NumberFn);
     functions.insert("floor".to_string(), box floor());
     functions.insert("ceiling".to_string(), box ceiling());
     functions.insert("round".to_string(), box round());
@@ -394,6 +408,7 @@ mod test {
         StringLength,
         NormalizeSpace,
         BooleanFn,
+        NumberFn,
     };
 
     struct Setup<'d> {
@@ -554,6 +569,14 @@ mod test {
         let r = evaluate_literal(BooleanFn, args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
+    }
+
+    #[test]
+    fn number_converts_to_number() {
+        let args = vec![LiteralValue::String(" -1.2 ".to_string())];
+        let r = evaluate_literal(NumberFn, args);
+
+        assert_eq!(Ok(LiteralValue::Number(-1.2)), r);
     }
 
     fn assert_number<F>(f: F, val: f64, expected: f64)
