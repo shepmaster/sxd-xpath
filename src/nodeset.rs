@@ -1,10 +1,13 @@
-use std::vec;
+use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::slice::Iter;
+use std::vec;
+
 use document::dom4;
 
 use super::EvaluationContext;
+
 use self::Node::*;
-use std::slice::Iter;
 
 macro_rules! unpack(
     ($enum_name:ident, $name:ident, $wrapper:ident, dom4::$inner:ident) => (
@@ -41,7 +44,7 @@ macro_rules! conversion_trait(
     )
 );
 
-#[derive(Clone,PartialEq,Debug,Copy)]
+#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
 pub enum Node<'d> {
     RootNode(dom4::Root<'d>),
     ElementNode(dom4::Element<'d>),
@@ -184,6 +187,36 @@ impl<'d> Nodeset<'d> {
     pub fn into_iter(self) -> vec::IntoIter<Node<'d>> {
         self.nodes.into_iter()
     }
+
+    pub fn document_order_first(&self) -> Option<Node<'d>> {
+        let doc = match self.nodes.first() {
+            Some(n) => n.document(),
+            None => return None,
+        };
+
+        let mut idx = 0;
+        let mut stack = vec![doc.root().to_node()];
+        let mut order: HashMap<Node, usize> = HashMap::new();
+
+        // Rebuilding this each time cannot possibly be performant,
+        // but I want to see how widely used this is first before
+        // picking an appropriate caching point.
+
+        while let Some(n) = stack.pop() {
+            order.insert(n, idx);
+            idx += 1;
+            let c = n.children();
+
+            stack.extend(c.into_iter().rev());
+
+            if let Node::ElementNode(e) = n {
+                // TODO: namespaces
+                stack.extend(e.attributes().into_iter().map(|a| a.to_node()));
+            }
+        }
+
+        self.nodes.iter().min_by(|&&n| order[n]).map(|n| *n)
+    }
 }
 
 impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
@@ -207,7 +240,7 @@ mod test {
         RootNode,
         TextNode,
     };
-    use super::Nodeset;
+    use super::{Nodeset,ToNode};
 
     #[test]
     fn nodeset_can_include_all_node_types() {
@@ -261,5 +294,37 @@ mod test {
         nodes1.add_nodeset(&nodes2);
 
         assert_eq!(all_nodes, nodes1);
+    }
+
+    #[test]
+    fn nodeset_knows_first_node_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let c1 = doc.create_comment("1");
+        let c2 = doc.create_comment("2");
+        doc.root().append_child(c1);
+        doc.root().append_child(c2);
+
+        let nodes = nodeset![c2, c1];
+
+        assert_eq!(Some(c1.to_node()), nodes.document_order_first());
+    }
+
+    #[test]
+    fn attributes_come_before_children_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let parent = doc.create_element("parent");
+        let attr = parent.set_attribute_value("a", "v");
+        let child = doc.create_element("child");
+
+        doc.root().append_child(parent);
+        parent.append_child(child);
+
+        let nodes = nodeset![child, attr];
+
+        assert_eq!(Some(attr.to_node()), nodes.document_order_first());
     }
 }
