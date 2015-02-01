@@ -1,7 +1,7 @@
 use std::num::Float;
 use std::{error,fmt};
 
-use super::{EvaluationContext,Functions,Value};
+use super::{EvaluationContext,Functions,Value,StringValue};
 
 pub trait Function {
     fn evaluate<'a, 'd>(&self,
@@ -122,6 +122,16 @@ fn value_or_context_node<'a, 'd>(context: &EvaluationContext<'a, 'd>, mut args: 
         .unwrap_or_else(|| Value::Nodes(nodeset![context.node]))
 }
 
+fn string_value_or_context_node(context: &EvaluationContext, mut args: Vec<Value>)
+                                 -> Result<String, Error>
+{
+    match args.pop() {
+        Some(Value::String(s)) => Ok(s),
+        Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::String)),
+        None => Ok(context.node.string_value()),
+    }
+}
+
 struct Last;
 
 impl Function for Last {
@@ -240,6 +250,19 @@ fn substring_after() -> Substring {
     Substring(inner)
 }
 
+struct StringLength;
+
+impl Function for StringLength {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(maximum_arg_count(&args, 1));
+        let arg = try!(string_value_or_context_node(context, args));
+        Ok(Value::Number(arg.chars().count() as f64))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -310,6 +333,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("contains".to_string(), box contains());
     functions.insert("substring-before".to_string(), box substring_before());
     functions.insert("substring-after".to_string(), box substring_after());
+    functions.insert("string-length".to_string(), box StringLength);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box true_fn());
     functions.insert("false".to_string(), box false_fn());
@@ -335,6 +359,7 @@ mod test {
         Count,
         StringFn,
         Concat,
+        StringLength,
     };
 
     struct Setup<'d> {
@@ -455,6 +480,14 @@ mod test {
         let r = evaluate_literal(super::substring_after(), args);
 
         assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
+    }
+
+    #[test]
+    fn string_length_counts_characters() {
+        let args = vec![LiteralValue::String("日本語".to_string())];
+        let r = evaluate_literal(StringLength, args);
+
+        assert_eq!(Ok(LiteralValue::Number(3.0)), r);
     }
 
     fn assert_number<F>(f: F, val: f64, expected: f64)
