@@ -281,6 +281,18 @@ impl Function for NormalizeSpace {
     }
 }
 
+struct BooleanFn;
+
+impl Function for BooleanFn {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 1));
+        Ok(Value::Boolean(args[0].boolean()))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -353,6 +365,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("substring-after".to_string(), box substring_after());
     functions.insert("string-length".to_string(), box StringLength);
     functions.insert("normalize-space".to_string(), box NormalizeSpace);
+    functions.insert("boolean".to_string(), box BooleanFn);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box true_fn());
     functions.insert("false".to_string(), box false_fn());
@@ -380,6 +393,7 @@ mod test {
         Concat,
         StringLength,
         NormalizeSpace,
+        BooleanFn,
     };
 
     struct Setup<'d> {
@@ -532,6 +546,14 @@ mod test {
         let r = evaluate_literal(NormalizeSpace, args);
 
         assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
+    }
+
+    #[test]
+    fn boolean_converts_to_boolean() {
+        let args = vec![LiteralValue::String("false".to_string())];
+        let r = evaluate_literal(BooleanFn, args);
+
+        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
 
     fn assert_number<F>(f: F, val: f64, expected: f64)
