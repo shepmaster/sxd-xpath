@@ -1,17 +1,14 @@
-use std::{error,fmt};
 use std::iter::Peekable;
+use std::{error,fmt};
 
 use self::ParseErr::*;
 
 use super::LiteralValue;
 use super::token::{Token,AxisName,NodeTestName};
 use super::tokenizer::{TokenResult,TokenizerErr};
-use super::axis;
-use super::axis::{Axis,SubAxis,PrincipalNodeType};
-use super::expression;
-use super::expression::SubExpression;
-use super::node_test;
-use super::node_test::SubNodeTest;
+use super::axis::{self,Axis,SubAxis,PrincipalNodeType};
+use super::expression::{self,SubExpression};
+use super::node_test::{self,SubNodeTest};
 
 #[allow(missing_copy_implementations)]
 pub struct Parser;

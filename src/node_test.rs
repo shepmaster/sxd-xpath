@@ -113,8 +113,7 @@ mod test {
     use document::{Package,QName,ToQName};
     use document::dom4::{Document,Element,Attribute};
 
-    use super::super::EvaluationContext;
-    use super::super::{Functions,Variables,Namespaces};
+    use super::super::{EvaluationContext,Functions,Variables,Namespaces};
     use super::super::nodeset::Nodeset;
 
     use super::super::node_test;

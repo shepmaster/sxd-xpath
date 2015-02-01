@@ -503,12 +503,11 @@ mod test {
     use super::super::{LiteralValue,Value};
     use super::super::Value::{Boolean, Number, String, Nodes};
     use super::super::{Functions,Variables,Namespaces};
-    use super::super::Function;
-    use super::super::EvaluationContext;
-    use super::super::nodeset::Nodeset;
+    use super::super::{EvaluationContext,Function};
     use super::super::axis::Axis;
     use super::super::function;
     use super::super::node_test::NodeTest;
+    use super::super::nodeset::Nodeset;
 
     use super::super::expression;
     use super::{Expression,Error};

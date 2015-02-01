@@ -9,18 +9,16 @@
 #[macro_use]
 extern crate document;
 
-use self::Value::*;
-use self::nodeset::Nodeset;
-use self::nodeset::{Node,ToNode};
-
 use std::collections::HashMap;
-use std::iter;
-use std::string;
 use std::num::Float;
-use std::vec;
+use std::{iter,string,vec};
 
-use tokenizer::{Tokenizer,TokenDeabbreviator};
+use self::Value::*;
+
+use nodeset::{Nodeset,Node,ToNode};
 use parser::Parser;
+use tokenizer::{Tokenizer,TokenDeabbreviator};
+
 pub use function::Function;
 pub use expression::Expression;
 
@@ -273,11 +271,12 @@ mod xpath {
 
 #[cfg(test)]
 mod test {
-    use document::Package;
-    use super::nodeset::ToNode;
-    use super::StringValue;
-    use super::Value;
     use std::num::Float;
+
+    use document::Package;
+
+    use super::nodeset::ToNode;
+    use super::{Value,StringValue};
 
     #[test]
     fn string_value_of_element_node_is_concatenation_of_descendant_text_nodes() {

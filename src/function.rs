@@ -1,5 +1,5 @@
-use std::{error,fmt};
 use std::num::Float;
+use std::{error,fmt};
 
 use super::{EvaluationContext,Functions,Value};
 
@@ -291,7 +291,9 @@ pub fn register_core_functions(functions: &mut Functions) {
 mod test {
     use std::collections::HashMap;
     use std::num::Float;
+
     use document::Package;
+
     use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::ToNode;
     use super::{

@@ -1,14 +1,13 @@
 use std::{error,fmt,string};
 
-use document::peresil;
-use document::peresil::{Point,Identifier};
+use document::peresil::{self,Point,Identifier};
 use document::parser::XmlParseExt;
-
-use self::TokenizerErr::*;
 
 use super::node_test;
 use super::token::{Token,AxisName,NodeTestName};
 use super::token::Token::*;
+
+use self::TokenizerErr::*;
 
 pub struct Tokenizer {
     xpath: string::String,
@@ -417,14 +416,11 @@ mod test {
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
 
-    use super::Tokenizer;
-    use super::{TokenResult,TokenizerErr};
+    use super::{Tokenizer,TokenDeabbreviator,TokenResult,TokenizerErr};
     use super::TokenizerErr::{
         MismatchedQuoteCharacters,
         UnableToCreateToken,
     };
-
-    use super::TokenDeabbreviator;
 
     fn is_finished(tokenizer: &Tokenizer) -> bool {
         ! tokenizer.has_more_tokens()

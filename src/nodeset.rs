@@ -238,6 +238,7 @@ impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
 #[cfg(test)]
 mod test {
     use document::Package;
+
     use super::Node::{
         Attribute,
         Comment,
