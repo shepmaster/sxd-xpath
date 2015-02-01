@@ -1,5 +1,6 @@
 use std::iter::AdditiveIterator;
 use std::num::Float;
+use std::ops::Index;
 use std::{error,fmt};
 
 use document::parser::xmlstr::XmlChar;
@@ -72,75 +73,88 @@ impl fmt::Display for Error {
     }
 }
 
-fn minimum_arg_count<T>(args: &Vec<T>, minimum: usize) -> Result<(), Error> {
-    let actual = args.len();
-    if actual < minimum {
-        Err(Error::NotEnoughArguments{expected: minimum, actual: actual})
-    } else {
-        Ok(())
-    }
-}
+struct Args<'d>(Vec<Value<'d>>);
 
-fn maximum_arg_count<T>(args: &Vec<T>, maximum: usize) -> Result<(), Error> {
-    let actual = args.len();
-    if actual < maximum {
-        Err(Error::TooManyArguments{expected: maximum, actual: actual})
-    } else {
-        Ok(())
-    }
-}
-
-fn exact_arg_count<T>(args: &Vec<T>, expected: usize) -> Result<(), Error> {
-    let actual = args.len();
-    if actual < expected {
-        Err(Error::NotEnoughArguments{ expected: expected, actual: actual })
-    } else if actual > expected {
-        Err(Error::TooManyArguments{ expected: expected, actual: actual })
-    } else {
-        Ok(())
-    }
-}
-
-fn string_args(args: Vec<Value>) -> Result<Vec<String>, Error> {
-    fn string_arg(v: Value) -> Result<String, Error> {
-        match v {
-            Value::String(s) => Ok(s),
-            _ => Err(Error::wrong_type(&v, ArgumentType::String)),
+impl<'d> Args<'d> {
+    fn at_least(&self, minimum: usize) -> Result<(), Error> {
+        let actual = self.0.len();
+        if actual < minimum {
+            Err(Error::NotEnoughArguments{expected: minimum, actual: actual})
+        } else {
+            Ok(())
         }
     }
 
-    args.into_iter().map(string_arg).collect()
-}
+    fn at_most(&self, maximum: usize) -> Result<(), Error> {
+        let actual = self.0.len();
+        if actual > maximum {
+            Err(Error::TooManyArguments{expected: maximum, actual: actual})
+        } else {
+            Ok(())
+        }
+    }
 
-fn one_number(args: Vec<Value>) -> Result<f64, Error> {
-    match &args[0] {
-        &Value::Number(v) => Ok(v),
-        a => Err(Error::wrong_type(a, ArgumentType::Number)),
+    fn exactly(&self, expected: usize) -> Result<(), Error> {
+        let actual = self.0.len();
+        if actual < expected {
+            Err(Error::NotEnoughArguments{ expected: expected, actual: actual })
+        } else if actual > expected {
+            Err(Error::TooManyArguments{ expected: expected, actual: actual })
+        } else {
+            Ok(())
+        }
+    }
+
+    fn into_strings(self) -> Result<Vec<String>, Error> {
+        fn string_arg(v: Value) -> Result<String, Error> {
+            match v {
+                Value::String(s) => Ok(s),
+                _ => Err(Error::wrong_type(&v, ArgumentType::String)),
+            }
+        }
+
+        self.0.into_iter().map(string_arg).collect()
+    }
+
+    fn pop_boolean(&mut self) -> Result<bool, Error> {
+        match self.0.pop().unwrap() {
+            Value::Boolean(v) => Ok(v),
+            a => Err(Error::wrong_type(&a, ArgumentType::Boolean)),
+        }
+    }
+
+    fn pop_number(&mut self) -> Result<f64, Error> {
+        match self.0.pop().unwrap() {
+            Value::Number(v) => Ok(v),
+            a => Err(Error::wrong_type(&a, ArgumentType::Number)),
+        }
+    }
+
+    fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
+        match self.0.pop().unwrap() {
+            Value::Nodes(v) => Ok(v),
+            a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
+        }
+    }
+
+    fn pop_value_or_context_node<'_>(&mut self, context: &EvaluationContext<'_, 'd>) -> Value<'d> {
+        self.0.pop()
+            .unwrap_or_else(|| Value::Nodes(nodeset![context.node]))
+    }
+
+    fn pop_string_value_or_context_node(&mut self, context: &EvaluationContext) -> Result<String, Error> {
+        match self.0.pop() {
+            Some(Value::String(s)) => Ok(s),
+            Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::String)),
+            None => Ok(context.node.string_value()),
+        }
     }
 }
 
-fn one_nodeset<'d>(mut args: Vec<Value<'d>>) -> Result<Nodeset<'d>, Error> {
-    match args.pop().unwrap() {
-        Value::Nodes(v) => Ok(v),
-        a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
-    }
-}
+impl<'d> Index<usize> for Args<'d> {
+    type Output = Value<'d>;
 
-fn value_or_context_node<'a, 'd>(context: &EvaluationContext<'a, 'd>, mut args: Vec<Value<'d>>)
-                                 -> Value<'d>
-{
-    args.pop()
-        .unwrap_or_else(|| Value::Nodes(nodeset![context.node]))
-}
-
-fn string_value_or_context_node(context: &EvaluationContext, mut args: Vec<Value>)
-                                 -> Result<String, Error>
-{
-    match args.pop() {
-        Some(Value::String(s)) => Ok(s),
-        Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::String)),
-        None => Ok(context.node.string_value()),
-    }
+    fn index(&self, index: &usize) -> &Value<'d> { self.0.index(index) }
 }
 
 struct Last;
@@ -150,7 +164,8 @@ impl Function for Last {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 0));
+        let args = Args(args);
+        try!(args.exactly(0));
         Ok(Value::Number(context.size() as f64))
     }
 }
@@ -162,7 +177,8 @@ impl Function for Position {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 0));
+        let args = Args(args);
+        try!(args.exactly(0));
         Ok(Value::Number(context.position() as f64))
     }
 }
@@ -174,12 +190,10 @@ impl Function for Count {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 1));
-        let arg = &args[0];
-        match arg {
-            &Value::Nodes(ref nodeset) => Ok(Value::Number(nodeset.size() as f64)),
-            _ => Err(Error::wrong_type(arg, ArgumentType::Nodeset)),
-        }
+        let mut args = Args(args);
+        try!(args.exactly(1));
+        let arg = try!(args.pop_nodeset());
+        Ok(Value::Number(arg.size() as f64))
     }
 }
 
@@ -190,8 +204,9 @@ impl Function for StringFn {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(maximum_arg_count(&args, 1));
-        let arg = value_or_context_node(context, args);
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = args.pop_value_or_context_node(context);
         Ok(Value::String(arg.string()))
     }
 }
@@ -204,8 +219,9 @@ impl Function for Concat {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(minimum_arg_count(&args, 2));
-        let args = try!(string_args(args));
+        let args = Args(args);
+        try!(args.at_least(2));
+        let args = try!(args.into_strings());
         Ok(Value::String(args.concat()))
     }
 }
@@ -217,9 +233,10 @@ impl Function for TwoStringPredicate {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 2));
-        let args = try!(string_args(args));
-        let v = self.0(&*args[0], &*args[1]);
+        let args = Args(args);
+        try!(args.exactly(2));
+        let args = try!(args.into_strings());
+        let v = self.0(&args[0], &args[1]);
         Ok(Value::Boolean(v))
     }
 }
@@ -234,8 +251,9 @@ impl Function for Substring {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 2));
-        let args = try!(string_args(args));
+        let args = Args(args);
+        try!(args.exactly(2));
+        let args = try!(args.into_strings());
         let s = self.0(&*args[0], &*args[1]);
         Ok(Value::String(s.to_string()))
     }
@@ -268,9 +286,10 @@ impl Function for StringLength {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(maximum_arg_count(&args, 1));
-        let arg = try!(string_value_or_context_node(context, args));
-        Ok(Value::Number(arg.chars().count() as f64))
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = try!(args.pop_string_value_or_context_node(context));
+        Ok(Value::Number(arg.graphemes(true).count() as f64))
     }
 }
 
@@ -281,8 +300,9 @@ impl Function for NormalizeSpace {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(maximum_arg_count(&args, 1));
-        let arg = try!(string_value_or_context_node(context, args));
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = try!(args.pop_string_value_or_context_node(context));
         // TODO: research itertools or another pure-iterator solution
         let s: Vec<_> = arg.split(XmlChar::is_space_char).filter(|s| !s.is_empty()).collect();
         let s = s.connect(" ");
@@ -297,7 +317,8 @@ impl Function for BooleanFn {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 1));
+        let args = Args(args);
+        try!(args.exactly(1));
         Ok(Value::Boolean(args[0].boolean()))
     }
 }
@@ -309,12 +330,10 @@ impl Function for Not {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 1));
-        let arg = &args[0];
-        match arg {
-            &Value::Boolean(v) => Ok(Value::Boolean(!v)),
-            _ => Err(Error::wrong_type(arg, ArgumentType::Boolean)),
-        }
+        let mut args = Args(args);
+        try!(args.exactly(1));
+        let arg = try!(args.pop_boolean());
+        Ok(Value::Boolean(!arg))
     }
 }
 
@@ -325,7 +344,8 @@ impl Function for BooleanLiteral {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 0));
+        let args = Args(args);
+        try!(args.exactly(0));
         Ok(Value::Boolean(self.0))
     }
 }
@@ -340,8 +360,9 @@ impl Function for NumberFn {
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(maximum_arg_count(&args, 1));
-        let arg = value_or_context_node(context, args);
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = args.pop_value_or_context_node(context);
         Ok(Value::Number(arg.number()))
     }
 }
@@ -353,8 +374,9 @@ impl Function for Sum {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 1));
-        let arg = try!(one_nodeset(args));
+        let mut args = Args(args);
+        try!(args.exactly(1));
+        let arg = try!(args.pop_nodeset());
         let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).sum();
         Ok(Value::Number(r))
     }
@@ -367,8 +389,9 @@ impl Function for NumberConvert {
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
-        try!(exact_arg_count(&args, 1));
-        let arg = try!(one_number(args));
+        let mut args = Args(args);
+        try!(args.exactly(1));
+        let arg = try!(args.pop_number());
         Ok(Value::Number(self.0(arg)))
     }
 }
