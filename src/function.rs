@@ -1,6 +1,8 @@
 use std::num::Float;
 use std::{error,fmt};
 
+use document::parser::xmlstr::XmlChar;
+
 use super::{EvaluationContext,Functions,Value,StringValue};
 
 pub trait Function {
@@ -263,6 +265,22 @@ impl Function for StringLength {
     }
 }
 
+struct NormalizeSpace;
+
+impl Function for NormalizeSpace {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(maximum_arg_count(&args, 1));
+        let arg = try!(string_value_or_context_node(context, args));
+        // TODO: research itertools or another pure-iterator solution
+        let s: Vec<_> = arg.split(XmlChar::is_space_char).filter(|s| !s.is_empty()).collect();
+        let s = s.connect(" ");
+        Ok(Value::String(s))
+    }
+}
+
 struct Not;
 
 impl Function for Not {
@@ -334,6 +352,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("substring-before".to_string(), box substring_before());
     functions.insert("substring-after".to_string(), box substring_after());
     functions.insert("string-length".to_string(), box StringLength);
+    functions.insert("normalize-space".to_string(), box NormalizeSpace);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box true_fn());
     functions.insert("false".to_string(), box false_fn());
@@ -360,6 +379,7 @@ mod test {
         StringFn,
         Concat,
         StringLength,
+        NormalizeSpace,
     };
 
     struct Setup<'d> {
@@ -488,6 +508,30 @@ mod test {
         let r = evaluate_literal(StringLength, args);
 
         assert_eq!(Ok(LiteralValue::Number(3.0)), r);
+    }
+
+    #[test]
+    fn normalize_space_removes_leading_space() {
+        let args = vec![LiteralValue::String("\t hello".to_string())];
+        let r = evaluate_literal(NormalizeSpace, args);
+
+        assert_eq!(Ok(LiteralValue::String("hello".to_string())), r);
+    }
+
+    #[test]
+    fn normalize_space_removes_trailing_space() {
+        let args = vec![LiteralValue::String("hello\r\n".to_string())];
+        let r = evaluate_literal(NormalizeSpace, args);
+
+        assert_eq!(Ok(LiteralValue::String("hello".to_string())), r);
+    }
+
+    #[test]
+    fn normalize_space_squashes_intermediate_space() {
+        let args = vec![LiteralValue::String("hello\t\r\n world".to_string())];
+        let r = evaluate_literal(NormalizeSpace, args);
+
+        assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
     }
 
     fn assert_number<F>(f: F, val: f64, expected: f64)
