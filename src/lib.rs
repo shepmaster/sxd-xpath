@@ -129,8 +129,8 @@ fn text_descendants_string_value(node: &Node) -> string::String {
     fn document_order_text_nodes(node: &Node, result: &mut string::String) {
         for child in node.children().iter() {
             match child {
-                &Node::ElementNode(_) => document_order_text_nodes(child, result),
-                &Node::TextNode(n) => result.push_str(n.text()),
+                &Node::Element(_) => document_order_text_nodes(child, result),
+                &Node::Text(n) => result.push_str(n.text()),
                 _ => {},
             }
         }
@@ -144,12 +144,12 @@ fn text_descendants_string_value(node: &Node) -> string::String {
 impl<'d> StringValue for Node<'d> {
     fn string_value(&self) -> string::String {
         match self {
-            &Node::RootNode(_) => text_descendants_string_value(self),
-            &Node::ElementNode(_) => text_descendants_string_value(self),
-            &Node::AttributeNode(n) => string::String::from_str(n.value()),
-            &Node::ProcessingInstructionNode(n) => string::String::from_str(n.value().unwrap_or("")),
-            &Node::CommentNode(n) => string::String::from_str(n.text()),
-            &Node::TextNode(n) => string::String::from_str(n.text()),
+            &Node::Root(_) => text_descendants_string_value(self),
+            &Node::Element(_) => text_descendants_string_value(self),
+            &Node::Attribute(n) => string::String::from_str(n.value()),
+            &Node::ProcessingInstruction(n) => string::String::from_str(n.value().unwrap_or("")),
+            &Node::Comment(n) => string::String::from_str(n.text()),
+            &Node::Text(n) => string::String::from_str(n.text()),
         }
     }
 }

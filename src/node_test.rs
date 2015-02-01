@@ -3,8 +3,7 @@ use std::fmt;
 use document::QName;
 
 use super::EvaluationContext;
-use super::nodeset::Nodeset;
-use super::nodeset::Node::{AttributeNode,ElementNode,TextNode};
+use super::nodeset::{self,Nodeset};
 
 pub trait NodeTest: fmt::Debug {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
@@ -54,7 +53,7 @@ impl Attribute {
 
 impl NodeTest for Attribute {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
-        if let AttributeNode(ref a) = context.node {
+        if let nodeset::Node::Attribute(ref a) = context.node {
             if self.name_test.matches(context, a.name()) {
                 result.add(context.node);
             }
@@ -77,7 +76,7 @@ impl Element {
 
 impl NodeTest for Element {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
-        if let ElementNode(ref e) = context.node {
+        if let nodeset::Node::Element(ref e) = context.node {
             if self.name_test.matches(context, e.name()) {
                 result.add(context.node);
             }
@@ -101,7 +100,7 @@ pub struct Text;
 
 impl NodeTest for Text {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
-        if let TextNode(_) = context.node {
+        if let nodeset::Node::Text(_) = context.node {
             result.add(context.node);
         }
     }

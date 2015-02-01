@@ -5,7 +5,6 @@ use std::fmt;
 use super::EvaluationContext;
 use super::node_test::NodeTest;
 use super::nodeset::{Nodeset,Node};
-use super::nodeset::Node::ElementNode;
 
 #[allow(missing_copy_implementations)]
 pub enum PrincipalNodeType {
@@ -75,7 +74,7 @@ impl Axis for Attribute {
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
-        if let ElementNode(ref e) = context.node {
+        if let Node::Element(ref e) = context.node {
             for attr in e.attributes().iter() {
                 let attr_context = context.new_context_for(*attr);
                 node_test.test(&attr_context, result);

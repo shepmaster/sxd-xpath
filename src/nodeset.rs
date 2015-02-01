@@ -7,14 +7,12 @@ use document::dom4;
 
 use super::EvaluationContext;
 
-use self::Node::*;
-
 macro_rules! unpack(
     ($enum_name:ident, $name:ident, $wrapper:ident, dom4::$inner:ident) => (
         impl<'d> $enum_name<'d> {
             pub fn $name(self) -> Option<dom4::$inner<'d>> {
                 match self {
-                    $wrapper(n) => Some(n),
+                    $enum_name::$wrapper(n) => Some(n),
                     _ => None,
                 }
             }
@@ -24,7 +22,7 @@ macro_rules! unpack(
 
 macro_rules! conversion_trait(
     ($tr_name:ident, $method:ident, $res_type:ident,
-        { $(dom4::$leaf_type:ident => $variant:ident),* }
+        { $(dom4::$leaf_type:ident => Node::$variant:ident),* }
     ) => (
         pub trait $tr_name<'d> {
             fn $method(self) -> $res_type<'d>;
@@ -38,7 +36,7 @@ macro_rules! conversion_trait(
 
         $(impl<'d> $tr_name<'d> for dom4::$leaf_type<'d> {
             fn $method(self) -> $res_type<'d> {
-                $variant(self)
+                Node::$variant(self)
             }
         })*
     )
@@ -46,113 +44,121 @@ macro_rules! conversion_trait(
 
 #[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
 pub enum Node<'d> {
-    RootNode(dom4::Root<'d>),
-    ElementNode(dom4::Element<'d>),
-    AttributeNode(dom4::Attribute<'d>),
-    TextNode(dom4::Text<'d>),
-    CommentNode(dom4::Comment<'d>),
-    ProcessingInstructionNode(dom4::ProcessingInstruction<'d>),
+    Root(dom4::Root<'d>),
+    Element(dom4::Element<'d>),
+    Attribute(dom4::Attribute<'d>),
+    Text(dom4::Text<'d>),
+    Comment(dom4::Comment<'d>),
+    ProcessingInstruction(dom4::ProcessingInstruction<'d>),
 }
 
-unpack!(Node, root, RootNode, dom4::Root);
-unpack!(Node, element, ElementNode, dom4::Element);
-unpack!(Node, attribute, AttributeNode, dom4::Attribute);
-unpack!(Node, text, TextNode, dom4::Text);
-unpack!(Node, comment, CommentNode, dom4::Comment);
-unpack!(Node, processing_instruction, ProcessingInstructionNode, dom4::ProcessingInstruction);
+unpack!(Node, root, Root, dom4::Root);
+unpack!(Node, element, Element, dom4::Element);
+unpack!(Node, attribute, Attribute, dom4::Attribute);
+unpack!(Node, text, Text, dom4::Text);
+unpack!(Node, comment, Comment, dom4::Comment);
+unpack!(Node, processing_instruction, ProcessingInstruction, dom4::ProcessingInstruction);
 
 impl<'d> Node<'d> {
     pub fn document(&self) -> &'d dom4::Document<'d> {
+        use self::Node::*;
         match self {
-            &RootNode(n)                  => n.document(),
-            &ElementNode(n)               => n.document(),
-            &AttributeNode(n)             => n.document(),
-            &TextNode(n)                  => n.document(),
-            &CommentNode(n)               => n.document(),
-            &ProcessingInstructionNode(n) => n.document(),
+            &Root(n)                  => n.document(),
+            &Element(n)               => n.document(),
+            &Attribute(n)             => n.document(),
+            &Text(n)                  => n.document(),
+            &Comment(n)               => n.document(),
+            &ProcessingInstruction(n) => n.document(),
         }
     }
 
     pub fn parent(&self) -> Option<Node<'d>> {
+        use self::Node::*;
         match self {
-            &RootNode(_)                  => None,
-            &ElementNode(n)               => n.parent().map(|n| n.to_node()),
-            &AttributeNode(n)             => n.parent().map(|n| n.to_node()),
-            &TextNode(n)                  => n.parent().map(|n| n.to_node()),
-            &CommentNode(n)               => n.parent().map(|n| n.to_node()),
-            &ProcessingInstructionNode(n) => n.parent().map(|n| n.to_node()),
+            &Root(_)                  => None,
+            &Element(n)               => n.parent().map(|n| n.to_node()),
+            &Attribute(n)             => n.parent().map(|n| n.to_node()),
+            &Text(n)                  => n.parent().map(|n| n.to_node()),
+            &Comment(n)               => n.parent().map(|n| n.to_node()),
+            &ProcessingInstruction(n) => n.parent().map(|n| n.to_node()),
         }
     }
 
     pub fn children(&self) -> Vec<Node<'d>> {
+        use self::Node::*;
         match self {
-            &RootNode(n)                  => n.children().iter().map(|n| n.to_node()).collect(),
-            &ElementNode(n)               => n.children().iter().map(|n| n.to_node()).collect(),
-            &AttributeNode(_)             => Vec::new(),
-            &TextNode(_)                  => Vec::new(),
-            &CommentNode(_)               => Vec::new(),
-            &ProcessingInstructionNode(_) => Vec::new(),
+            &Root(n)                  => n.children().iter().map(|n| n.to_node()).collect(),
+            &Element(n)               => n.children().iter().map(|n| n.to_node()).collect(),
+            &Attribute(_)             => Vec::new(),
+            &Text(_)                  => Vec::new(),
+            &Comment(_)               => Vec::new(),
+            &ProcessingInstruction(_) => Vec::new(),
         }
     }
 
     pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
+        use self::Node::*;
         match self {
-            &RootNode(_)                  => Vec::new(),
-            &ElementNode(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
-            &AttributeNode(_)             => Vec::new(),
-            &TextNode(n)                  => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
-            &CommentNode(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
-            &ProcessingInstructionNode(n) => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &Root(_)                  => Vec::new(),
+            &Element(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &Attribute(_)             => Vec::new(),
+            &Text(n)                  => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &Comment(n)               => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
+            &ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|n| n.to_node()).collect(),
         }
     }
 
     pub fn following_siblings(&self) -> Vec<Node<'d>> {
+        use self::Node::*;
         match self {
-            &RootNode(_)                  => Vec::new(),
-            &ElementNode(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
-            &AttributeNode(_)             => Vec::new(),
-            &TextNode(n)                  => n.following_siblings().iter().map(|n| n.to_node()).collect(),
-            &CommentNode(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
-            &ProcessingInstructionNode(n) => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &Root(_)                  => Vec::new(),
+            &Element(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &Attribute(_)             => Vec::new(),
+            &Text(n)                  => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &Comment(n)               => n.following_siblings().iter().map(|n| n.to_node()).collect(),
+            &ProcessingInstruction(n) => n.following_siblings().iter().map(|n| n.to_node()).collect(),
         }
     }
 }
 
 conversion_trait!(ToNode, to_node, Node, {
-    dom4::Root => RootNode,
-    dom4::Element => ElementNode,
-    dom4::Attribute => AttributeNode,
-    dom4::Text => TextNode,
-    dom4::Comment => CommentNode,
-    dom4::ProcessingInstruction => ProcessingInstructionNode
+    dom4::Root => Node::Root,
+    dom4::Element => Node::Element,
+    dom4::Attribute => Node::Attribute,
+    dom4::Text => Node::Text,
+    dom4::Comment => Node::Comment,
+    dom4::ProcessingInstruction => Node::ProcessingInstruction
 });
 
 impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
     fn to_node(self) -> Node<'d> {
+        use self::Node::*;
         match self {
-            dom4::ChildOfRoot::Element(n)               => ElementNode(n),
-            dom4::ChildOfRoot::Comment(n)               => CommentNode(n),
-            dom4::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstructionNode(n),
+            dom4::ChildOfRoot::Element(n)               => Element(n),
+            dom4::ChildOfRoot::Comment(n)               => Comment(n),
+            dom4::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
 }
 
 impl<'d> ToNode<'d> for dom4::ChildOfElement<'d> {
     fn to_node(self) -> Node<'d> {
+        use self::Node::*;
         match self {
-            dom4::ChildOfElement::Element(n)               => ElementNode(n),
-            dom4::ChildOfElement::Text(n)                  => TextNode(n),
-            dom4::ChildOfElement::Comment(n)               => CommentNode(n),
-            dom4::ChildOfElement::ProcessingInstruction(n) => ProcessingInstructionNode(n),
+            dom4::ChildOfElement::Element(n)               => Element(n),
+            dom4::ChildOfElement::Text(n)                  => Text(n),
+            dom4::ChildOfElement::Comment(n)               => Comment(n),
+            dom4::ChildOfElement::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
 }
 
 impl<'d> ToNode<'d> for dom4::ParentOfChild<'d> {
     fn to_node(self) -> Node<'d> {
+        use self::Node::*;
         match self {
-            dom4::ParentOfChild::Root(n)    => RootNode(n),
-            dom4::ParentOfChild::Element(n) => ElementNode(n),
+            dom4::ParentOfChild::Root(n)    => Root(n),
+            dom4::ParentOfChild::Element(n) => Element(n),
         }
     }
 }
@@ -209,7 +215,7 @@ impl<'d> Nodeset<'d> {
 
             stack.extend(c.into_iter().rev());
 
-            if let Node::ElementNode(e) = n {
+            if let Node::Element(e) = n {
                 // TODO: namespaces
                 stack.extend(e.attributes().into_iter().map(|a| a.to_node()));
             }
@@ -233,12 +239,12 @@ impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
 mod test {
     use document::Package;
     use super::Node::{
-        AttributeNode,
-        CommentNode,
-        ElementNode,
-        ProcessingInstructionNode,
-        RootNode,
-        TextNode,
+        Attribute,
+        Comment,
+        Element,
+        ProcessingInstruction,
+        Root,
+        Text,
     };
     use super::{Nodeset,ToNode};
 
@@ -265,12 +271,12 @@ mod test {
         let node_vec: Vec<_> = nodes.iter().collect();
 
         assert_eq!(6, node_vec.len());
-        assert_eq!(node_vec[0], &RootNode(r));
-        assert_eq!(node_vec[1], &ElementNode(e));
-        assert_eq!(node_vec[2], &AttributeNode(a));
-        assert_eq!(node_vec[3], &TextNode(t));
-        assert_eq!(node_vec[4], &CommentNode(c));
-        assert_eq!(node_vec[5], &ProcessingInstructionNode(p));
+        assert_eq!(node_vec[0], &Root(r));
+        assert_eq!(node_vec[1], &Element(e));
+        assert_eq!(node_vec[2], &Attribute(a));
+        assert_eq!(node_vec[3], &Text(t));
+        assert_eq!(node_vec[4], &Comment(c));
+        assert_eq!(node_vec[5], &ProcessingInstruction(p));
     }
 
     #[test]
