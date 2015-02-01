@@ -1,9 +1,11 @@
+use std::iter::AdditiveIterator;
 use std::num::Float;
 use std::{error,fmt};
 
 use document::parser::xmlstr::XmlChar;
 
 use super::{EvaluationContext,Functions,Value,StringValue};
+use super::nodeset::Nodeset;
 
 pub trait Function {
     fn evaluate<'a, 'd>(&self,
@@ -114,6 +116,13 @@ fn one_number(args: Vec<Value>) -> Result<f64, Error> {
     match &args[0] {
         &Value::Number(v) => Ok(v),
         a => Err(Error::wrong_type(a, ArgumentType::Number)),
+    }
+}
+
+fn one_nodeset<'d>(mut args: Vec<Value<'d>>) -> Result<Nodeset<'d>, Error> {
+    match args.pop().unwrap() {
+        Value::Nodes(v) => Ok(v),
+        a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
     }
 }
 
@@ -337,6 +346,20 @@ impl Function for NumberFn {
     }
 }
 
+struct Sum;
+
+impl Function for Sum {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(exact_arg_count(&args, 1));
+        let arg = try!(one_nodeset(args));
+        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).sum();
+        Ok(Value::Number(r))
+    }
+}
+
 struct NumberConvert(fn(f64) -> f64);
 
 impl Function for NumberConvert {
@@ -383,6 +406,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("true".to_string(), box true_fn());
     functions.insert("false".to_string(), box false_fn());
     functions.insert("number".to_string(), box NumberFn);
+    functions.insert("sum".to_string(), box Sum);
     functions.insert("floor".to_string(), box floor());
     functions.insert("ceiling".to_string(), box ceiling());
     functions.insert("round".to_string(), box round());
@@ -409,6 +433,7 @@ mod test {
         NormalizeSpace,
         BooleanFn,
         NumberFn,
+        Sum,
     };
 
     struct Setup<'d> {
@@ -577,6 +602,21 @@ mod test {
         let r = evaluate_literal(NumberFn, args);
 
         assert_eq!(Ok(LiteralValue::Number(-1.2)), r);
+    }
+
+    #[test]
+    fn sum_adds_up_nodeset() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let c = doc.create_comment("-32.0");
+        let t = doc.create_text("98.7");
+
+        let nodeset = nodeset![c, t];
+        let r = setup.evaluate(doc.root(), Sum, vec![Value::Nodes(nodeset)]);
+
+        assert_eq!(Ok(Value::Number(66.7)), r);
     }
 
     fn assert_number<F>(f: F, val: f64, expected: f64)

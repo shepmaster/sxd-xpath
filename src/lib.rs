@@ -58,6 +58,10 @@ pub enum Value<'d> {
     Nodes(Nodeset<'d>), // rename as Nodeset
 }
 
+fn str_to_num(s: &str) -> f64 {
+    s.trim().parse().unwrap_or(Float::nan())
+}
+
 impl<'d> Value<'d> {
     pub fn boolean(&self) -> bool {
         match *self {
@@ -69,8 +73,6 @@ impl<'d> Value<'d> {
     }
 
     pub fn number(&self) -> f64 {
-        let str_to_num = |&: s: &str| s.trim().parse().unwrap_or(Float::nan());
-
         match *self {
             Boolean(val) => if val { 1.0 } else { 0.0 },
             Number(val) => val,
