@@ -71,11 +71,13 @@ impl<'d> Value<'d> {
     }
 
     pub fn number(&self) -> f64 {
+        let str_to_num = |&: s: &str| s.trim().parse().unwrap_or(Float::nan());
+
         match *self {
-            Number(val) => val,
-            String(ref s) => s.trim().parse().unwrap_or(Float::nan()),
             Boolean(val) => if val { 1.0 } else { 0.0 },
-            _ => unimplemented!(),
+            Number(val) => val,
+            String(ref s) => str_to_num(s),
+            Nodes(..) => str_to_num(&self.string()),
         }
     }
 
@@ -371,6 +373,20 @@ mod test {
     fn number_of_boolean_false_is_0() {
         let v = Value::Boolean(false);
         assert_eq!(0.0, v.number());
+    }
+
+    #[test]
+    fn number_of_nodeset_is_number_value_of_first_node_in_document_order() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let c1 = doc.create_comment("42.42");
+        let c2 = doc.create_comment("1234");
+        doc.root().append_child(c1);
+        doc.root().append_child(c2);
+
+        let v = Value::Nodes(nodeset![c2, c1]);
+        assert_eq!(42.42, v.number());
     }
 
     #[test]
