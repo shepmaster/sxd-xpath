@@ -77,6 +77,15 @@ fn minimum_arg_count<T>(args: &Vec<T>, minimum: usize) -> Result<(), Error> {
     }
 }
 
+fn maximum_arg_count<T>(args: &Vec<T>, maximum: usize) -> Result<(), Error> {
+    let actual = args.len();
+    if actual < maximum {
+        Err(Error::TooManyArguments{expected: maximum, actual: actual})
+    } else {
+        Ok(())
+    }
+}
+
 fn exact_arg_count<T>(args: &Vec<T>, expected: usize) -> Result<(), Error> {
     let actual = args.len();
     if actual < expected {
@@ -104,6 +113,13 @@ fn one_number(args: Vec<Value>) -> Result<f64, Error> {
         &Value::Number(v) => Ok(v),
         a => Err(Error::wrong_type(a, ArgumentType::Number)),
     }
+}
+
+fn value_or_context_node<'a, 'd>(context: &EvaluationContext<'a, 'd>, mut args: Vec<Value<'d>>)
+                                 -> Value<'d>
+{
+    args.pop()
+        .unwrap_or_else(|| Value::Nodes(nodeset![context.node]))
 }
 
 struct Last;
@@ -145,6 +161,20 @@ impl Function for Count {
         }
     }
 }
+
+struct StringFn;
+
+impl Function for StringFn {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        try!(maximum_arg_count(&args, 1));
+        let arg = value_or_context_node(context, args);
+        Ok(Value::String(arg.string()))
+    }
+}
+
 
 struct Concat;
 
@@ -274,6 +304,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
+    functions.insert("string".to_string(), box StringFn);
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box starts_with());
     functions.insert("contains".to_string(), box contains());
@@ -302,6 +333,7 @@ mod test {
         Last,
         Position,
         Count,
+        StringFn,
         Concat,
     };
 
@@ -369,6 +401,14 @@ mod test {
         let r = setup.evaluate(doc.root(), Count, vec![Value::Nodes(nodeset)]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
+    }
+
+    #[test]
+    fn string_converts_to_string() {
+        let args = vec![LiteralValue::Boolean(true)];
+        let r = evaluate_literal(StringFn, args);
+
+        assert_eq!(Ok(LiteralValue::String("true".to_string())), r);
     }
 
     #[test]
