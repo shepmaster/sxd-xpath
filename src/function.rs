@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::iter::AdditiveIterator;
 use std::num::Float;
 use std::ops::Index;
-use std::{error,fmt};
+use std::{error,fmt,iter};
 
 use document::parser::xmlstr::XmlChar;
 
@@ -355,6 +357,36 @@ impl Function for NormalizeSpace {
     }
 }
 
+struct Translate;
+
+impl Function for Translate {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        let mut args = Args(args);
+        try!(args.exactly(3));
+
+        let to = try!(args.pop_string());
+        let from = try!(args.pop_string());
+        let s = try!(args.pop_string());
+
+        let mut replacements = HashMap::new();
+        let pairs = from.graphemes(true).zip(to.graphemes(true).chain(iter::repeat("")));
+        for (from, to) in pairs {
+            if let Entry::Vacant(entry) = replacements.entry(from) {
+                entry.insert(to);
+            }
+        }
+
+        let s = s.graphemes(true).map(|c| {
+            replacements.get(c).map(|&s| s).unwrap_or(c)
+        }).collect();
+
+        Ok(Value::String(s))
+    }
+}
+
 struct BooleanFn;
 
 impl Function for BooleanFn {
@@ -470,6 +502,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("substring".to_string(), box Substring);
     functions.insert("string-length".to_string(), box StringLength);
     functions.insert("normalize-space".to_string(), box NormalizeSpace);
+    functions.insert("translate".to_string(), box Translate);
     functions.insert("boolean".to_string(), box BooleanFn);
     functions.insert("not".to_string(), box Not);
     functions.insert("true".to_string(), box true_fn());
@@ -501,6 +534,7 @@ mod test {
         Substring,
         StringLength,
         NormalizeSpace,
+        Translate,
         BooleanFn,
         NumberFn,
         Sum,
@@ -716,6 +750,42 @@ mod test {
         let r = evaluate_literal(NormalizeSpace, args);
 
         assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
+    }
+
+    fn translate_test(s: &str, from: &str, to: &str) -> String {
+        let args = vec![LiteralValue::String(s.to_string()),
+                        LiteralValue::String(from.to_string()),
+                        LiteralValue::String(to.to_string())];
+
+        match evaluate_literal(Translate, args) {
+            Ok(LiteralValue::String(s)) => s,
+            r => panic!("translate failed: {:?}", r)
+        }
+    }
+
+    #[test]
+    fn translate_replaces_characters() {
+        assert_eq!("イエ", translate_test("いえ", "あいうえお", "アイウエオ"));
+    }
+
+    #[test]
+    fn translate_removes_characters_without_replacement() {
+        assert_eq!("イ", translate_test("いえ", "あいうえお", "アイ"));
+    }
+
+    #[test]
+    fn translate_replaces_each_char_only_once() {
+        assert_eq!("b", translate_test("a", "ab", "bc"));
+    }
+
+    #[test]
+    fn translate_uses_first_replacement() {
+        assert_eq!("b", translate_test("a", "aa", "bc"));
+    }
+
+    #[test]
+    fn translate_ignores_extra_replacements() {
+        assert_eq!("b", translate_test("a", "a", "bc"));
     }
 
     #[test]
