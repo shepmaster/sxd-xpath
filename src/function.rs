@@ -76,6 +76,8 @@ impl fmt::Display for Error {
 struct Args<'d>(Vec<Value<'d>>);
 
 impl<'d> Args<'d> {
+    fn len(&self) -> usize { self.0.len() }
+
     fn at_least(&self, minimum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < minimum {
@@ -127,6 +129,13 @@ impl<'d> Args<'d> {
         match self.0.pop().unwrap() {
             Value::Number(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Number)),
+        }
+    }
+
+    fn pop_string(&mut self) -> Result<String, Error> {
+        match self.0.pop().unwrap() {
+            Value::String(v) => Ok(v),
+            a => Err(Error::wrong_type(&a, ArgumentType::String)),
         }
     }
 
@@ -244,9 +253,9 @@ impl Function for TwoStringPredicate {
 fn starts_with() -> TwoStringPredicate { TwoStringPredicate(StrExt::starts_with) }
 fn contains() -> TwoStringPredicate { TwoStringPredicate(StrExt::contains) }
 
-struct Substring(for<'s> fn(&'s str, &'s str) -> &'s str);
+struct SubstringCommon(for<'s> fn(&'s str, &'s str) -> &'s str);
 
-impl Function for Substring {
+impl Function for SubstringCommon {
     fn evaluate<'a, 'd>(&self,
                         _context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
@@ -259,24 +268,60 @@ impl Function for Substring {
     }
 }
 
-fn substring_before() -> Substring {
+fn substring_before() -> SubstringCommon {
     fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
         match haystack.find_str(needle) {
             Some(pos) => &haystack[..pos],
             None => "",
         }
     }
-    Substring(inner)
+    SubstringCommon(inner)
 }
 
-fn substring_after() -> Substring {
+fn substring_after() -> SubstringCommon {
     fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
         match haystack.find_str(needle) {
             Some(pos) => &haystack[pos + needle.len()..],
             None => "",
         }
     }
-    Substring(inner)
+    SubstringCommon(inner)
+}
+
+struct Substring;
+
+impl Function for Substring {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        let mut args = Args(args);
+        try!(args.at_least(2));
+        try!(args.at_most(3));
+
+        let len = if args.len() == 3 {
+            let len = try!(args.pop_number());
+            round_ties_to_positive_infinity(len)
+        } else {
+            Float::infinity()
+        };
+
+        let start = try!(args.pop_number());
+        let start = round_ties_to_positive_infinity(start);
+        let s = try!(args.pop_string());
+
+        let chars = s.graphemes(true).enumerate();
+        let selected_chars = chars.filter_map(|(p, s)| {
+            let p = (p+1) as f64; // 1-based indexing
+            if p >= start && p < start + len {
+                Some(s)
+            } else {
+                None
+            }
+        }).collect() ;
+
+        Ok(Value::String(selected_chars))
+    }
 }
 
 struct StringLength;
@@ -422,6 +467,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("contains".to_string(), box contains());
     functions.insert("substring-before".to_string(), box substring_before());
     functions.insert("substring-after".to_string(), box substring_after());
+    functions.insert("substring".to_string(), box Substring);
     functions.insert("string-length".to_string(), box StringLength);
     functions.insert("normalize-space".to_string(), box NormalizeSpace);
     functions.insert("boolean".to_string(), box BooleanFn);
@@ -452,6 +498,7 @@ mod test {
         Count,
         StringFn,
         Concat,
+        Substring,
         StringLength,
         NormalizeSpace,
         BooleanFn,
@@ -577,6 +624,66 @@ mod test {
         let r = evaluate_literal(super::substring_after(), args);
 
         assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
+    }
+
+    #[test]
+    fn substring_is_one_indexed() {
+        let args = vec![LiteralValue::String("あいうえお".to_string()),
+                        LiteralValue::Number(2.0)];
+        let r = evaluate_literal(Substring, args);
+
+        assert_eq!(Ok(LiteralValue::String("いうえお".to_string())), r);
+    }
+
+    #[test]
+    fn substring_has_optional_length() {
+        let args = vec![LiteralValue::String("あいうえお".to_string()),
+                        LiteralValue::Number(2.0),
+                        LiteralValue::Number(3.0)];
+        let r = evaluate_literal(Substring, args);
+
+        assert_eq!(Ok(LiteralValue::String("いうえ".to_string())), r);
+    }
+
+    fn substring_test(s: &str, start: f64, len: f64) -> String {
+        let args = vec![LiteralValue::String(s.to_string()),
+                        LiteralValue::Number(start),
+                        LiteralValue::Number(len)];
+
+        match evaluate_literal(Substring, args) {
+            Ok(LiteralValue::String(s)) => s,
+            r => panic!("substring failed: {:?}", r),
+        }
+    }
+
+    #[test]
+    fn substring_rounds_values() {
+        assert_eq!("いうえ", substring_test("あいうえお", 1.5, 2.6));
+    }
+
+    #[test]
+    fn substring_is_a_window_of_the_characters() {
+        assert_eq!("あい", substring_test("あいうえお", 0.0, 3.0));
+    }
+
+    #[test]
+    fn substring_with_nan_start_is_empty() {
+        assert_eq!("", substring_test("あいうえお", Float::nan(), 3.0));
+    }
+
+    #[test]
+    fn substring_with_nan_len_is_empty() {
+        assert_eq!("", substring_test("あいうえお", 1.0, Float::nan()));
+    }
+
+    #[test]
+    fn substring_with_infinite_len_goes_to_end_of_string() {
+        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, Float::infinity()));
+    }
+
+    #[test]
+    fn substring_with_negative_infinity_start_is_empty() {
+        assert_eq!("", substring_test("あいうえお", Float::neg_infinity(), Float::infinity()));
     }
 
     #[test]
