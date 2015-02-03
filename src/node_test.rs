@@ -110,7 +110,7 @@ impl NodeTest for Text {
 mod test {
     use std::collections::HashMap;
 
-    use document::{Package,QName,ToQName};
+    use document::{Package,ToQName};
     use document::dom4::{Document,Element,Attribute};
 
     use super::super::{EvaluationContext,Functions,Variables,Namespaces};
@@ -154,8 +154,7 @@ mod test {
                                     -> (Attribute<'d>, EvaluationContext<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
-            let name = QName::with_namespace_uri(Some(nsuri), local);
-            self.context_for_attribute(name, value)
+            self.context_for_attribute((nsuri, local), value)
         }
 
         fn context_for_element<'n, N>(&'d self, name: N)
@@ -171,8 +170,7 @@ mod test {
                                   -> (Element<'d>, EvaluationContext<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
-            let name = QName::with_namespace_uri(Some(nsuri), local);
-            self.context_for_element(name)
+            self.context_for_element((nsuri, local))
         }
     }
 
