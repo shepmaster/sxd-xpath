@@ -3,6 +3,7 @@ use std::iter::FromIterator;
 use std::slice::Iter;
 use std::vec;
 
+use document::QName;
 use document::dom4;
 
 use super::EvaluationContext;
@@ -69,6 +70,18 @@ impl<'d> Node<'d> {
             &Text(n)                  => n.document(),
             &Comment(n)               => n.document(),
             &ProcessingInstruction(n) => n.document(),
+        }
+    }
+
+    pub fn expanded_name(&self) -> Option<QName<'d>> {
+        use self::Node::*;
+        match self {
+            &Root(_)                  => None,
+            &Element(n)               => Some(n.name()),
+            &Attribute(n)             => Some(n.name()),
+            &Text(_)                  => None,
+            &Comment(_)               => None,
+            &ProcessingInstruction(n) => Some(QName::new(n.target())),
         }
     }
 
