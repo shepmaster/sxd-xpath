@@ -160,6 +160,17 @@ impl<'d> Args<'d> {
             None => Ok(context.node.string_value()),
         }
     }
+
+
+    fn pop_nodeset_or_context_node<'_>(&mut self, context: &EvaluationContext<'_, 'd>)
+                                       -> Result<Nodeset<'d>, Error>
+    {
+        match self.0.pop() {
+            Some(Value::Nodes(ns)) => Ok(ns),
+            Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::Nodeset)),
+            None => Ok(nodeset![context.node]),
+        }
+    }
 }
 
 impl<'d> Index<usize> for Args<'d> {
@@ -205,6 +216,25 @@ impl Function for Count {
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
         Ok(Value::Number(arg.size() as f64))
+    }
+}
+
+struct LocalName;
+
+impl Function for LocalName {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = try!(args.pop_nodeset_or_context_node(context));
+        let name =
+            arg.document_order_first()
+            .and_then(|n| n.expanded_name())
+            .map(|q| q.local_part())
+            .unwrap_or("");
+        Ok(Value::String(name.to_string()))
     }
 }
 
@@ -493,6 +523,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_string(), box Last);
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
+    functions.insert("local-name".to_string(), box LocalName);
     functions.insert("string".to_string(), box StringFn);
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box starts_with());
@@ -529,6 +560,7 @@ mod test {
         Last,
         Position,
         Count,
+        LocalName,
         StringFn,
         Concat,
         Substring,
@@ -604,6 +636,33 @@ mod test {
         let r = setup.evaluate(doc.root(), Count, vec![Value::Nodes(nodeset)]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
+    }
+
+    #[test]
+    fn local_name_gets_name_of_element() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let e = doc.create_element(("uri", "wow"));
+        doc.root().append_child(e);
+
+        let nodeset = nodeset![e];
+        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodes(nodeset)]);
+
+        assert_eq!(Ok(Value::String("wow".to_string())), r);
+    }
+
+    #[test]
+    fn local_name_is_empty_for_empty_nodeset() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let nodeset = nodeset![];
+        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodes(nodeset)]);
+
+        assert_eq!(Ok(Value::String("".to_string())), r);
     }
 
     #[test]
