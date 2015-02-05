@@ -238,6 +238,25 @@ impl Function for LocalName {
     }
 }
 
+struct NamespaceUri;
+
+impl Function for NamespaceUri {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = try!(args.pop_nodeset_or_context_node(context));
+        let name =
+            arg.document_order_first()
+            .and_then(|n| n.expanded_name())
+            .and_then(|q| q.namespace_uri())
+            .unwrap_or("");
+        Ok(Value::String(name.to_string()))
+    }
+}
+
 struct StringFn;
 
 impl Function for StringFn {
@@ -524,6 +543,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("position".to_string(), box Position);
     functions.insert("count".to_string(), box Count);
     functions.insert("local-name".to_string(), box LocalName);
+    functions.insert("namespace-uri".to_string(), box NamespaceUri);
     functions.insert("string".to_string(), box StringFn);
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box starts_with());
@@ -561,6 +581,7 @@ mod test {
         Position,
         Count,
         LocalName,
+        NamespaceUri,
         StringFn,
         Concat,
         Substring,
@@ -663,6 +684,21 @@ mod test {
         let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodes(nodeset)]);
 
         assert_eq!(Ok(Value::String("".to_string())), r);
+    }
+
+    #[test]
+    fn namespace_uri_gets_uri_of_element() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let e = doc.create_element(("uri", "wow"));
+        doc.root().append_child(e);
+
+        let nodeset = nodeset![e];
+        let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodes(nodeset)]);
+
+        assert_eq!(Ok(Value::String("uri".to_string())), r);
     }
 
     #[test]
