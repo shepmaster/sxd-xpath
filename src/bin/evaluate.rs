@@ -2,6 +2,7 @@
 #![feature(core)]
 #![feature(io)]
 #![feature(os)]
+#![feature(env)]
 #![feature(path)]
 #![feature(rustc_private)]
 
@@ -10,6 +11,7 @@ extern crate xpath;
 extern crate getopts;
 
 use std::cmp::min;
+use std::env;
 use std::collections::HashMap;
 use std::old_io::File;
 
@@ -84,7 +86,9 @@ fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
 
 #[allow(dead_code)]
 fn main() {
-    let args = std::os::args();
+    let args: Result<Vec<_>, _> = env::args().map(|a| a.into_string()).collect();
+    let args = args.unwrap();
+
     let program_name = &args[0];
 
     let opts = &[
