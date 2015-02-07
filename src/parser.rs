@@ -84,7 +84,7 @@ struct LeftAssociativeBinaryParser<I> {
     rules: Vec<BinaryRule>,
 }
 
-type TokenSource<'a, I> = &'a mut Peekable<TokenResult, I>;
+type TokenSource<'a, I> = &'a mut Peekable<I>;
 
 trait XCompat {
     fn has_more_tokens(&mut self) -> bool;
@@ -92,7 +92,7 @@ trait XCompat {
     fn consume(&mut self, token: &Token) -> Result<(), ParseErr>;
 }
 
-impl<I> XCompat for Peekable<TokenResult, I>
+impl<I> XCompat for Peekable<I>
     where I: Iterator<Item=TokenResult>
 {
     fn has_more_tokens(&mut self) -> bool {
