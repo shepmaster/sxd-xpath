@@ -73,6 +73,35 @@ impl<'d> Node<'d> {
         }
     }
 
+    pub fn prefixed_name(&self) -> Option<String> {
+        use self::Node::*;
+
+        fn ensure_prefixed_name(element: dom4::Element, name: QName, preferred_prefix: Option<&str>) -> String {
+            if let Some(ns_uri) = name.namespace_uri() {
+                let prefix = element
+                    .prefix_for_namespace_uri(ns_uri, preferred_prefix)
+                    .unwrap_or_else(|| element.generate_prefix(ns_uri, preferred_prefix));
+                format!("{}:{}", prefix, name.local_part())
+            } else {
+                name.local_part().to_string()
+            }
+        };
+
+        match self {
+            &Root(_)                  => None,
+            &Element(n)               => {
+                Some(ensure_prefixed_name(n, n.name(), n.preferred_prefix()))
+            },
+            &Attribute(n)             => {
+                let parent = n.parent().expect("Cannot process attribute without parent");
+                Some(ensure_prefixed_name(parent, n.name(), n.preferred_prefix()))
+            },
+            &Text(_)                  => None,
+            &Comment(_)               => None,
+            &ProcessingInstruction(n) => Some(n.target().to_string()),
+        }
+    }
+
     pub fn expanded_name(&self) -> Option<QName<'d>> {
         use self::Node::*;
         match self {
@@ -346,5 +375,64 @@ mod test {
         let nodes = nodeset![child, attr];
 
         assert_eq!(Some(attr.to_node()), nodes.document_order_first());
+    }
+
+    #[test]
+    fn prefixed_name_of_element_with_preferred_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let e = doc.create_element(("uri", "wow"));
+        e.set_preferred_prefix(Some("prefix"));
+        let node = e.to_node();
+
+        assert_eq!(Some("prefix:wow".to_string()), node.prefixed_name());
+    }
+
+    #[test]
+    fn prefixed_name_of_element_with_auto_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let e = doc.create_element(("uri", "wow"));
+        let node = e.to_node();
+
+        assert_eq!(Some("autons0:wow".to_string()), node.prefixed_name());
+    }
+
+    #[test]
+    fn prefixed_name_of_attribute_with_preferred_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let e = doc.create_element("element");
+        let a = e.set_attribute_value(("uri", "attr"), "value");
+        a.set_preferred_prefix(Some("prefix"));
+        let node = a.to_node();
+
+        assert_eq!(Some("prefix:attr".to_string()), node.prefixed_name());
+    }
+
+    #[test]
+    fn prefixed_name_of_attribute_with_auto_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let e = doc.create_element("element");
+        let a = e.set_attribute_value(("uri", "attr"), "value");
+        let node = a.to_node();
+
+        assert_eq!(Some("autons0:attr".to_string()), node.prefixed_name());
+    }
+
+    #[test]
+    fn prefixed_name_of_processing_instruction() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let pi = doc.create_processing_instruction("target", Some("value"));
+        let node = pi.to_node();
+
+        assert_eq!(Some("target".to_string()), node.prefixed_name());
     }
 }
