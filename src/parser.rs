@@ -215,21 +215,21 @@ impl Parser {
             let name = consume_value!(source, Token::Axis);
 
             match name {
-                AxisName::Self => Ok(box axis::Self as SubAxis),
-                AxisName::Parent => Ok(box axis::Parent as SubAxis),
-                AxisName::Descendant => Ok(box axis::Descendant as SubAxis),
-                AxisName::DescendantOrSelf => Ok(box axis::DescendantOrSelf as SubAxis),
-                AxisName::Attribute => Ok(box axis::Attribute as SubAxis),
-                AxisName::Ancestor => Ok(box axis::Ancestor as SubAxis),
-                AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf as SubAxis),
-                AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling as SubAxis),
-                AxisName::FollowingSibling => Ok(box axis::FollowingSibling as SubAxis),
-                AxisName::Preceding => Ok(box axis::Preceding as SubAxis),
-                AxisName::Following => Ok(box axis::Following as SubAxis),
+                AxisName::Self => Ok(box axis::Self),
+                AxisName::Parent => Ok(box axis::Parent),
+                AxisName::Descendant => Ok(box axis::Descendant),
+                AxisName::DescendantOrSelf => Ok(box axis::DescendantOrSelf),
+                AxisName::Attribute => Ok(box axis::Attribute),
+                AxisName::Ancestor => Ok(box axis::Ancestor),
+                AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf),
+                AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling),
+                AxisName::FollowingSibling => Ok(box axis::FollowingSibling),
+                AxisName::Preceding => Ok(box axis::Preceding),
+                AxisName::Following => Ok(box axis::Following),
                 _ => unimplemented!(),
             }
         } else {
-            Ok(box axis::Child as SubAxis)
+            Ok(box axis::Child)
         }
     }
 
@@ -240,8 +240,8 @@ impl Parser {
             let name = consume_value!(source, Token::NodeTest);
 
             match name {
-                NodeTestName::Node => Ok(Some(box node_test::Node as SubNodeTest)),
-                NodeTestName::Text => Ok(Some(box node_test::Text as SubNodeTest)),
+                NodeTestName::Node => Ok(Some(box node_test::Node)),
+                NodeTestName::Text => Ok(Some(box node_test::Text)),
                 _ => unimplemented!(),
             }
         } else {
@@ -256,11 +256,9 @@ impl Parser {
         if next_token_is!(source, Token::NameTest) {
             let name = consume_value!(source, Token::NameTest);
 
-            let test = match axis.principal_node_type() {
-                PrincipalNodeType::Attribute =>
-                    box node_test::Attribute::new(name) as SubNodeTest,
-                PrincipalNodeType::Element =>
-                    box node_test::Element::new(name) as SubNodeTest,
+            let test: SubNodeTest = match axis.principal_node_type() {
+                PrincipalNodeType::Attribute => box node_test::Attribute::new(name),
+                PrincipalNodeType::Element   => box node_test::Element::new(name),
             };
 
             Ok(Some(test))
@@ -274,7 +272,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Variable) {
             let name = consume_value!(source, Token::Variable);
-            Ok(Some(box expression::Variable { name: name } as SubExpression))
+            Ok(Some(box expression::Variable { name: name }))
         } else {
             Ok(None)
         }
@@ -285,7 +283,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(box expression::Literal { value: LiteralValue::String(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::String(value) }))
         } else {
             Ok(None)
         }
@@ -296,7 +294,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(box expression::Literal { value: LiteralValue::Number(value) } as SubExpression))
+            Ok(Some(box expression::Literal { value: LiteralValue::Number(value) }))
         } else {
             Ok(None)
         }
@@ -342,7 +340,7 @@ impl Parser {
             let arguments = try!(self.parse_function_args(source));
             try!(source.consume(&Token::RightParen));
 
-            Ok(Some(box expression::Function{ name: name, arguments: arguments } as SubExpression))
+            Ok(Some(box expression::Function{ name: name, arguments: arguments }))
         } else {
             Ok(None)
         }
@@ -452,7 +450,7 @@ impl Parser {
             let start_point = box expression::RootNode;
             match try!(self.parse_relative_location_path_raw(source, start_point)) {
                 Some(expr) => Ok(Some(expr)),
-                None => Ok(Some(box expression::RootNode as SubExpression)),
+                None => Ok(Some(box expression::RootNode)),
             }
         } else {
             Ok(None)

@@ -57,7 +57,7 @@ macro_rules! binary_constructor(
     ($t:ident) => (
         impl $t {
             pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
-                box $t{left: left, right: right} as SubExpression
+                box $t{left: left, right: right}
             }
         }
     );
