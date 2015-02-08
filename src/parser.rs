@@ -351,10 +351,10 @@ impl Parser {
     fn parse_primary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
         where I: Iterator<Item=TokenResult>
     {
-        let rule1 = |&: src: TokenSource<I>| self.parse_variable_reference(src);
-        let rule2 = |&: src: TokenSource<I>| self.parse_string_literal(src);
-        let rule3 = |&: src: TokenSource<I>| self.parse_numeric_literal(src);
-        let rule4 = |&: src: TokenSource<I>| self.parse_function_call(src);
+        let rule1 = |src: TokenSource<I>| self.parse_variable_reference(src);
+        let rule2 = |src: TokenSource<I>| self.parse_string_literal(src);
+        let rule3 = |src: TokenSource<I>| self.parse_numeric_literal(src);
+        let rule4 = |src: TokenSource<I>| self.parse_function_call(src);
 
         let rules = &[
             &rule1 as &Rule<I>,
@@ -467,8 +467,8 @@ impl Parser {
     fn parse_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
         where I: Iterator<Item=TokenResult>
     {
-        let rule1 = |&: source: TokenSource<I>| self.parse_relative_location_path(source);
-        let rule2 = |&: source: TokenSource<I>| self.parse_absolute_location_path(source);
+        let rule1 = |source: TokenSource<I>| self.parse_relative_location_path(source);
+        let rule2 = |source: TokenSource<I>| self.parse_absolute_location_path(source);
 
         let rules = &[
             &rule1 as &Rule<I>,
