@@ -257,6 +257,24 @@ impl Function for NamespaceUri {
     }
 }
 
+struct Name;
+
+impl Function for Name {
+    fn evaluate<'a, 'd>(&self,
+                        context: &EvaluationContext<'a, 'd>,
+                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+    {
+        let mut args = Args(args);
+        try!(args.at_most(1));
+        let arg = try!(args.pop_nodeset_or_context_node(context));
+        let name =
+            arg.document_order_first()
+            .and_then(|n| n.prefixed_name())
+            .unwrap_or("".to_string());
+        Ok(Value::String(name))
+    }
+}
+
 struct StringFn;
 
 impl Function for StringFn {
@@ -544,6 +562,7 @@ pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("count".to_string(), box Count);
     functions.insert("local-name".to_string(), box LocalName);
     functions.insert("namespace-uri".to_string(), box NamespaceUri);
+    functions.insert("name".to_string(), box Name);
     functions.insert("string".to_string(), box StringFn);
     functions.insert("concat".to_string(), box Concat);
     functions.insert("starts-with".to_string(), box starts_with());
@@ -582,6 +601,7 @@ mod test {
         Count,
         LocalName,
         NamespaceUri,
+        Name,
         StringFn,
         Concat,
         Substring,
@@ -699,6 +719,22 @@ mod test {
         let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodes(nodeset)]);
 
         assert_eq!(Ok(Value::String("uri".to_string())), r);
+    }
+
+    #[test]
+    fn name_uses_elements_preferred_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+        let setup = Setup::new();
+
+        let e = doc.create_element(("uri", "wow"));
+        e.set_preferred_prefix(Some("prefix"));
+        doc.root().append_child(e);
+
+        let nodeset = nodeset![e];
+        let r = setup.evaluate(doc.root(), Name, vec![Value::Nodes(nodeset)]);
+
+        assert_eq!(Ok(Value::String("prefix:wow".to_string())), r);
     }
 
     #[test]
