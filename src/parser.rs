@@ -243,7 +243,8 @@ impl Parser {
                 NodeTestName::Node    => Ok(Some(box node_test::Node)),
                 NodeTestName::Text    => Ok(Some(box node_test::Text)),
                 NodeTestName::Comment => Ok(Some(box node_test::Comment)),
-                _ => unimplemented!(),
+                NodeTestName::ProcessingInstruction(target) =>
+                    Ok(Some(box node_test::ProcessingInstruction::new(target))),
             }
         } else {
             Ok(None)
@@ -769,6 +770,12 @@ mod test {
             parent.append_child(cn);
             cn
         }
+
+        fn add_processing_instruction(&'d self, parent: Element<'d>, name: &str, value: Option<&str>) -> dom4::ProcessingInstruction<'d> {
+            let pi = self.0.create_processing_instruction(name, value);
+            parent.append_child(pi);
+            pi
+        }
     }
 
     struct Exercise<'d> {
@@ -998,6 +1005,21 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(Nodes(nodeset![text]), ex.evaluate_on(&*expr, one));
+    }
+
+    #[test]
+    fn parses_processing_instruction_node_test() {
+        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction("name".to_string()))];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+        let one = doc.add_top_child("one");
+        let two = doc.add_processing_instruction(one, "name", None);
+
+        let ex = Exercise::new(&doc);
+        let expr = ex.parse(tokens);
+
+        assert_eq!(Nodes(nodeset![two]), ex.evaluate_on(&*expr, one));
     }
 
     #[test]

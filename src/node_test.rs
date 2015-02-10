@@ -118,6 +118,27 @@ impl NodeTest for Comment {
     }
 }
 
+#[derive(Debug)]
+pub struct ProcessingInstruction {
+    target: String,
+}
+
+impl ProcessingInstruction {
+    pub fn new(target: String) -> ProcessingInstruction {
+        ProcessingInstruction { target: target }
+    }
+}
+
+impl NodeTest for ProcessingInstruction {
+    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+        if let nodeset::Node::ProcessingInstruction(pi) = context.node {
+            if pi.target() == self.target {
+                result.add(context.node);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
