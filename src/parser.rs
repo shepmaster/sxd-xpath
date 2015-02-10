@@ -240,8 +240,9 @@ impl Parser {
             let name = consume_value!(source, Token::NodeTest);
 
             match name {
-                NodeTestName::Node => Ok(Some(box node_test::Node)),
-                NodeTestName::Text => Ok(Some(box node_test::Text)),
+                NodeTestName::Node    => Ok(Some(box node_test::Node)),
+                NodeTestName::Text    => Ok(Some(box node_test::Text)),
+                NodeTestName::Comment => Ok(Some(box node_test::Comment)),
                 _ => unimplemented!(),
             }
         } else {
@@ -647,7 +648,7 @@ mod test {
     use std::num::Float;
 
     use document::Package;
-    use document::dom4::{Document,Root,Element,Text};
+    use document::dom4::{self,Document,Root,Element,Text};
 
     use super::super::Value::{Boolean,Number,String,Nodes};
     use super::super::{Functions,Variables,Namespaces};
@@ -761,6 +762,12 @@ mod test {
             let tn = doc.create_text(value);
             parent.append_child(tn);
             tn
+        }
+
+        fn add_comment(&'d self, parent: Element<'d>, value: &str) -> dom4::Comment<'d> {
+            let cn = self.0.create_comment(value);
+            parent.append_child(cn);
+            cn
         }
     }
 
@@ -956,6 +963,21 @@ mod test {
         let doc = TestDoc(package.as_document());
         let one = doc.add_top_child("one");
         let two = doc.add_child(one, "two");
+
+        let ex = Exercise::new(&doc);
+        let expr = ex.parse(tokens);
+
+        assert_eq!(Nodes(nodeset![two]), ex.evaluate_on(&*expr, one));
+    }
+
+    #[test]
+    fn parses_comment_node_test() {
+        let tokens = tokens![Token::NodeTest(NodeTestName::Comment)];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+        let one = doc.add_top_child("one");
+        let two = doc.add_comment(one, "two");
 
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);

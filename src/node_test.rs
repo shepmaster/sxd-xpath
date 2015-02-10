@@ -106,6 +106,18 @@ impl NodeTest for Text {
     }
 }
 
+#[allow(missing_copy_implementations)]
+#[derive(Debug)]
+pub struct Comment;
+
+impl NodeTest for Comment {
+    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+        if let nodeset::Node::Comment(_) = context.node {
+            result.add(context.node);
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
