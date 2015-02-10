@@ -120,11 +120,11 @@ impl NodeTest for Comment {
 
 #[derive(Debug)]
 pub struct ProcessingInstruction {
-    target: String,
+    target: Option<String>,
 }
 
 impl ProcessingInstruction {
-    pub fn new(target: String) -> ProcessingInstruction {
+    pub fn new(target: Option<String>) -> ProcessingInstruction {
         ProcessingInstruction { target: target }
     }
 }
@@ -132,8 +132,10 @@ impl ProcessingInstruction {
 impl NodeTest for ProcessingInstruction {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
-            if pi.target() == self.target {
-                result.add(context.node);
+            match self.target {
+                Some(ref name) if name == &pi.target() => result.add(context.node),
+                Some(_)                                => {},
+                None                                   => result.add(context.node),
             }
         }
     }

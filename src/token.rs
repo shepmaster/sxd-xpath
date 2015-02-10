@@ -23,7 +23,7 @@ pub enum AxisName {
 pub enum NodeTestName {
     Comment,
     Text,
-    ProcessingInstruction(string::String),
+    ProcessingInstruction(Option<string::String>),
     Node,
 }
 

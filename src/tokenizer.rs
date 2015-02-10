@@ -106,9 +106,11 @@ static AXES: [Identifier<'static, AxisName>; 13] = [
     ("self", AxisName::Self),
 ];
 
-static NODE_TESTS_WITHOUT_ARG : [Identifier<'static, NodeTestName>; 3] = [
+
+static NODE_TESTS: [Identifier<'static, NodeTestName>; 4] = [
     ("comment", NodeTestName::Comment),
     ("text", NodeTestName::Text),
+    ("processing-instruction", NodeTestName::ProcessingInstruction(None)),
     ("node", NodeTestName::Node),
 ];
 
@@ -191,7 +193,7 @@ fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenize
 
 fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
     fn without_arg<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
-        let (node_type, p) = try_parse!(p.consume_identifier(&NODE_TESTS_WITHOUT_ARG));
+        let (node_type, p) = try_parse!(p.consume_identifier(&NODE_TESTS));
         let (_, p) = try_parse!(p.consume_literal("()"));
 
         peresil::Result::success(Token::NodeTest(node_type), p)
@@ -202,7 +204,7 @@ fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         let (arg, p) = try_parse!(parse_literal(p));
         let (_, p) = try_parse!(p.consume_literal(")"));
 
-        let name = NodeTestName::ProcessingInstruction(arg.to_string());
+        let name = NodeTestName::ProcessingInstruction(Some(arg.to_string()));
         peresil::Result::success(Token::NodeTest(name), p)
     }
 
@@ -793,12 +795,22 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_node_test_with_args() {
+    fn tokenizes_processing_instruction_node_test_without_args() {
+        let tokenizer = Tokenizer::new("processing-instruction()");
+
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(None))]
+        );
+    }
+
+    #[test]
+    fn tokenizes_processing_instruction_node_test_with_args() {
         let tokenizer = Tokenizer::new("processing-instruction('hi')");
 
         assert_eq!(
             all_tokens(tokenizer),
-            vec![Token::NodeTest(NodeTestName::ProcessingInstruction("hi".to_string()))]
+            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("hi".to_string())))]
         );
     }
 

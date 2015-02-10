@@ -1009,7 +1009,7 @@ mod test {
 
     #[test]
     fn parses_processing_instruction_node_test() {
-        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction("name".to_string()))];
+        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("name".to_string())))];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
