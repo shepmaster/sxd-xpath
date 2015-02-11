@@ -4,12 +4,13 @@ use std::fmt;
 
 use super::EvaluationContext;
 use super::node_test::NodeTest;
-use super::nodeset::{Nodeset,Node};
+use super::nodeset::{self,Nodeset,Node};
 
 #[allow(missing_copy_implementations)]
 pub enum PrincipalNodeType {
     Attribute,
     Element,
+    Namespace,
 }
 
 /// A directed traversal of Nodes.
@@ -63,7 +64,6 @@ impl Axis for AncestorOrSelf {
     }
 }
 
-
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
 pub struct Attribute;
@@ -84,6 +84,35 @@ impl Axis for Attribute {
 
     fn principal_node_type(&self) -> PrincipalNodeType {
         PrincipalNodeType::Attribute
+    }
+}
+
+#[allow(missing_copy_implementations)]
+#[derive(Debug)]
+pub struct Namespace;
+
+impl Axis for Namespace {
+    fn select_nodes<'a, 'd>(&self,
+                            context:   &EvaluationContext<'a, 'd>,
+                            node_test: &NodeTest,
+                            result:    &mut Nodeset<'d>)
+    {
+        if let Node::Element(ref e) = context.node {
+            for ns in e.namespaces_in_scope().iter() {
+                let ns = Node::Namespace(nodeset::Namespace {
+                    parent: *e,
+                    prefix: ns.prefix(),
+                    uri: ns.uri(),
+                });
+
+                let attr_context = context.new_context_for(ns);
+                node_test.test(&attr_context, result);
+            }
+        }
+    }
+
+    fn principal_node_type(&self) -> PrincipalNodeType {
+        PrincipalNodeType::Namespace
     }
 }
 

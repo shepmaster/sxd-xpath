@@ -219,6 +219,7 @@ impl Parser {
                 AxisName::Descendant => Ok(box axis::Descendant),
                 AxisName::DescendantOrSelf => Ok(box axis::DescendantOrSelf),
                 AxisName::Attribute => Ok(box axis::Attribute),
+                AxisName::Namespace => Ok(box axis::Namespace),
                 AxisName::Ancestor => Ok(box axis::Ancestor),
                 AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf),
                 AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling),
@@ -260,6 +261,7 @@ impl Parser {
             let test: SubNodeTest = match axis.principal_node_type() {
                 PrincipalNodeType::Attribute => box node_test::Attribute::new(name),
                 PrincipalNodeType::Element   => box node_test::Element::new(name),
+                PrincipalNodeType::Namespace => box node_test::Namespace::new(name),
             };
 
             Ok(Some(test))
@@ -654,7 +656,7 @@ mod test {
     use super::super::{Functions,Variables,Namespaces};
     use super::super::{Value,EvaluationContext};
 
-    use super::super::nodeset::ToNode;
+    use super::super::nodeset::{Node,ToNode};
 
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
@@ -945,6 +947,36 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(Value::Nodeset(nodeset![attr]), ex.evaluate_on(&*expr, one));
+    }
+
+    #[test]
+    fn parses_namespace_axis() {
+        let tokens = tokens![
+            Token::Axis(AxisName::Namespace),
+            name_test("prefix")
+        ];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+        let one = doc.add_top_child("one");
+        one.register_prefix("prefix", "uri");
+
+        let ex = Exercise::new(&doc);
+        let expr = ex.parse(tokens);
+
+        match ex.evaluate_on(&*expr, one) {
+            Value::Nodeset(ns) => {
+                assert_eq!(1, ns.size());
+                match ns.into_iter().next() {
+                    Some(Node::Namespace(ns)) => {
+                        assert_eq!("prefix", ns.prefix());
+                        assert_eq!("uri", ns.uri());
+                    },
+                    _ => panic!("Not a namespace node"),
+                }
+            },
+            _ => panic!("Did not get the namespace node"),
+        }
     }
 
     #[test]

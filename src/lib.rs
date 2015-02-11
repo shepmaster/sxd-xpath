@@ -112,7 +112,7 @@ impl<'d> Value<'d> {
             Boolean(v) => LiteralValue::Boolean(v),
             Number(v)  => LiteralValue::Number(v),
             String(v)  => LiteralValue::String(v),
-            Nodeset(_)   => panic!("Cannot convert a nodeset to a literal"),
+            Nodeset(_) => panic!("Cannot convert a nodeset to a literal"),
         }
     }
 }

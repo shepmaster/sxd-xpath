@@ -62,6 +62,29 @@ impl NodeTest for Attribute {
 }
 
 #[derive(Debug)]
+pub struct Namespace {
+    name_test: NameTest,
+}
+
+impl Namespace {
+    pub fn new(name: NameTest) -> Namespace {
+        Namespace {
+            name_test: name,
+        }
+    }
+}
+
+impl NodeTest for Namespace {
+    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+        if let nodeset::Node::Namespace(ref ns) = context.node {
+            if self.name_test.matches(context, QName::new(ns.prefix())) {
+                result.add(context.node);
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Element {
     name_test: NameTest,
 }

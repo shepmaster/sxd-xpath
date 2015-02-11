@@ -44,12 +44,28 @@ macro_rules! conversion_trait(
 );
 
 #[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
+pub struct Namespace<'d> {
+    pub parent: dom4::Element<'d>,
+    pub prefix: &'d str,
+    pub uri: &'d str,
+}
+
+impl<'d> Namespace<'d> {
+    pub fn document(&self) -> &'d dom4::Document<'d> { self.parent.document() }
+    pub fn parent(&self) -> dom4::Element<'d> { self.parent }
+    pub fn prefix(&self) -> &'d str { self.prefix }
+    pub fn uri(&self) -> &'d str { self.uri }
+    pub fn expanded_name(&self) -> QName<'d> { QName::new(self.prefix) }
+}
+
+#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
 pub enum Node<'d> {
     Root(dom4::Root<'d>),
     Element(dom4::Element<'d>),
     Attribute(dom4::Attribute<'d>),
     Text(dom4::Text<'d>),
     Comment(dom4::Comment<'d>),
+    Namespace(Namespace<'d>),
     ProcessingInstruction(dom4::ProcessingInstruction<'d>),
 }
 
@@ -70,6 +86,7 @@ impl<'d> Node<'d> {
             &Text(n)                  => n.document(),
             &Comment(n)               => n.document(),
             &ProcessingInstruction(n) => n.document(),
+            &Namespace(n)             => n.document(),
         }
     }
 
@@ -99,6 +116,7 @@ impl<'d> Node<'d> {
             &Text(_)                  => None,
             &Comment(_)               => None,
             &ProcessingInstruction(n) => Some(n.target().to_string()),
+            &Namespace(n)             => Some(n.prefix().to_string()),
         }
     }
 
@@ -111,6 +129,7 @@ impl<'d> Node<'d> {
             &Text(_)                  => None,
             &Comment(_)               => None,
             &ProcessingInstruction(n) => Some(QName::new(n.target())),
+            &Namespace(n)             => Some(n.expanded_name())
         }
     }
 
@@ -123,6 +142,7 @@ impl<'d> Node<'d> {
             &Text(n)                  => n.parent().map(|n| n.into_node()),
             &Comment(n)               => n.parent().map(|n| n.into_node()),
             &ProcessingInstruction(n) => n.parent().map(|n| n.into_node()),
+            &Namespace(n)             => Some(n.parent().into_node()),
         }
     }
 
@@ -135,6 +155,7 @@ impl<'d> Node<'d> {
             &Text(_)                  => Vec::new(),
             &Comment(_)               => Vec::new(),
             &ProcessingInstruction(_) => Vec::new(),
+            &Namespace(_)             => Vec::new(),
         }
     }
 
@@ -147,6 +168,7 @@ impl<'d> Node<'d> {
             &Text(n)                  => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
             &Comment(n)               => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
             &ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
+            &Namespace(_)             => Vec::new(),
         }
     }
 
@@ -159,6 +181,7 @@ impl<'d> Node<'d> {
             &Text(n)                  => n.following_siblings().iter().map(|n| n.into_node()).collect(),
             &Comment(n)               => n.following_siblings().iter().map(|n| n.into_node()).collect(),
             &ProcessingInstruction(n) => n.following_siblings().iter().map(|n| n.into_node()).collect(),
+            &Namespace(_)             => Vec::new(),
         }
     }
 
@@ -188,6 +211,7 @@ impl<'d> Node<'d> {
             &ProcessingInstruction(n) => String::from_str(n.value().unwrap_or("")),
             &Comment(n) => String::from_str(n.text()),
             &Text(n) => String::from_str(n.text()),
+            &Namespace(n) => String::from_str(n.uri()),
         }
     }
 }
