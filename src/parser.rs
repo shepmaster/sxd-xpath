@@ -475,9 +475,9 @@ impl Parser {
     {
         match try!(self.parse_primary_expression(source)) {
             Some(expr) => {
-                let mut predicates = try!(self.parse_predicates(source));
+                let predicates = try!(self.parse_predicates(source));
 
-                Ok(Some(predicates.drain().fold(expr, |expr, pred| {
+                Ok(Some(predicates.into_iter().fold(expr, |expr, pred| {
                     expression::Filter::new(expr, pred)
                 })))
             },
