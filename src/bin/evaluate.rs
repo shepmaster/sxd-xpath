@@ -1,7 +1,5 @@
 #![feature(collections)]
-#![feature(core)]
 #![feature(io)]
-#![feature(os)]
 #![feature(env)]
 #![feature(path)]
 #![feature(rustc_private)]
@@ -86,8 +84,7 @@ fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
 
 #[allow(dead_code)]
 fn main() {
-    let args: Result<Vec<_>, _> = env::args().map(|a| a.into_string()).collect();
-    let args = args.unwrap();
+    let args: Vec<_> = env::args().collect();
 
     let program_name = &args[0];
 
