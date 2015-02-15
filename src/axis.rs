@@ -249,9 +249,9 @@ impl Axis for Following {
 
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
-pub struct Self;
+pub struct SelfAxis;
 
-impl Axis for Self {
+impl Axis for SelfAxis {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,

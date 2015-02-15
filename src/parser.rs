@@ -215,7 +215,7 @@ impl Parser {
             let name = consume_value!(source, Token::Axis);
 
             match name {
-                AxisName::Self => Ok(box axis::Self),
+                AxisName::SelfAxis => Ok(box axis::SelfAxis),
                 AxisName::Parent => Ok(box axis::Parent),
                 AxisName::Descendant => Ok(box axis::Descendant),
                 AxisName::DescendantOrSelf => Ok(box axis::DescendantOrSelf),
@@ -864,7 +864,7 @@ mod test {
     #[test]
     fn parses_self_axis() {
         let tokens = tokens![
-            Token::Axis(AxisName::Self),
+            Token::Axis(AxisName::SelfAxis),
             name_test("the-top-node")
         ];
 
@@ -1025,7 +1025,7 @@ mod test {
     #[test]
     fn parses_axis_and_node_test() {
         let tokens = tokens![
-            Token::Axis(AxisName::Self),
+            Token::Axis(AxisName::SelfAxis),
             Token::NodeTest(NodeTestName::Text),
         ];
 

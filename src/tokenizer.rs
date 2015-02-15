@@ -103,7 +103,7 @@ static AXES: [Identifier<'static, AxisName>; 13] = [
     ("parent", AxisName::Parent),
     ("preceding-sibling", AxisName::PrecedingSibling),
     ("preceding", AxisName::Preceding),
-    ("self", AxisName::Self),
+    ("self", AxisName::SelfAxis),
 ];
 
 
@@ -379,7 +379,7 @@ impl<I> TokenDeabbreviator<I> {
                 self.push(Token::Slash);
             }
             Token::CurrentNode => {
-                self.push(Token::Axis(AxisName::Self));
+                self.push(Token::Axis(AxisName::SelfAxis));
                 self.push(Token::NodeTest(NodeTestName::Node));
             }
             Token::ParentNode => {
@@ -902,7 +902,7 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::Self),
+        assert_eq!(all_tokens(deabbrv), vec!(Token::Axis(AxisName::SelfAxis),
                                              Token::NodeTest(NodeTestName::Node)));
     }
 

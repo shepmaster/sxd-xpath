@@ -16,7 +16,7 @@ pub enum AxisName {
     Parent,
     Preceding,
     PrecedingSibling,
-    Self,
+    SelfAxis,
 }
 
 #[derive(Clone,PartialEq,Debug)]
