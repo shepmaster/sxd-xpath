@@ -238,11 +238,6 @@ impl Factory {
     }
 }
 
-#[doc(hidden)]
-mod xpath {
-    pub use nodeset;
-}
-
 #[cfg(test)]
 mod test {
     use std::num::Float;
