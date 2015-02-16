@@ -106,14 +106,6 @@ impl<'d> Value<'d> {
         }
     }
 
-    pub fn nodeset(&self) -> Nodeset<'d> {
-        use Value::*;
-        match *self {
-            Nodeset(ref ns) => ns.clone(),
-            _ => panic!("Did not evaluate to a nodeset!"),
-        }
-    }
-
     #[allow(dead_code)]
     fn into_literal_value(self) -> LiteralValue {
         use Value::*;

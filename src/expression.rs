@@ -12,6 +12,7 @@ use super::nodeset::Nodeset;
 
 #[derive(Clone,Debug,PartialEq,Hash)]
 pub enum Error {
+    NotANodeset,
     UnknownFunction(String),
     UnknownVariable(String),
     FunctionEvaluation(function::Error),
@@ -21,6 +22,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
         match self {
+            &NotANodeset               => "expression did not evaluate to a nodeset",
             &UnknownFunction(..)       => "unknown function",
             &UnknownVariable(..)       => "unknown variable",
             &FunctionEvaluation(ref f) => f.description(),
@@ -32,6 +34,10 @@ impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         use self::Error::*;
         match self {
+            &NotANodeset => {
+                let self_err: &error::Error = self;
+                fmt.write_str(self_err.description())
+            },
             &UnknownFunction(ref f) => {
                 write!(fmt, "unknown function {}", f)
             },
@@ -43,6 +49,13 @@ impl fmt::Display for Error {
                 f.fmt(fmt)
             },
         }
+    }
+}
+
+fn nodeset<'d>(v: Value<'d>) -> Result<Nodeset<'d>, Error> {
+    match v {
+        Value::Nodeset(ns) => Ok(ns),
+        _ => Err(Error::NotANodeset),
     }
 }
 
@@ -284,7 +297,8 @@ impl Path {
 
 impl Expression for Path {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        let mut result = try!(self.start_point.evaluate(context)).nodeset();
+        let result = try!(self.start_point.evaluate(context));
+        let mut result = try!(nodeset(result));
 
         for step in self.steps.iter() {
             result = try!(step.evaluate(context, result));
@@ -309,9 +323,10 @@ impl Filter {
 
 impl Expression for Filter {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        let nodes = try!(self.node_selector.evaluate(context)).nodeset();
-        let nodes = try!(self.predicate.select(context, nodes));
-        Ok(Value::Nodeset(nodes))
+        self.node_selector.evaluate(context)
+            .and_then(|value| nodeset(value))
+            .and_then(|nodes| self.predicate.select(context, nodes))
+            .and_then(|nodes| Ok(Value::Nodeset(nodes)))
     }
 }
 
@@ -468,10 +483,13 @@ binary_constructor!(Union);
 
 impl Expression for Union {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        let mut left_val = try!(self.left.evaluate(context)).nodeset();
-        let right_val = try!(self.right.evaluate(context)).nodeset();
-        left_val.add_nodeset(&right_val);
-        Ok(Value::Nodeset(left_val))
+        let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(|v| nodeset(v));
+
+        let mut left_nodes = try!(as_nodes(&self.left));
+        let right_nodes = try!(as_nodes(&self.right));
+
+        left_nodes.add_nodeset(&right_nodes);
+        Ok(Value::Nodeset(left_nodes))
     }
 }
 
