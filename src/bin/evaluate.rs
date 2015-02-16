@@ -1,6 +1,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(collections)]
+#![feature(core)]
 #![feature(io)]
 #![feature(env)]
 #![feature(path)]
@@ -11,6 +12,7 @@ extern crate xpath;
 extern crate getopts;
 
 use std::cmp::min;
+use std::borrow::ToOwned;
 use std::env;
 use std::collections::HashMap;
 use std::old_io::File;
@@ -18,7 +20,7 @@ use std::old_io::File;
 use document::parser::Parser;
 
 use xpath::nodeset::ToNode;
-use xpath::{EvaluationContext,Factory,Expression};
+use xpath::{EvaluationContext,Factory,Expression,Value};
 
 use getopts::{reqopt,optmulti,getopts,OptGroup,usage};
 
@@ -59,7 +61,14 @@ fn load_xml(filename: &str) -> document::Package {
     }
 }
 
-
+fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
+    let parts: Vec<_> = s.splitn(2, delim).collect();
+    if parts.len() < 2 {
+        None
+    } else {
+        Some((parts[0], parts[1]))
+    }
+}
 
 fn build_functions() -> xpath::Functions {
     let mut functions = HashMap::new();
@@ -67,20 +76,50 @@ fn build_functions() -> xpath::Functions {
     functions
 }
 
-fn build_variables<'a>() -> xpath::Variables<'a> {
-    HashMap::new()
+fn build_variables<'a>(arguments: &getopts::Matches) -> xpath::Variables<'a> {
+    let mut vars = HashMap::new();
+
+    for boolean in arguments.opt_strs("boolean") {
+        match argument_name_value(&boolean, '=') {
+            Some((name, "true")) => { vars.insert(name.to_owned(), Value::Boolean(true)); },
+            Some((name, "false")) => { vars.insert(name.to_owned(), Value::Boolean(false)); },
+            Some((_, val)) => panic!("Unknown boolean value '{}'", val),
+            None => panic!("boolean argument '{}' is malformed", boolean),
+        }
+    }
+
+    for number in arguments.opt_strs("number") {
+        match argument_name_value(&number, '=') {
+            Some((name, val)) => {
+                match val.parse() {
+                    Ok(val) => { vars.insert(name.to_owned(), Value::Number(val)); },
+                    Err(e) => panic!("Unknown numeric value '{}': {}", val, e),
+                }
+            },
+            None => panic!("number argument '{}' is malformed", number),
+        }
+    }
+
+    for string in arguments.opt_strs("string") {
+        match argument_name_value(&string, '=') {
+            Some((name, val)) => { vars.insert(name.to_owned(), Value::String(val.to_owned())); },
+            None => panic!("string argument '{}' is malformed", string),
+        }
+    }
+
+    vars
 }
 
 fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
     let mut namespaces = HashMap::new();
-    for ns_defn in arguments.opt_strs("namespace").iter() {
-        let parts: Vec<_> = ns_defn.splitn(2, ':').collect();
-        if parts.len() < 2 {
-            panic!("Namespace definition '{}' is malformed", ns_defn);
-        }
 
-        namespaces.insert(parts[0].to_string(), parts[1].to_string());
+    for ns_defn in arguments.opt_strs("namespace") {
+        match argument_name_value(&ns_defn, ':') {
+            Some((prefix, uri)) => { namespaces.insert(prefix.to_owned(), uri.to_owned()); },
+            None => panic!("Namespace definition '{}' is malformed", ns_defn),
+        }
     }
+
     namespaces
 }
 
@@ -92,6 +131,9 @@ fn main() {
     let opts = &[
         reqopt("", "xpath", "The XPath to execute", "XPATH"),
         optmulti("", "namespace", "set namespace prefix", "PREFIX:URI"),
+        optmulti("", "string", "set string variable", "NAME=VALUE"),
+        optmulti("", "number", "set number variable", "NAME=VALUE"),
+        optmulti("", "boolean", "set boolean variable", "NAME=VALUE"),
     ];
 
     let arguments = match getopts(args.tail(), opts) {
@@ -112,7 +154,7 @@ fn main() {
         let root = doc.root().into_node();
 
         let functions = build_functions();
-        let variables = build_variables();
+        let variables = build_variables(&arguments);
         let namespaces = build_namespaces(&arguments);
 
         let context = EvaluationContext::new(
