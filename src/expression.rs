@@ -3,7 +3,7 @@ use std::{error,fmt};
 
 use super::EvaluationContext;
 use super::{LiteralValue,Value};
-use super::Value::{Boolean,Number,Nodes};
+use super::Value::{Boolean,Number};
 
 use super::axis::Axis;
 use super::function;
@@ -84,7 +84,7 @@ pub struct ContextNode;
 
 impl Expression for ContextNode {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        Ok(Nodes(nodeset![context.node]))
+        Ok(Value::Nodeset(nodeset![context.node]))
     }
 }
 
@@ -114,18 +114,18 @@ impl Equal {
         }
 
         let v = match (&left_val, &right_val) {
-            (&Nodes(ref left_nodes), &Nodes(ref right_nodes)) => {
+            (&Value::Nodeset(ref left_nodes), &Value::Nodeset(ref right_nodes)) => {
                 let left_strings = str_vals(left_nodes);
                 let right_strings = str_vals(right_nodes);
                 !left_strings.is_disjoint(&right_strings)
             },
-            (&Nodes(ref nodes), &Number(val)) |
-            (&Number(val), &Nodes(ref nodes)) => {
+            (&Value::Nodeset(ref nodes), &Number(val)) |
+            (&Number(val), &Value::Nodeset(ref nodes)) => {
                 let numbers = num_vals(nodes);
                 numbers.iter().any(|n| *n == val)
             },
-            (&Nodes(ref nodes), &Value::String(ref val)) |
-            (&Value::String(ref val), &Nodes(ref nodes)) => {
+            (&Value::Nodeset(ref nodes), &Value::String(ref val)) |
+            (&Value::String(ref val), &Value::Nodeset(ref nodes)) => {
                 let strings = str_vals(nodes);
                 strings.contains(val)
             },
@@ -290,7 +290,7 @@ impl Expression for Path {
             result = try!(step.evaluate(context, result));
         }
 
-        Ok(Nodes(result))
+        Ok(Value::Nodeset(result))
     }
 }
 
@@ -311,7 +311,7 @@ impl Expression for Filter {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
         let nodes = try!(self.node_selector.evaluate(context)).nodeset();
         let nodes = try!(self.predicate.select(context, nodes));
-        Ok(Nodes(nodes))
+        Ok(Value::Nodeset(nodes))
     }
 }
 
@@ -369,7 +369,7 @@ pub struct RootNode;
 
 impl Expression for RootNode {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        Ok(Nodes(nodeset![context.node.document().root()]))
+        Ok(Value::Nodeset(nodeset![context.node.document().root()]))
     }
 }
 
@@ -471,7 +471,7 @@ impl Expression for Union {
         let mut left_val = try!(self.left.evaluate(context)).nodeset();
         let right_val = try!(self.right.evaluate(context)).nodeset();
         left_val.add_nodeset(&right_val);
-        Ok(Nodes(left_val))
+        Ok(Value::Nodeset(left_val))
     }
 }
 
@@ -500,7 +500,7 @@ mod test {
     use document::dom4::Document;
 
     use super::super::{LiteralValue,Value};
-    use super::super::Value::{Boolean, Number, String, Nodes};
+    use super::super::Value::{Boolean, Number, String};
     use super::super::{Functions,Variables,Namespaces};
     use super::super::{EvaluationContext,Function};
     use super::super::axis::Axis;
@@ -593,8 +593,8 @@ mod test {
         let string_value_1 = setup.doc.create_text("same");
         let string_value_2 = setup.doc.create_text("same");
 
-        setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1]));
-        setup.vars.insert("right".to_string(), Nodes(nodeset![string_value_2]));
+        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value_1]));
+        setup.vars.insert("right".to_string(), Value::Nodeset(nodeset![string_value_2]));
 
         let left  = box Variable{name: "left".to_string()};
         let right = box Variable{name: "right".to_string()};
@@ -613,7 +613,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let string_value = setup.doc.create_text("3.14");
-        setup.vars.insert("left".to_string(), Nodes(nodeset![string_value]));
+        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value]));
 
         let left  = box Variable{name: "left".to_string()};
         let right = box Literal{value: LiteralValue::Number(6.28)};
@@ -633,7 +633,7 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.vars.insert("left".to_string(), Nodes(nodeset![string_value_1, string_value_2]));
+        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
         let left  = box Variable{name: "left".to_string()};
         let right = box Literal{value: LiteralValue::String("boat".to_string())};
@@ -778,7 +778,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
+        setup.vars.insert("nodes".to_string(), Value::Nodeset(input_nodeset));
 
         let selected_nodes = box Variable{name: "nodes".to_string()};
         let predicate = box Literal{value: LiteralValue::Number(1.0)};
@@ -788,7 +788,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Ok(Nodes(nodeset![input_node_1])));
+        assert_eq!(res, Ok(Value::Nodeset(nodeset![input_node_1])));
     }
 
     #[test]
@@ -800,7 +800,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_string(), Nodes(input_nodeset));
+        setup.vars.insert("nodes".to_string(), Value::Nodeset(input_nodeset));
 
         let selected_nodes = box Variable{name: "nodes".to_string()};
         let predicate = box Literal{value: LiteralValue::Boolean(false)};
@@ -810,7 +810,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Ok(Nodes(nodeset![])));
+        assert_eq!(res, Ok(Value::Nodeset(nodeset![])));
     }
 
     #[test]
@@ -838,7 +838,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Ok(Nodes(nodeset![setup.doc.root()])));
+        assert_eq!(res, Ok(Value::Nodeset(nodeset![setup.doc.root()])));
     }
 
     #[derive(Clone,Debug)]
@@ -896,12 +896,12 @@ mod test {
 
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
-        setup.vars.insert("left".to_string(), Nodes(nodes));
+        setup.vars.insert("left".to_string(), Value::Nodeset(nodes));
         let left = box Variable{name: "left".to_string()};
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
-        setup.vars.insert("right".to_string(), Nodes(nodes));
+        setup.vars.insert("right".to_string(), Value::Nodeset(nodes));
         let right = box Variable{name: "right".to_string()};
 
         let expr = Union{left: left, right: right};
@@ -909,7 +909,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Ok(Nodes(nodeset![left_node, right_node])));
+        assert_eq!(res, Ok(Value::Nodeset(nodeset![left_node, right_node])));
     }
 
     #[test]

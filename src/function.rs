@@ -34,7 +34,7 @@ pub enum Error {
 impl Error {
     fn wrong_type(actual: &Value, expected: ArgumentType) -> Error {
         let actual = match *actual {
-            Value::Nodes(..)   => ArgumentType::Nodeset,
+            Value::Nodeset(..) => ArgumentType::Nodeset,
             Value::String(..)  => ArgumentType::String,
             Value::Number(..)  => ArgumentType::Number,
             Value::Boolean(..) => ArgumentType::Boolean,
@@ -143,14 +143,14 @@ impl<'d> Args<'d> {
 
     fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
         match self.0.pop().unwrap() {
-            Value::Nodes(v) => Ok(v),
+            Value::Nodeset(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
         }
     }
 
     fn pop_value_or_context_node<'_>(&mut self, context: &EvaluationContext<'_, 'd>) -> Value<'d> {
         self.0.pop()
-            .unwrap_or_else(|| Value::Nodes(nodeset![context.node]))
+            .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
 
     fn pop_string_value_or_context_node(&mut self, context: &EvaluationContext) -> Result<String, Error> {
@@ -166,7 +166,7 @@ impl<'d> Args<'d> {
                                        -> Result<Nodeset<'d>, Error>
     {
         match self.0.pop() {
-            Some(Value::Nodes(ns)) => Ok(ns),
+            Some(Value::Nodeset(ns)) => Ok(ns),
             Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::Nodeset)),
             None => Ok(nodeset![context.node]),
         }
@@ -674,7 +674,7 @@ mod test {
         let setup = Setup::new();
 
         let nodeset = nodeset![doc.root()];
-        let r = setup.evaluate(doc.root(), Count, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), Count, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
     }
@@ -689,7 +689,7 @@ mod test {
         doc.root().append_child(e);
 
         let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::String("wow".to_string())), r);
     }
@@ -701,7 +701,7 @@ mod test {
         let setup = Setup::new();
 
         let nodeset = nodeset![];
-        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::String("".to_string())), r);
     }
@@ -716,7 +716,7 @@ mod test {
         doc.root().append_child(e);
 
         let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::String("uri".to_string())), r);
     }
@@ -732,7 +732,7 @@ mod test {
         doc.root().append_child(e);
 
         let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), Name, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), Name, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::String("prefix:wow".to_string())), r);
     }
@@ -945,7 +945,7 @@ mod test {
         let t = doc.create_text("98.7");
 
         let nodeset = nodeset![c, t];
-        let r = setup.evaluate(doc.root(), Sum, vec![Value::Nodes(nodeset)]);
+        let r = setup.evaluate(doc.root(), Sum, vec![Value::Nodeset(nodeset)]);
 
         assert_eq!(Ok(Value::Number(66.7)), r);
     }

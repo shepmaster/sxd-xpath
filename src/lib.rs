@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::num::Float;
 use std::{iter,string,vec};
 
-use self::Value::*;
+use self::Value::{Boolean,Number,String};
 
 use nodeset::{Nodeset,Node,ToNode};
 use parser::Parser;
@@ -55,7 +55,7 @@ pub enum Value<'d> {
     Boolean(bool),
     Number(f64),
     String(string::String),
-    Nodes(Nodeset<'d>), // rename as Nodeset
+    Nodeset(Nodeset<'d>),
 }
 
 fn str_to_num(s: &str) -> f64 {
@@ -64,24 +64,27 @@ fn str_to_num(s: &str) -> f64 {
 
 impl<'d> Value<'d> {
     pub fn boolean(&self) -> bool {
+        use Value::*;
         match *self {
             Boolean(val) => val,
             Number(n) => n != 0.0 && ! n.is_nan(),
             String(ref s) => ! s.is_empty(),
-            Nodes(ref nodeset) => nodeset.size() > 0,
+            Nodeset(ref nodeset) => nodeset.size() > 0,
         }
     }
 
     pub fn number(&self) -> f64 {
+        use Value::*;
         match *self {
             Boolean(val) => if val { 1.0 } else { 0.0 },
             Number(val) => val,
             String(ref s) => str_to_num(s),
-            Nodes(..) => str_to_num(&self.string()),
+            Nodeset(..) => str_to_num(&self.string()),
         }
     }
 
     pub fn string(&self) -> string::String {
+        use Value::*;
         match *self {
             Boolean(v) => v.to_string(),
             Number(n) => {
@@ -96,7 +99,7 @@ impl<'d> Value<'d> {
                 }
             },
             String(ref val) => val.clone(),
-            Nodes(ref ns) => match ns.document_order_first() {
+            Nodeset(ref ns) => match ns.document_order_first() {
                 Some(n) => n.string_value(),
                 None => "".to_string(),
             },
@@ -104,24 +107,24 @@ impl<'d> Value<'d> {
     }
 
     pub fn nodeset(&self) -> Nodeset<'d> {
+        use Value::*;
         match *self {
-            Nodes(ref ns) => ns.clone(),
+            Nodeset(ref ns) => ns.clone(),
             _ => panic!("Did not evaluate to a nodeset!"),
         }
     }
 
     #[allow(dead_code)]
     fn into_literal_value(self) -> LiteralValue {
+        use Value::*;
         match self {
             Boolean(v) => LiteralValue::Boolean(v),
             Number(v)  => LiteralValue::Number(v),
             String(v)  => LiteralValue::String(v),
-            Nodes(_)   => panic!("Cannot convert a nodeset to a literal"),
+            Nodeset(_)   => panic!("Cannot convert a nodeset to a literal"),
         }
     }
 }
-
-
 
 type BoxFunc = Box<Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
@@ -294,7 +297,7 @@ mod test {
         doc.root().append_child(c1);
         doc.root().append_child(c2);
 
-        let v = Value::Nodes(nodeset![c2, c1]);
+        let v = Value::Nodeset(nodeset![c2, c1]);
         assert_eq!(42.42, v.number());
     }
 
@@ -362,7 +365,7 @@ mod test {
         doc.root().append_child(c1);
         doc.root().append_child(c2);
 
-        let v = Value::Nodes(nodeset![c2, c1]);
+        let v = Value::Nodeset(nodeset![c2, c1]);
         assert_eq!("comment 1", v.string());
     }
 }
