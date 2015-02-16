@@ -147,7 +147,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         where N: ToNode<'d>
     {
         EvaluationContext {
-            node: node.to_node(),
+            node: node.into_node(),
             functions: functions,
             variables: variables,
             namespaces: namespaces,
@@ -160,7 +160,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         where N: ToNode<'d>
     {
         EvaluationContext {
-            node: node.to_node(),
+            node: node.into_node(),
             .. *self
         }
     }

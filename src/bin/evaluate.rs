@@ -109,7 +109,7 @@ fn main() {
     for filename in arguments.free.iter() {
         let package = load_xml(filename);
         let doc = package.as_document();
-        let root = doc.root().to_node();
+        let root = doc.root().into_node();
 
         let functions = build_functions();
         let variables = build_variables();

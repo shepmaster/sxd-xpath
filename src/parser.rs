@@ -817,7 +817,7 @@ mod test {
         }
 
         fn evaluate_on<N : ToNode<'d>>(&self, expr: &Expression, node: N) -> Value<'d> {
-            let node = node.to_node();
+            let node = node.into_node();
             let context = EvaluationContext::new(
                 node,
                 &self.functions,
