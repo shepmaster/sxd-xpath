@@ -4,7 +4,6 @@ use std::{error,fmt};
 use super::EvaluationContext;
 use super::{LiteralValue,Value};
 use super::Value::{Boolean,Number,Nodes};
-use super::StringValue;
 
 use super::axis::Axis;
 use super::function;

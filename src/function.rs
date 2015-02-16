@@ -7,7 +7,7 @@ use std::{error,fmt,iter};
 
 use document::parser::xmlstr::XmlChar;
 
-use super::{EvaluationContext,Functions,Value,StringValue};
+use super::{EvaluationContext,Functions,Value};
 use super::nodeset::Nodeset;
 
 pub trait Function {
