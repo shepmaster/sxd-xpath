@@ -16,6 +16,7 @@ use std::borrow::ToOwned;
 use std::env;
 use std::collections::HashMap;
 use std::old_io::File;
+use std::old_io::stdio;
 
 use document::parser::Parser;
 
@@ -45,12 +46,13 @@ fn build_xpath(xpath_str: &str) -> Box<Expression> {
     }
 }
 
-fn load_xml(filename: &str) -> document::Package {
+fn load_xml<R>(input: R) -> document::Package
+    where R: Reader
+{
+    let mut input = input;
     let p = Parser::new();
-    let path = Path::new(filename);
-    let mut file = File::open(&path);
 
-    let data = match file.read_to_string() {
+    let data = match input.read_to_string() {
         Ok(x) => x,
         Err(x) => panic!("Can't read: {}", x),
     };
@@ -148,8 +150,13 @@ fn main() {
     let xpath_str = arguments.opt_str("xpath").unwrap();
     let xpath = build_xpath(&xpath_str);
 
-    for filename in arguments.free.iter() {
-        let package = load_xml(filename);
+    for filename in &arguments.free {
+        let package = if *filename == "-" {
+            load_xml(stdio::stdin_raw())
+        } else {
+            load_xml(File::open(&Path::new(filename)))
+        };
+
         let doc = package.as_document();
         let root = doc.root().into_node();
 
