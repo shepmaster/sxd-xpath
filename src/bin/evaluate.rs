@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(dead_code))]
+
 #![feature(collections)]
 #![feature(io)]
 #![feature(env)]
@@ -82,7 +84,6 @@ fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
     namespaces
 }
 
-#[allow(dead_code)]
 fn main() {
     let args: Vec<_> = env::args().collect();
 
