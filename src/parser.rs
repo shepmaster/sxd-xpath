@@ -80,7 +80,7 @@ struct BinaryRule {
     builder: BinaryExpressionBuilder,
 }
 
-struct LeftAssociativeBinaryParser<I> {
+struct LeftAssociativeBinaryParser {
     rules: Vec<BinaryRule>,
 }
 
@@ -144,17 +144,16 @@ macro_rules! next_token_is(
     );
 );
 
-impl<I> LeftAssociativeBinaryParser<I>
-    where I: Iterator<Item=TokenResult>
-{
-    fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser<I> {
+impl LeftAssociativeBinaryParser {
+    fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser {
         LeftAssociativeBinaryParser {
             rules: rules,
         }
     }
 
-    fn parse<F>(&self, source: TokenSource<I>, child_parse: F) -> ParseResult
-        where F: Fn(TokenSource<I>) -> ParseResult
+    fn parse<F, I>(&self, source: TokenSource<I>, child_parse: F) -> ParseResult
+        where F: Fn(TokenSource<I>) -> ParseResult,
+              I: Iterator<Item=TokenResult>
     {
         let left = try!(child_parse(source));
 
