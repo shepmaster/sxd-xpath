@@ -3,7 +3,6 @@
 #![feature(box_syntax)]
 #![feature(collections)]
 #![feature(core)]
-#![feature(hash)]
 #![feature(std_misc)]
 
 #[macro_use]

@@ -1,10 +1,9 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(collections)]
-#![feature(core)]
-#![feature(io)]
 #![feature(env)]
-#![feature(path)]
+#![feature(old_io)]
+#![feature(old_path)]
 #![feature(rustc_private)]
 
 extern crate document;
