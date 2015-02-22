@@ -93,13 +93,13 @@ impl<'d> Node<'d> {
     pub fn prefixed_name(&self) -> Option<String> {
         use self::Node::*;
 
-        fn ensure_prefixed_name(element: dom4::Element, name: QName, preferred_prefix: Option<&str>) -> String {
+        fn qname_prefixed_name(element: dom4::Element, name: QName, preferred_prefix: Option<&str>) -> String {
             if let Some(ns_uri) = name.namespace_uri() {
-                let prefix = element
-                    .prefix_for_namespace_uri(ns_uri, preferred_prefix)
-                    // FIXME
-                    .unwrap_or_else(|| element.generate_prefix(ns_uri, preferred_prefix));
-                format!("{}:{}", prefix, name.local_part())
+                if let Some(prefix) = element.prefix_for_namespace_uri(ns_uri, preferred_prefix) {
+                    format!("{}:{}", prefix, name.local_part())
+                } else {
+                    name.local_part().to_string()
+                }
             } else {
                 name.local_part().to_string()
             }
@@ -108,11 +108,11 @@ impl<'d> Node<'d> {
         match self {
             &Root(_)                  => None,
             &Element(n)               => {
-                Some(ensure_prefixed_name(n, n.name(), n.preferred_prefix()))
+                Some(qname_prefixed_name(n, n.name(), n.preferred_prefix()))
             },
             &Attribute(n)             => {
                 let parent = n.parent().expect("Cannot process attribute without parent");
-                Some(ensure_prefixed_name(parent, n.name(), n.preferred_prefix()))
+                Some(qname_prefixed_name(parent, n.name(), n.preferred_prefix()))
             },
             &Text(_)                  => None,
             &Comment(_)               => None,
@@ -438,20 +438,34 @@ mod test {
 
         let e = doc.create_element(("uri", "wow"));
         e.set_preferred_prefix(Some("prefix"));
+        e.register_prefix("prefix", "uri");
         let node = e.into_node();
 
         assert_eq!(Some("prefix:wow".to_string()), node.prefixed_name());
     }
 
     #[test]
-    fn prefixed_name_of_element_with_auto_prefix() {
+    fn prefixed_name_of_element_with_prefix() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let e = doc.create_element(("uri", "wow"));
+        e.register_prefix("prefix", "uri");
+        let node = e.into_node();
+
+        assert_eq!(Some("prefix:wow".to_string()), node.prefixed_name());
+    }
+
+    #[test]
+    fn prefixed_name_of_element_without_prefix() {
+        // See library-level doc about missing prefixes
         let package = Package::new();
         let doc = package.as_document();
 
         let e = doc.create_element(("uri", "wow"));
         let node = e.into_node();
 
-        assert_eq!(Some("autons0:wow".to_string()), node.prefixed_name());
+        assert_eq!(Some("wow".to_string()), node.prefixed_name());
     }
 
     #[test]
@@ -462,21 +476,23 @@ mod test {
         let e = doc.create_element("element");
         let a = e.set_attribute_value(("uri", "attr"), "value");
         a.set_preferred_prefix(Some("prefix"));
+        e.register_prefix("prefix", "uri");
         let node = a.into_node();
 
         assert_eq!(Some("prefix:attr".to_string()), node.prefixed_name());
     }
 
     #[test]
-    fn prefixed_name_of_attribute_with_auto_prefix() {
+    fn prefixed_name_of_attribute_with_prefix() {
         let package = Package::new();
         let doc = package.as_document();
 
         let e = doc.create_element("element");
         let a = e.set_attribute_value(("uri", "attr"), "value");
+        e.register_prefix("prefix", "uri");
         let node = a.into_node();
 
-        assert_eq!(Some("autons0:attr".to_string()), node.prefixed_name());
+        assert_eq!(Some("prefix:attr".to_string()), node.prefixed_name());
     }
 
     #[test]

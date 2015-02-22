@@ -722,13 +722,13 @@ mod test {
     }
 
     #[test]
-    fn name_uses_elements_preferred_prefix() {
+    fn name_uses_declared_prefix() {
         let package = Package::new();
         let doc = package.as_document();
         let setup = Setup::new();
 
         let e = doc.create_element(("uri", "wow"));
-        e.set_preferred_prefix(Some("prefix"));
+        e.register_prefix("prefix", "uri");
         doc.root().append_child(e);
 
         let nodeset = nodeset![e];
