@@ -1,3 +1,20 @@
+//!
+//! ### Namespaces
+//!
+//! The XPath specification assumes that the XML being processed has a
+//! prefix defined for every namespace present in the document. If you
+//! are processing XML that was parsed from text, this will be true by
+//! construction.
+//!
+//! If you have programmatically created XML with namespaces but not
+//! defined prefixes, some XPath behavior may be confusing:
+//!
+//! 1. The `name` method will not include a prefix, even if the
+//! element or attribute has a namespace.
+//! 2. The `namespace` axis will not include namespaces without
+//! prefixes.
+//!
+
 #![crate_name = "xpath"]
 
 #![feature(box_syntax)]

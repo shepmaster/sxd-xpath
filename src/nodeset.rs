@@ -97,6 +97,7 @@ impl<'d> Node<'d> {
             if let Some(ns_uri) = name.namespace_uri() {
                 let prefix = element
                     .prefix_for_namespace_uri(ns_uri, preferred_prefix)
+                    // FIXME
                     .unwrap_or_else(|| element.generate_prefix(ns_uri, preferred_prefix));
                 format!("{}:{}", prefix, name.local_part())
             } else {
