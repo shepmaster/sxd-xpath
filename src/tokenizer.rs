@@ -1,6 +1,6 @@
 use std::{error,fmt,string};
 
-use document::peresil::{self,Point,Identifier};
+use peresil::{self,Point,Identifier};
 use document::parser::XmlParseExt;
 
 use super::node_test;

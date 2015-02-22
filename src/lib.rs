@@ -23,6 +23,7 @@
 #![feature(std_misc)]
 
 #[macro_use]
+extern crate peresil;
 extern crate document;
 
 use std::collections::HashMap;
