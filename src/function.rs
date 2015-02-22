@@ -5,7 +5,7 @@ use std::num::Float;
 use std::ops::Index;
 use std::{error,fmt,iter};
 
-use document::parser::xmlstr::XmlChar;
+use document::str::XmlChar;
 
 use super::{EvaluationContext,Functions,Value};
 use super::nodeset::Nodeset;
