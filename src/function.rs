@@ -319,8 +319,14 @@ impl Function for TwoStringPredicate {
     }
 }
 
-fn starts_with() -> TwoStringPredicate { TwoStringPredicate(StrExt::starts_with) }
-fn contains() -> TwoStringPredicate { TwoStringPredicate(StrExt::contains) }
+fn starts_with() -> TwoStringPredicate {
+    fn imp(a: &str, b: &str) -> bool { StrExt::starts_with(a, b) };
+    TwoStringPredicate(imp)
+}
+fn contains() -> TwoStringPredicate {
+    fn imp(a: &str, b: &str) -> bool { StrExt::contains(a, b) };
+    TwoStringPredicate(imp)
+}
 
 struct SubstringCommon(for<'s> fn(&'s str, &'s str) -> &'s str);
 
