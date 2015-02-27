@@ -345,7 +345,7 @@ impl Function for SubstringCommon {
 
 fn substring_before() -> SubstringCommon {
     fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
-        match haystack.find_str(needle) {
+        match haystack.find(needle) {
             Some(pos) => &haystack[..pos],
             None => "",
         }
@@ -355,7 +355,7 @@ fn substring_before() -> SubstringCommon {
 
 fn substring_after() -> SubstringCommon {
     fn inner<'a>(haystack: &'a str, needle: &'a str) -> &'a str {
-        match haystack.find_str(needle) {
+        match haystack.find(needle) {
             Some(pos) => &haystack[pos + needle.len()..],
             None => "",
         }

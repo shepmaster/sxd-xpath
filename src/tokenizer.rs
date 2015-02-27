@@ -52,7 +52,7 @@ trait XPathParseExt<'a> {
 
 impl<'a> XPathParseExt<'a> for Point<'a> {
     fn consume_quoted_string<E>(&self, quote: &str) -> peresil::Result<'a, &'a str, E> {
-        let end_of_str = self.s.find_str(quote).or(Some(self.s.len()));
+        let end_of_str = self.s.find(quote).or(Some(self.s.len()));
         self.consume_to(end_of_str)
     }
 }
