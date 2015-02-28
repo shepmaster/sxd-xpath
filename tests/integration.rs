@@ -1,6 +1,7 @@
 extern crate document;
 extern crate xpath;
 
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use document::Package;
 use document::dom4::Document;
@@ -14,7 +15,7 @@ fn functions_accept_arguments() {
 
     let result = evaluate(&doc, "concat('hello', ' ', 'world')");
 
-    assert_eq!(Value::String("hello world".to_string()), result);
+    assert_eq!(Value::String("hello world".to_owned()), result);
 }
 
 #[test]

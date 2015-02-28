@@ -26,6 +26,7 @@
 extern crate peresil;
 extern crate document;
 
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::num::Float;
 use std::{iter,string,vec};
@@ -107,9 +108,9 @@ impl<'d> Value<'d> {
             Number(n) => {
                 if n.is_infinite() {
                     if n.signum() < 0.0 {
-                        "-Infinity".to_string()
+                        "-Infinity".to_owned()
                     } else {
-                        "Infinity".to_string()
+                        "Infinity".to_owned()
                     }
                 } else {
                     n.to_string()
@@ -118,7 +119,7 @@ impl<'d> Value<'d> {
             String(ref val) => val.clone(),
             Nodeset(ref ns) => match ns.document_order_first() {
                 Some(n) => n.string_value(),
-                None => "".to_string(),
+                None => "".to_owned(),
             },
         }
     }
@@ -186,11 +187,11 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
     }
 
     fn function_for_name(&self, name: &str) -> Option<&'a BoxFunc> {
-        self.functions.get(&name.to_string())
+        self.functions.get(&name.to_owned())
     }
 
     fn value_of(&self, name: &str) -> Option<&Value<'d>> {
-        self.variables.get(&name.to_string())
+        self.variables.get(&name.to_owned())
     }
 
     fn namespace_for(&self, prefix: &str) -> Option<&str> {
@@ -249,6 +250,7 @@ impl Factory {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
     use std::num::Float;
 
     use document::Package;
@@ -257,25 +259,25 @@ mod test {
 
     #[test]
     fn number_of_string_is_ieee_754_number() {
-        let v = Value::String("1.5".to_string());
+        let v = Value::String("1.5".to_owned());
         assert_eq!(1.5, v.number());
     }
 
     #[test]
     fn number_of_string_with_negative_is_negative_number() {
-        let v = Value::String("-1.5".to_string());
+        let v = Value::String("-1.5".to_owned());
         assert_eq!(-1.5, v.number());
     }
 
     #[test]
     fn number_of_string_with_surrounding_whitespace_is_number_without_whitespace() {
-        let v = Value::String("\r\n1.5 \t".to_string());
+        let v = Value::String("\r\n1.5 \t".to_owned());
         assert_eq!(1.5, v.number());
     }
 
     #[test]
     fn number_of_garbage_string_is_nan() {
-        let v = Value::String("I am not an IEEE 754 number".to_string());
+        let v = Value::String("I am not an IEEE 754 number".to_owned());
         assert!(v.number().is_nan());
     }
 

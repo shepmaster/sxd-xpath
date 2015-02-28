@@ -166,6 +166,7 @@ impl NodeTest for ProcessingInstruction {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
     use std::collections::HashMap;
 
     use document::{Package,ToQName};
@@ -195,7 +196,7 @@ mod test {
         }
 
         fn register_prefix(&mut self, prefix: &str, namespace_uri: &str) {
-            self.namespaces.insert(prefix.to_string(), namespace_uri.to_string());
+            self.namespaces.insert(prefix.to_owned(), namespace_uri.to_owned());
         }
 
         fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
@@ -237,8 +238,8 @@ mod test {
     {
         let mut result = Nodeset::new();
         let name = super::NameTest {
-            prefix: prefix.map(|p| p.to_string()),
-            local_part: local.to_string()
+            prefix: prefix.map(|p| p.to_owned()),
+            local_part: local.to_owned()
         };
         let test = node_test::Attribute::new(name);
         test.test(context, &mut result);
@@ -331,8 +332,8 @@ mod test {
     {
         let mut result = Nodeset::new();
         let name = super::NameTest {
-            prefix: prefix.map(|p| p.to_string()),
-            local_part: local.to_string()
+            prefix: prefix.map(|p| p.to_owned()),
+            local_part: local.to_owned()
         };
         let test = node_test::Element::new(name);
         test.test(context, &mut result);

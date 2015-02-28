@@ -510,9 +510,10 @@ impl Expression for Variable {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
     use std::cell::RefCell;
-    use std::rc::Rc;
     use std::collections::HashMap;
+    use std::rc::Rc;
 
     use document::Package;
     use document::dom4::Document;
@@ -611,11 +612,11 @@ mod test {
         let string_value_1 = setup.doc.create_text("same");
         let string_value_2 = setup.doc.create_text("same");
 
-        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value_1]));
-        setup.vars.insert("right".to_string(), Value::Nodeset(nodeset![string_value_2]));
+        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1]));
+        setup.vars.insert("right".to_owned(), Value::Nodeset(nodeset![string_value_2]));
 
-        let left  = box Variable{name: "left".to_string()};
-        let right = box Variable{name: "right".to_string()};
+        let left  = box Variable{name: "left".to_owned()};
+        let right = box Variable{name: "right".to_owned()};
 
         let expr = Equal{left: left, right: right};
 
@@ -631,9 +632,9 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let string_value = setup.doc.create_text("3.14");
-        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value]));
+        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value]));
 
-        let left  = box Variable{name: "left".to_string()};
+        let left  = box Variable{name: "left".to_owned()};
         let right = box Literal{value: LiteralValue::Number(6.28)};
 
         let expr = Equal{left: left, right: right};
@@ -651,10 +652,10 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.vars.insert("left".to_string(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
+        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
-        let left  = box Variable{name: "left".to_string()};
-        let right = box Literal{value: LiteralValue::String("boat".to_string())};
+        let left  = box Variable{name: "left".to_owned()};
+        let right = box Literal{value: LiteralValue::String("boat".to_owned())};
 
         let expr = Equal{left: left, right: right};
 
@@ -670,7 +671,7 @@ mod test {
         let setup = Setup::new(&package);
 
         let actual_bool = box Literal{value: LiteralValue::Boolean(false)};
-        let truthy_str = box Literal{value: LiteralValue::String("hello".to_string())};
+        let truthy_str = box Literal{value: LiteralValue::String("hello".to_owned())};
 
         let expr = Equal{left: actual_bool, right: truthy_str};
 
@@ -686,7 +687,7 @@ mod test {
         let setup = Setup::new(&package);
 
         let actual_number = box Literal{value: LiteralValue::Number(-42.0)};
-        let number_str = box Literal{value: LiteralValue::String("-42.0".to_string())};
+        let number_str = box Literal{value: LiteralValue::String("-42.0".to_owned())};
 
         let expr = Equal{left: number_str, right: actual_number};
 
@@ -701,8 +702,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = box Literal{value: LiteralValue::String("hello".to_string())};
-        let b_str = box Literal{value: LiteralValue::String("World".to_string())};
+        let a_str = box Literal{value: LiteralValue::String("hello".to_owned())};
+        let b_str = box Literal{value: LiteralValue::String("World".to_owned())};
 
         let expr = Equal{left: a_str, right: b_str};
 
@@ -737,7 +738,7 @@ mod test {
                             _: &EvaluationContext<'a, 'd>,
                             _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
         {
-            Ok(String(self.value.to_string()))
+            Ok(String(self.value.to_owned()))
         }
     }
 
@@ -748,14 +749,14 @@ mod test {
 
         let arg_expr: Box<Expression> = box Literal{value: LiteralValue::Boolean(true)};
         let fun = box StubFunction{value: "the function ran"};
-        setup.funs.insert("test-fn".to_string(), fun);
+        setup.funs.insert("test-fn".to_owned(), fun);
 
-        let expr = expression::Function{name: "test-fn".to_string(), arguments: vec!(arg_expr)};
+        let expr = expression::Function{name: "test-fn".to_owned(), arguments: vec!(arg_expr)};
 
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Ok(String("the function ran".to_string())));
+        assert_eq!(res, Ok(String("the function ran".to_owned())));
     }
 
     #[test]
@@ -763,12 +764,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = expression::Function{name: "unknown-fn".to_string(), arguments: vec!()};
+        let expr = expression::Function{name: "unknown-fn".to_owned(), arguments: vec!()};
 
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".to_string())));
+        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".to_owned())));
     }
 
     #[test]
@@ -796,9 +797,9 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_string(), Value::Nodeset(input_nodeset));
+        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
 
-        let selected_nodes = box Variable{name: "nodes".to_string()};
+        let selected_nodes = box Variable{name: "nodes".to_owned()};
         let predicate = box Literal{value: LiteralValue::Number(1.0)};
 
         let expr = Filter::new(selected_nodes, predicate);
@@ -818,9 +819,9 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_string(), Value::Nodeset(input_nodeset));
+        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
 
-        let selected_nodes = box Variable{name: "nodes".to_string()};
+        let selected_nodes = box Variable{name: "nodes".to_owned()};
         let predicate = box Literal{value: LiteralValue::Boolean(false)};
 
         let expr = Filter::new(selected_nodes, predicate);
@@ -914,13 +915,13 @@ mod test {
 
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
-        setup.vars.insert("left".to_string(), Value::Nodeset(nodes));
-        let left = box Variable{name: "left".to_string()};
+        setup.vars.insert("left".to_owned(), Value::Nodeset(nodes));
+        let left = box Variable{name: "left".to_owned()};
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
-        setup.vars.insert("right".to_string(), Value::Nodeset(nodes));
-        let right = box Variable{name: "right".to_string()};
+        setup.vars.insert("right".to_owned(), Value::Nodeset(nodes));
+        let right = box Variable{name: "right".to_owned()};
 
         let expr = Union{left: left, right: right};
 
@@ -934,9 +935,9 @@ mod test {
     fn expression_variable_looks_up_the_variable() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
-        setup.vars.insert("foo".to_string(), Boolean(true));
+        setup.vars.insert("foo".to_owned(), Boolean(true));
 
-        let expr = Variable{name: "foo".to_string()};
+        let expr = Variable{name: "foo".to_owned()};
 
         let context = setup.context();
         let res = expr.evaluate(&context);

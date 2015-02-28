@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::iter::AdditiveIterator;
@@ -234,7 +235,7 @@ impl Function for LocalName {
             .and_then(|n| n.expanded_name())
             .map(|q| q.local_part())
             .unwrap_or("");
-        Ok(Value::String(name.to_string()))
+        Ok(Value::String(name.to_owned()))
     }
 }
 
@@ -253,7 +254,7 @@ impl Function for NamespaceUri {
             .and_then(|n| n.expanded_name())
             .and_then(|q| q.namespace_uri())
             .unwrap_or("");
-        Ok(Value::String(name.to_string()))
+        Ok(Value::String(name.to_owned()))
     }
 }
 
@@ -270,7 +271,7 @@ impl Function for Name {
         let name =
             arg.document_order_first()
             .and_then(|n| n.prefixed_name())
-            .unwrap_or("".to_string());
+            .unwrap_or("".to_owned());
         Ok(Value::String(name))
     }
 }
@@ -339,7 +340,7 @@ impl Function for SubstringCommon {
         try!(args.exactly(2));
         let args = try!(args.into_strings());
         let s = self.0(&*args[0], &*args[1]);
-        Ok(Value::String(s.to_string()))
+        Ok(Value::String(s.to_owned()))
     }
 }
 
@@ -563,35 +564,36 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
 fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 
 pub fn register_core_functions(functions: &mut Functions) {
-    functions.insert("last".to_string(), box Last);
-    functions.insert("position".to_string(), box Position);
-    functions.insert("count".to_string(), box Count);
-    functions.insert("local-name".to_string(), box LocalName);
-    functions.insert("namespace-uri".to_string(), box NamespaceUri);
-    functions.insert("name".to_string(), box Name);
-    functions.insert("string".to_string(), box StringFn);
-    functions.insert("concat".to_string(), box Concat);
-    functions.insert("starts-with".to_string(), box starts_with());
-    functions.insert("contains".to_string(), box contains());
-    functions.insert("substring-before".to_string(), box substring_before());
-    functions.insert("substring-after".to_string(), box substring_after());
-    functions.insert("substring".to_string(), box Substring);
-    functions.insert("string-length".to_string(), box StringLength);
-    functions.insert("normalize-space".to_string(), box NormalizeSpace);
-    functions.insert("translate".to_string(), box Translate);
-    functions.insert("boolean".to_string(), box BooleanFn);
-    functions.insert("not".to_string(), box Not);
-    functions.insert("true".to_string(), box true_fn());
-    functions.insert("false".to_string(), box false_fn());
-    functions.insert("number".to_string(), box NumberFn);
-    functions.insert("sum".to_string(), box Sum);
-    functions.insert("floor".to_string(), box floor());
-    functions.insert("ceiling".to_string(), box ceiling());
-    functions.insert("round".to_string(), box round());
+    functions.insert("last".to_owned(), box Last);
+    functions.insert("position".to_owned(), box Position);
+    functions.insert("count".to_owned(), box Count);
+    functions.insert("local-name".to_owned(), box LocalName);
+    functions.insert("namespace-uri".to_owned(), box NamespaceUri);
+    functions.insert("name".to_owned(), box Name);
+    functions.insert("string".to_owned(), box StringFn);
+    functions.insert("concat".to_owned(), box Concat);
+    functions.insert("starts-with".to_owned(), box starts_with());
+    functions.insert("contains".to_owned(), box contains());
+    functions.insert("substring-before".to_owned(), box substring_before());
+    functions.insert("substring-after".to_owned(), box substring_after());
+    functions.insert("substring".to_owned(), box Substring);
+    functions.insert("string-length".to_owned(), box StringLength);
+    functions.insert("normalize-space".to_owned(), box NormalizeSpace);
+    functions.insert("translate".to_owned(), box Translate);
+    functions.insert("boolean".to_owned(), box BooleanFn);
+    functions.insert("not".to_owned(), box Not);
+    functions.insert("true".to_owned(), box true_fn());
+    functions.insert("false".to_owned(), box false_fn());
+    functions.insert("number".to_owned(), box NumberFn);
+    functions.insert("sum".to_owned(), box Sum);
+    functions.insert("floor".to_owned(), box floor());
+    functions.insert("ceiling".to_owned(), box ceiling());
+    functions.insert("round".to_owned(), box round());
 }
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
     use std::collections::HashMap;
     use std::num::Float;
 
@@ -697,7 +699,7 @@ mod test {
         let nodeset = nodeset![e];
         let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
 
-        assert_eq!(Ok(Value::String("wow".to_string())), r);
+        assert_eq!(Ok(Value::String("wow".to_owned())), r);
     }
 
     #[test]
@@ -709,7 +711,7 @@ mod test {
         let nodeset = nodeset![];
         let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
 
-        assert_eq!(Ok(Value::String("".to_string())), r);
+        assert_eq!(Ok(Value::String("".to_owned())), r);
     }
 
     #[test]
@@ -724,7 +726,7 @@ mod test {
         let nodeset = nodeset![e];
         let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodeset(nodeset)]);
 
-        assert_eq!(Ok(Value::String("uri".to_string())), r);
+        assert_eq!(Ok(Value::String("uri".to_owned())), r);
     }
 
     #[test]
@@ -740,7 +742,7 @@ mod test {
         let nodeset = nodeset![e];
         let r = setup.evaluate(doc.root(), Name, vec![Value::Nodeset(nodeset)]);
 
-        assert_eq!(Ok(Value::String("prefix:wow".to_string())), r);
+        assert_eq!(Ok(Value::String("prefix:wow".to_owned())), r);
     }
 
     #[test]
@@ -748,23 +750,23 @@ mod test {
         let args = vec![LiteralValue::Boolean(true)];
         let r = evaluate_literal(StringFn, args);
 
-        assert_eq!(Ok(LiteralValue::String("true".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("true".to_owned())), r);
     }
 
     #[test]
     fn concat_combines_strings() {
-        let args = vec![LiteralValue::String("hello".to_string()),
-                        LiteralValue::String(" ".to_string()),
-                        LiteralValue::String("world".to_string())];
+        let args = vec![LiteralValue::String("hello".to_owned()),
+                        LiteralValue::String(" ".to_owned()),
+                        LiteralValue::String("world".to_owned())];
         let r = evaluate_literal(Concat, args);
 
-        assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("hello world".to_owned())), r);
     }
 
     #[test]
     fn starts_with_checks_prefixes() {
-        let args = vec![LiteralValue::String("hello".to_string()),
-                        LiteralValue::String("he".to_string())];
+        let args = vec![LiteralValue::String("hello".to_owned()),
+                        LiteralValue::String("he".to_owned())];
         let r = evaluate_literal(super::starts_with(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
@@ -772,8 +774,8 @@ mod test {
 
     #[test]
     fn contains_looks_for_a_needle() {
-        let args = vec![LiteralValue::String("astronomer".to_string()),
-                        LiteralValue::String("ono".to_string())];
+        let args = vec![LiteralValue::String("astronomer".to_owned()),
+                        LiteralValue::String("ono".to_owned())];
         let r = evaluate_literal(super::contains(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
@@ -781,43 +783,43 @@ mod test {
 
     #[test]
     fn substring_before_slices_before() {
-        let args = vec![LiteralValue::String("1999/04/01".to_string()),
-                        LiteralValue::String("/".to_string())];
+        let args = vec![LiteralValue::String("1999/04/01".to_owned()),
+                        LiteralValue::String("/".to_owned())];
         let r = evaluate_literal(super::substring_before(), args);
 
-        assert_eq!(Ok(LiteralValue::String("1999".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("1999".to_owned())), r);
     }
 
     #[test]
     fn substring_after_slices_after() {
-        let args = vec![LiteralValue::String("1999/04/01".to_string()),
-                        LiteralValue::String("/".to_string())];
+        let args = vec![LiteralValue::String("1999/04/01".to_owned()),
+                        LiteralValue::String("/".to_owned())];
         let r = evaluate_literal(super::substring_after(), args);
 
-        assert_eq!(Ok(LiteralValue::String("04/01".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("04/01".to_owned())), r);
     }
 
     #[test]
     fn substring_is_one_indexed() {
-        let args = vec![LiteralValue::String("あいうえお".to_string()),
+        let args = vec![LiteralValue::String("あいうえお".to_owned()),
                         LiteralValue::Number(2.0)];
         let r = evaluate_literal(Substring, args);
 
-        assert_eq!(Ok(LiteralValue::String("いうえお".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("いうえお".to_owned())), r);
     }
 
     #[test]
     fn substring_has_optional_length() {
-        let args = vec![LiteralValue::String("あいうえお".to_string()),
+        let args = vec![LiteralValue::String("あいうえお".to_owned()),
                         LiteralValue::Number(2.0),
                         LiteralValue::Number(3.0)];
         let r = evaluate_literal(Substring, args);
 
-        assert_eq!(Ok(LiteralValue::String("いうえ".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("いうえ".to_owned())), r);
     }
 
     fn substring_test(s: &str, start: f64, len: f64) -> String {
-        let args = vec![LiteralValue::String(s.to_string()),
+        let args = vec![LiteralValue::String(s.to_owned()),
                         LiteralValue::Number(start),
                         LiteralValue::Number(len)];
 
@@ -859,7 +861,7 @@ mod test {
 
     #[test]
     fn string_length_counts_characters() {
-        let args = vec![LiteralValue::String("日本語".to_string())];
+        let args = vec![LiteralValue::String("日本語".to_owned())];
         let r = evaluate_literal(StringLength, args);
 
         assert_eq!(Ok(LiteralValue::Number(3.0)), r);
@@ -867,32 +869,32 @@ mod test {
 
     #[test]
     fn normalize_space_removes_leading_space() {
-        let args = vec![LiteralValue::String("\t hello".to_string())];
+        let args = vec![LiteralValue::String("\t hello".to_owned())];
         let r = evaluate_literal(NormalizeSpace, args);
 
-        assert_eq!(Ok(LiteralValue::String("hello".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("hello".to_owned())), r);
     }
 
     #[test]
     fn normalize_space_removes_trailing_space() {
-        let args = vec![LiteralValue::String("hello\r\n".to_string())];
+        let args = vec![LiteralValue::String("hello\r\n".to_owned())];
         let r = evaluate_literal(NormalizeSpace, args);
 
-        assert_eq!(Ok(LiteralValue::String("hello".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("hello".to_owned())), r);
     }
 
     #[test]
     fn normalize_space_squashes_intermediate_space() {
-        let args = vec![LiteralValue::String("hello\t\r\n world".to_string())];
+        let args = vec![LiteralValue::String("hello\t\r\n world".to_owned())];
         let r = evaluate_literal(NormalizeSpace, args);
 
-        assert_eq!(Ok(LiteralValue::String("hello world".to_string())), r);
+        assert_eq!(Ok(LiteralValue::String("hello world".to_owned())), r);
     }
 
     fn translate_test(s: &str, from: &str, to: &str) -> String {
-        let args = vec![LiteralValue::String(s.to_string()),
-                        LiteralValue::String(from.to_string()),
-                        LiteralValue::String(to.to_string())];
+        let args = vec![LiteralValue::String(s.to_owned()),
+                        LiteralValue::String(from.to_owned()),
+                        LiteralValue::String(to.to_owned())];
 
         match evaluate_literal(Translate, args) {
             Ok(LiteralValue::String(s)) => s,
@@ -927,7 +929,7 @@ mod test {
 
     #[test]
     fn boolean_converts_to_boolean() {
-        let args = vec![LiteralValue::String("false".to_string())];
+        let args = vec![LiteralValue::String("false".to_owned())];
         let r = evaluate_literal(BooleanFn, args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
@@ -935,7 +937,7 @@ mod test {
 
     #[test]
     fn number_converts_to_number() {
-        let args = vec![LiteralValue::String(" -1.2 ".to_string())];
+        let args = vec![LiteralValue::String(" -1.2 ".to_owned())];
         let r = evaluate_literal(NumberFn, args);
 
         assert_eq!(Ok(LiteralValue::Number(-1.2)), r);

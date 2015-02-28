@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::{error,fmt,string};
 
 use peresil::{self,Point,Identifier};
@@ -130,7 +131,7 @@ fn parse_literal<'a>(p: Point<'a>) -> peresil::Result<'a, &'a str, TokenizerErr>
 }
 
 fn parse_quoted_literal<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    parse_literal(p).map(|v| Token::Literal(v.to_string()))
+    parse_literal(p).map(|v| Token::Literal(v.to_owned()))
 }
 
 fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
@@ -204,7 +205,7 @@ fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         let (arg, p) = try_parse!(parse_literal(p));
         let (_, p) = try_parse!(p.consume_literal(")"));
 
-        let name = NodeTestName::ProcessingInstruction(Some(arg.to_string()));
+        let name = NodeTestName::ProcessingInstruction(Some(arg.to_owned()));
         peresil::Result::success(Token::NodeTest(name), p)
     }
 
@@ -219,7 +220,7 @@ fn parse_function_call<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenizer
     try_parse!(p.consume_literal("("));
 
     // TODO: We should be using the prefix here!
-    let name = name.local_part.to_string();
+    let name = name.local_part.to_owned();
     peresil::Result::success(Token::Function(name), p)
 }
 
@@ -229,7 +230,7 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
 
         let name = node_test::NameTest {
             prefix: None,
-            local_part: wc.to_string(),
+            local_part: wc.to_owned(),
         };
         peresil::Result::success(Token::NameTest(name), p)
     }
@@ -240,8 +241,8 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         let (wc, p) = try_parse!(p.consume_literal("*"));
 
         let name = node_test::NameTest {
-            prefix: Some(prefix.to_string()),
-            local_part: wc.to_string(),
+            prefix: Some(prefix.to_owned()),
+            local_part: wc.to_owned(),
         };
         peresil::Result::success(Token::NameTest(name), p)
     }
@@ -249,8 +250,8 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
     fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
-                prefix: name.prefix.map(|p| p.to_string()),
-                local_part: name.local_part.to_string()
+                prefix: name.prefix.map(|p| p.to_owned()),
+                local_part: name.local_part.to_owned()
             })
         })
     }
@@ -265,14 +266,14 @@ fn parse_variable_reference<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Toke
     let (name, p) = try_parse!(p.consume_prefixed_name());
 
     // TODO: We should be using the prefix here!
-    let name = name.local_part.to_string();
+    let name = name.local_part.to_owned();
     peresil::Result::success(Token::Variable(name), p)
 }
 
 impl Tokenizer {
     pub fn new(xpath: &str) -> Tokenizer {
         Tokenizer {
-            xpath: xpath.to_string(),
+            xpath: xpath.to_owned(),
             start: 0,
             prefer_recognition_of_operator_names: false,
         }
@@ -415,6 +416,8 @@ impl<I> Iterator for TokenDeabbreviator<I>
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
+
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
 
@@ -446,7 +449,7 @@ mod test {
     fn name_test(local_part: &str) -> Token {
         Token::NameTest(node_test::NameTest {
             prefix: None,
-            local_part: local_part.to_string()
+            local_part: local_part.to_owned()
         })
     }
 
@@ -493,8 +496,8 @@ mod test {
         let tokenizer = Tokenizer::new("ns:foo");
 
         let name = node_test::NameTest {
-            prefix: Some("ns".to_string()),
-            local_part: "foo".to_string()
+            prefix: Some("ns".to_owned()),
+            local_part: "foo".to_owned()
         };
         assert_eq!(all_tokens(tokenizer), vec![Token::NameTest(name)]);
     }
@@ -646,7 +649,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("'hello!'");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("hello!".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("hello!".to_owned())));
     }
 
     #[test]
@@ -654,7 +657,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("\"1.23\"");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("1.23".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("1.23".to_owned())));
     }
 
     #[test]
@@ -662,7 +665,7 @@ mod test {
     {
         let tokenizer = Tokenizer::new("$yo");
 
-        assert_eq!(all_tokens(tokenizer), vec!(Token::Variable("yo".to_string())));
+        assert_eq!(all_tokens(tokenizer), vec!(Token::Variable("yo".to_owned())));
     }
 
     #[test]
@@ -810,7 +813,7 @@ mod test {
 
         assert_eq!(
             all_tokens(tokenizer),
-            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("hi".to_string())))]
+            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("hi".to_owned())))]
         );
     }
 
@@ -818,7 +821,7 @@ mod test {
     fn tokenizes_function_call() {
         let tokenizer = Tokenizer::new("hello()");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
                                                Token::LeftParen,
                                                Token::RightParen]);
     }
@@ -827,7 +830,7 @@ mod test {
     fn tokenizes_function_call_with_argument() {
         let tokenizer = Tokenizer::new("hello(1)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
                                                Token::LeftParen,
                                                Token::Number(1.0),
                                                Token::RightParen]);
@@ -837,7 +840,7 @@ mod test {
     fn tokenizes_function_call_with_multiple_arguments() {
         let tokenizer = Tokenizer::new("hello(1, 2)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_string()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
                                                Token::LeftParen,
                                                Token::Number(1.0),
                                                Token::Comma,

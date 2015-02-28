@@ -646,6 +646,7 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
     use std::collections::HashMap;
     use std::num::Float;
 
@@ -690,7 +691,7 @@ mod test {
     fn name_test(local_part: &str) -> Token {
         Token::NameTest(node_test::NameTest {
             prefix: None,
-            local_part: local_part.to_string()
+            local_part: local_part.to_owned()
         })
     }
 
@@ -802,7 +803,7 @@ mod test {
         }
 
         fn add_var(&mut self, name: &str, value: Value<'d>) {
-            self.variables.insert(name.to_string(), value);
+            self.variables.insert(name.to_owned(), value);
         }
 
         fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
@@ -1040,7 +1041,7 @@ mod test {
 
     #[test]
     fn parses_processing_instruction_node_test() {
-        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("name".to_string())))];
+        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("name".to_owned())))];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1093,7 +1094,7 @@ mod test {
 
     #[test]
     fn string_literal() {
-        let tokens = tokens![Token::Literal("string".to_string())];
+        let tokens = tokens![Token::Literal("string".to_owned())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1101,7 +1102,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(String("string".to_string()), ex.evaluate(&*expr));
+        assert_eq!(String("string".to_owned()), ex.evaluate(&*expr));
     }
 
     #[test]
@@ -1109,11 +1110,11 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_string()),
+            Token::Function("false".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1135,7 +1136,7 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1157,7 +1158,7 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("false".to_string()),
+            Token::Function("false".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1200,9 +1201,9 @@ mod test {
     #[test]
     fn functions_accept_arguments() {
         let tokens = tokens![
-            Token::Function("not".to_string()),
+            Token::Function("not".to_owned()),
             Token::LeftParen,
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightParen,
@@ -1220,13 +1221,13 @@ mod test {
     #[test]
     fn functions_accept_any_expression_as_an_argument() {
         let tokens = tokens![
-            Token::Function("not".to_string()),
+            Token::Function("not".to_owned()),
             Token::LeftParen,
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_string()),
+            Token::Function("false".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightParen,
@@ -1414,7 +1415,7 @@ mod test {
     #[test]
     fn top_level_function_call() {
         let tokens = tokens![
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
         ];
@@ -1431,11 +1432,11 @@ mod test {
     #[test]
     fn or_expression() {
         let tokens = tokens![
-            Token::Function("true".to_string()),
+            Token::Function("true".to_owned()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_string()),
+            Token::Function("false".to_owned()),
             Token::LeftParen,
             Token::RightParen,
         ];
@@ -1570,7 +1571,7 @@ mod test {
 
     #[test]
     fn variable_reference() {
-        let tokens = tokens![Token::Variable("variable-name".to_string())];
+        let tokens = tokens![Token::Variable("variable-name".to_owned())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1585,7 +1586,7 @@ mod test {
     #[test]
     fn filter_expression() {
         let tokens = tokens![
-            Token::Variable("variable".to_string()),
+            Token::Variable("variable".to_owned()),
             Token::LeftBracket,
             Token::Number(0.0),
             Token::RightBracket,
@@ -1609,7 +1610,7 @@ mod test {
     #[test]
     fn filter_expression_and_relative_path() {
         let tokens = tokens![
-            Token::Variable("variable".to_string()),
+            Token::Variable("variable".to_owned()),
             Token::Slash,
             name_test("child"),
         ];
@@ -1632,9 +1633,9 @@ mod test {
     #[test]
     fn union_expression() {
         let tokens = tokens![
-            Token::Variable("variable1".to_string()),
+            Token::Variable("variable1".to_owned()),
             Token::Pipe,
-            Token::Variable("variable2".to_string()),
+            Token::Variable("variable2".to_owned()),
         ];
 
         let package = Package::new();
@@ -1689,7 +1690,7 @@ mod test {
     #[test]
     fn unexpected_token_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::Function("does-not-matter".to_string()),
+            Token::Function("does-not-matter".to_owned()),
             Token::RightParen
         ];
 
@@ -1704,7 +1705,7 @@ mod test {
     #[test]
     fn binary_operator_without_right_hand_side_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::Literal("left".to_string()),
+            Token::Literal("left".to_owned()),
             Token::And
         ];
 
@@ -1764,7 +1765,7 @@ mod test {
     #[test]
     fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::Variable("variable".to_string()),
+            Token::Variable("variable".to_owned()),
             Token::Slash,
         ];
 
@@ -1778,7 +1779,7 @@ mod test {
 
     #[test]
     fn running_out_of_input_is_reported_as_an_error() {
-        let tokens = tokens![Token::Function("func".to_string())];
+        let tokens = tokens![Token::Function("func".to_owned())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1803,7 +1804,7 @@ mod test {
     #[test]
     fn a_tokenizer_error_is_reported_as_an_error() {
         let tokens = vec![
-            Ok(Token::Function("func".to_string())),
+            Ok(Token::Function("func".to_owned())),
             Err(TokenizerErr::UnableToCreateToken)
         ];
 

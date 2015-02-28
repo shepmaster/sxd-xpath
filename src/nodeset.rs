@@ -99,10 +99,10 @@ impl<'d> Node<'d> {
                 if let Some(prefix) = element.prefix_for_namespace_uri(ns_uri, preferred_prefix) {
                     format!("{}:{}", prefix, name.local_part())
                 } else {
-                    name.local_part().to_string()
+                    name.local_part().to_owned()
                 }
             } else {
-                name.local_part().to_string()
+                name.local_part().to_owned()
             }
         };
 
@@ -117,8 +117,8 @@ impl<'d> Node<'d> {
             },
             &Text(_)                  => None,
             &Comment(_)               => None,
-            &ProcessingInstruction(n) => Some(n.target().to_string()),
-            &Namespace(n)             => Some(n.prefix().to_string()),
+            &ProcessingInstruction(n) => Some(n.target().to_owned()),
+            &Namespace(n)             => Some(n.prefix().to_owned()),
         }
     }
 
@@ -334,6 +334,8 @@ impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
 
 #[cfg(test)]
 mod test {
+    use std::borrow::ToOwned;
+
     use document::Package;
 
     use super::Node::{
@@ -442,7 +444,7 @@ mod test {
         e.register_prefix("prefix", "uri");
         let node = e.into_node();
 
-        assert_eq!(Some("prefix:wow".to_string()), node.prefixed_name());
+        assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
 
     #[test]
@@ -454,7 +456,7 @@ mod test {
         e.register_prefix("prefix", "uri");
         let node = e.into_node();
 
-        assert_eq!(Some("prefix:wow".to_string()), node.prefixed_name());
+        assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
 
     #[test]
@@ -466,7 +468,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         let node = e.into_node();
 
-        assert_eq!(Some("wow".to_string()), node.prefixed_name());
+        assert_eq!(Some("wow".to_owned()), node.prefixed_name());
     }
 
     #[test]
@@ -480,7 +482,7 @@ mod test {
         e.register_prefix("prefix", "uri");
         let node = a.into_node();
 
-        assert_eq!(Some("prefix:attr".to_string()), node.prefixed_name());
+        assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
 
     #[test]
@@ -493,7 +495,7 @@ mod test {
         e.register_prefix("prefix", "uri");
         let node = a.into_node();
 
-        assert_eq!(Some("prefix:attr".to_string()), node.prefixed_name());
+        assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
 
     #[test]
@@ -504,7 +506,7 @@ mod test {
         let pi = doc.create_processing_instruction("target", Some("value"));
         let node = pi.into_node();
 
-        assert_eq!(Some("target".to_string()), node.prefixed_name());
+        assert_eq!(Some("target".to_owned()), node.prefixed_name());
     }
 
     #[test]
