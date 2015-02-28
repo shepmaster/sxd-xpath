@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::iter::{IntoIterator,FromIterator};
 use std::slice::Iter;
@@ -206,13 +207,13 @@ impl<'d> Node<'d> {
         }
 
         match self {
-            &Root(_) => text_descendants_string_value(self),
-            &Element(_) => text_descendants_string_value(self),
-            &Attribute(n) => String::from_str(n.value()),
-            &ProcessingInstruction(n) => String::from_str(n.value().unwrap_or("")),
-            &Comment(n) => String::from_str(n.text()),
-            &Text(n) => String::from_str(n.text()),
-            &Namespace(n) => String::from_str(n.uri()),
+            &Root(_)                  => text_descendants_string_value(self),
+            &Element(_)               => text_descendants_string_value(self),
+            &Attribute(n)             => n.value().to_owned(),
+            &ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
+            &Comment(n)               => n.text().to_owned(),
+            &Text(n)                  => n.text().to_owned(),
+            &Namespace(n)             => n.uri().to_owned(),
         }
     }
 }
