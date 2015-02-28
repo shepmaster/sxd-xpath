@@ -194,7 +194,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
     }
 
     fn namespace_for(&self, prefix: &str) -> Option<&str> {
-        self.namespaces.get(prefix).map(|ns| ns.as_slice())
+        self.namespaces.get(prefix).map(|ns| &ns[..])
     }
 
     fn predicate_iter<'p>(&'p self, nodes: Nodeset<'d>)
