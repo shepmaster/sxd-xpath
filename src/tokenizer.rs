@@ -220,7 +220,7 @@ fn parse_function_call<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Tokenizer
     try_parse!(p.consume_literal("("));
 
     // TODO: We should be using the prefix here!
-    let name = name.local_part.to_owned();
+    let name = name.local_part().to_owned();
     peresil::Result::success(Token::Function(name), p)
 }
 
@@ -250,8 +250,8 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
     fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
-                prefix: name.prefix.map(|p| p.to_owned()),
-                local_part: name.local_part.to_owned()
+                prefix: name.prefix().map(|p| p.to_owned()),
+                local_part: name.local_part().to_owned()
             })
         })
     }
@@ -266,7 +266,7 @@ fn parse_variable_reference<'a>(p: Point<'a>) -> peresil::Result<'a, Token, Toke
     let (name, p) = try_parse!(p.consume_prefixed_name());
 
     // TODO: We should be using the prefix here!
-    let name = name.local_part.to_owned();
+    let name = name.local_part().to_owned();
     peresil::Result::success(Token::Variable(name), p)
 }
 
