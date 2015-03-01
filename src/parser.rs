@@ -270,6 +270,19 @@ impl Parser {
         }
     }
 
+    fn parse_nested_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+        where I: Iterator<Item=TokenResult>
+    {
+        if source.next_token_is(&Token::LeftParen) {
+            try!(source.consume(&Token::LeftParen));
+            let result = try!(self.parse_expression(source));
+            try!(source.consume(&Token::RightParen));
+            Ok(result)
+        } else {
+            Ok(None)
+        }
+    }
+
     fn parse_variable_reference<I>(&self, source: TokenSource<I>) -> ParseResult
         where I: Iterator<Item=TokenResult>
     {
@@ -354,6 +367,7 @@ impl Parser {
     {
         let rules: &[&Rule<I>] = &[
             &|src: TokenSource<I>| self.parse_variable_reference(src),
+            &|src: TokenSource<I>| self.parse_nested_expression(src),
             &|src: TokenSource<I>| self.parse_string_literal(src),
             &|src: TokenSource<I>| self.parse_numeric_literal(src),
             &|src: TokenSource<I>| self.parse_function_call(src),
@@ -1567,6 +1581,23 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(Boolean(true), ex.evaluate(&*expr));
+    }
+
+    #[test]
+    fn nested_expression() {
+        let tokens = tokens![
+            Token::LeftParen,
+            Token::Number(1.1),
+            Token::RightParen,
+        ];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+
+        let ex = Exercise::new(&doc);
+        let expr = ex.parse(tokens);
+
+        assert_approx_eq!(Number(1.1), ex.evaluate(&*expr));
     }
 
     #[test]
