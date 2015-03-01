@@ -1,8 +1,7 @@
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::iter::{IntoIterator,FromIterator};
-use std::slice::Iter;
-use std::vec;
+use std::{slice,vec};
 
 use document::QName;
 use document::dom4;
@@ -275,8 +274,8 @@ impl<'d> Nodeset<'d> {
         self.nodes.push(node.into_node());
     }
 
-    pub fn iter(&self) -> Iter<Node<'d>> {
-        self.nodes.iter()
+    pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
+        Iter { iter: self.nodes.iter() }
     }
 
     pub fn add_nodeset(& mut self, other: &Nodeset<'d>) {
@@ -287,8 +286,8 @@ impl<'d> Nodeset<'d> {
         self.nodes.len()
     }
 
-    pub fn into_iter(self) -> vec::IntoIter<Node<'d>> {
-        self.nodes.into_iter()
+    pub fn into_iter(self) -> IntoIter<'d> {
+        IntoIter { iter: self.nodes.into_iter() }
     }
 
     pub fn document_order_first(&self) -> Option<Node<'d>> {
@@ -330,6 +329,24 @@ impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
         for n in iterator { ns.add(n.node) };
         ns
     }
+}
+
+pub struct Iter<'a, 'd : 'a> {
+    iter: slice::Iter<'a, Node<'d>>,
+}
+
+impl<'a, 'd : 'a> Iterator for Iter<'a, 'd> {
+    type Item = &'a Node<'d>;
+    fn next(&mut self) -> Option<&'a Node<'d>> { self.iter.next() }
+}
+
+pub struct IntoIter<'d> {
+    iter: vec::IntoIter<Node<'d>>,
+}
+
+impl<'d> Iterator for IntoIter<'d> {
+    type Item = Node<'d>;
+    fn next(&mut self) -> Option<Node<'d>> { self.iter.next() }
 }
 
 #[cfg(test)]

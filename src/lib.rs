@@ -29,7 +29,7 @@ extern crate document;
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::num::Float;
-use std::{iter,string,vec};
+use std::{iter,string};
 
 use self::Value::{Boolean,Number,String};
 
@@ -212,7 +212,7 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
 
 struct EvaluationContextPredicateIter<'a : 'p, 'd : 'a + 'p, 'p> {
     parent: &'p EvaluationContext<'a, 'd>,
-    nodes: iter::Enumerate<vec::IntoIter<Node<'d>>>,
+    nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
     size: usize,
 }
 
