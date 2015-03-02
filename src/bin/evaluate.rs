@@ -1,7 +1,6 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(collections)]
-#![feature(env)]
 #![feature(old_io)]
 #![feature(old_path)]
 #![feature(rustc_private)]
