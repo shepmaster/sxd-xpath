@@ -1,8 +1,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(collections)]
-#![feature(old_io)]
-#![feature(old_path)]
+#![feature(io)]
 #![feature(rustc_private)]
 
 extern crate document;
@@ -13,8 +12,8 @@ use std::cmp::min;
 use std::borrow::ToOwned;
 use std::env;
 use std::collections::HashMap;
-use std::old_io::File;
-use std::old_io::stdio;
+use std::fs::File;
+use std::io::{self,Read};
 
 use document::parser::Parser;
 
@@ -45,15 +44,16 @@ fn build_xpath(xpath_str: &str) -> Box<Expression> {
 }
 
 fn load_xml<R>(input: R) -> document::Package
-    where R: Reader
+    where R: Read
 {
     let mut input = input;
-    let p = Parser::new();
+    let mut data = String::new();
 
-    let data = match input.read_to_string() {
-        Ok(x) => x,
-        Err(x) => panic!("Can't read: {}", x),
-    };
+    if let Err(x) = input.read_to_string(&mut data) {
+        panic!("Can't read: {}", x);
+    }
+
+    let p = Parser::new();
 
     match p.parse(&data) {
         Ok(d) => d,
@@ -150,9 +150,10 @@ fn main() {
 
     for filename in &arguments.free {
         let package = if *filename == "-" {
-            load_xml(stdio::stdin_raw())
+            load_xml(io::stdin())
         } else {
-            load_xml(File::open(&Path::new(filename)))
+            let file = File::open(filename).unwrap();
+            load_xml(file)
         };
 
         let doc = package.as_document();
