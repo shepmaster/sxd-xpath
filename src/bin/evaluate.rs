@@ -2,7 +2,6 @@
 
 #![feature(collections)]
 #![feature(io)]
-#![feature(rustc_private)]
 
 extern crate document;
 extern crate xpath;
@@ -20,11 +19,11 @@ use document::parser::Parser;
 use xpath::nodeset::ToNode;
 use xpath::{EvaluationContext,Factory,Expression,Value};
 
-use getopts::{reqopt,optmulti,getopts,OptGroup,usage};
+use getopts::Options;
 
-fn print_usage(program: &str, opts: &[OptGroup]) {
+fn print_usage(program: &str, opts: &Options) {
     let brief = format!("Usage: {} [options] FILE...", program);
-    print!("{}", usage(&brief, opts));
+    print!("{}", opts.usage(&brief));
 }
 
 fn pretty_error(xml: &str, position: usize) -> &str {
@@ -128,19 +127,19 @@ fn main() {
 
     let program_name = &args[0];
 
-    let opts = &[
-        reqopt("", "xpath", "The XPath to execute", "XPATH"),
-        optmulti("", "namespace", "set namespace prefix", "PREFIX:URI"),
-        optmulti("", "string", "set string variable", "NAME=VALUE"),
-        optmulti("", "number", "set number variable", "NAME=VALUE"),
-        optmulti("", "boolean", "set boolean variable", "NAME=VALUE"),
-    ];
+    let mut opts = Options::new();
 
-    let arguments = match getopts(args.tail(), opts) {
+    opts.reqopt("", "xpath", "The XPath to execute", "XPATH");
+    opts.optmulti("", "namespace", "set namespace prefix", "PREFIX:URI");
+    opts.optmulti("", "string", "set string variable", "NAME=VALUE");
+    opts.optmulti("", "number", "set number variable", "NAME=VALUE");
+    opts.optmulti("", "boolean", "set boolean variable", "NAME=VALUE");
+
+    let arguments = match opts.parse(args.tail()) {
         Ok(x) => x,
         Err(x) => {
             println!("{}", x);
-            print_usage(program_name, opts);
+            print_usage(program_name, &opts);
             return;
         },
     };

@@ -6,6 +6,7 @@ authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 
 [dependencies]
 
+getopts = "0.2.4"
 peresil = "0.1.0"
 
 [dependencies.document]
