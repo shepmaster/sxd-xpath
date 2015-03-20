@@ -321,11 +321,11 @@ impl Function for TwoStringPredicate {
 }
 
 fn starts_with() -> TwoStringPredicate {
-    fn imp(a: &str, b: &str) -> bool { StrExt::starts_with(a, b) };
+    fn imp(a: &str, b: &str) -> bool { str::starts_with(a, b) };
     TwoStringPredicate(imp)
 }
 fn contains() -> TwoStringPredicate {
-    fn imp(a: &str, b: &str) -> bool { StrExt::contains(a, b) };
+    fn imp(a: &str, b: &str) -> bool { str::contains(a, b) };
     TwoStringPredicate(imp)
 }
 
