@@ -21,6 +21,7 @@
 #![feature(collections)]
 #![feature(core)]
 #![feature(std_misc)]
+#![feature(unicode)]
 
 #[macro_use]
 extern crate peresil;
