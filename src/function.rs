@@ -177,7 +177,7 @@ impl<'d> Args<'d> {
 impl<'d> Index<usize> for Args<'d> {
     type Output = Value<'d>;
 
-    fn index(&self, index: &usize) -> &Value<'d> { self.0.index(index) }
+    fn index(&self, index: usize) -> &Value<'d> { self.0.index(index) }
 }
 
 struct Last;

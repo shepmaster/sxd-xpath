@@ -317,7 +317,7 @@ impl<'d> Nodeset<'d> {
             }
         }
 
-        self.nodes.iter().min_by(|&&n| order[n]).map(|n| *n)
+        self.nodes.iter().min_by(|&n| order[n]).map(|n| *n)
     }
 }
 
