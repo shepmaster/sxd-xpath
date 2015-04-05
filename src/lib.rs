@@ -20,8 +20,8 @@
 #![feature(box_syntax)]
 #![feature(collections)]
 #![feature(core)]
-#![feature(std_misc)]
 #![feature(unicode)]
+#![cfg_attr(test, feature(slice_patterns))]
 
 #[macro_use]
 extern crate peresil;
