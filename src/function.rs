@@ -2,7 +2,6 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::iter::AdditiveIterator;
-use std::num::Float;
 use std::ops::Index;
 use std::{error,fmt,iter};
 
@@ -379,7 +378,7 @@ impl Function for Substring {
             let len = try!(args.pop_number());
             round_ties_to_positive_infinity(len)
         } else {
-            Float::infinity()
+            ::std::f64::INFINITY
         };
 
         let start = try!(args.pop_number());
@@ -547,8 +546,8 @@ impl Function for NumberConvert {
     }
 }
 
-fn floor() -> NumberConvert { NumberConvert(Float::floor) }
-fn ceiling() -> NumberConvert { NumberConvert(Float::ceil) }
+fn floor() -> NumberConvert { NumberConvert(f64::floor) }
+fn ceiling() -> NumberConvert { NumberConvert(f64::ceil) }
 
 // http://stackoverflow.com/a/28124775/155423
 fn round_ties_to_positive_infinity(x: f64) -> f64 {
@@ -595,7 +594,6 @@ pub fn register_core_functions(functions: &mut Functions) {
 mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
-    use std::num::Float;
 
     use document::Package;
 
@@ -841,22 +839,22 @@ mod test {
 
     #[test]
     fn substring_with_nan_start_is_empty() {
-        assert_eq!("", substring_test("あいうえお", Float::nan(), 3.0));
+        assert_eq!("", substring_test("あいうえお", ::std::f64::NAN, 3.0));
     }
 
     #[test]
     fn substring_with_nan_len_is_empty() {
-        assert_eq!("", substring_test("あいうえお", 1.0, Float::nan()));
+        assert_eq!("", substring_test("あいうえお", 1.0, ::std::f64::NAN));
     }
 
     #[test]
     fn substring_with_infinite_len_goes_to_end_of_string() {
-        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, Float::infinity()));
+        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, ::std::f64::INFINITY));
     }
 
     #[test]
     fn substring_with_negative_infinity_start_is_empty() {
-        assert_eq!("", substring_test("あいうえお", Float::neg_infinity(), Float::infinity()));
+        assert_eq!("", substring_test("あいうえお", ::std::f64::NEG_INFINITY, ::std::f64::INFINITY));
     }
 
     #[test]
@@ -985,32 +983,32 @@ mod test {
 
     #[test]
     fn round_nan_to_nan() {
-        assert_number(super::round(), Float::nan(), Float::nan());
+        assert_number(super::round(), ::std::f64::NAN, ::std::f64::NAN);
     }
 
     #[test]
     fn round_pos_inf_to_pos_inf() {
-        assert_number(super::round(), Float::infinity(), Float::infinity());
+        assert_number(super::round(), ::std::f64::INFINITY, ::std::f64::INFINITY);
     }
 
     #[test]
     fn round_neg_inf_to_neg_inf() {
-        assert_number(super::round(), Float::neg_infinity(), Float::neg_infinity());
+        assert_number(super::round(), ::std::f64::NEG_INFINITY, ::std::f64::NEG_INFINITY);
     }
 
     #[test]
     fn round_pos_zero_to_pos_zero() {
-        assert_number(super::round(), Float::zero(), Float::zero());
+        assert_number(super::round(), 0.0, 0.0);
     }
 
     #[test]
     fn round_neg_zero_to_neg_zero() {
-        assert_number(super::round(), Float::neg_zero(), Float::neg_zero());
+        assert_number(super::round(), -0.0, -0.0);
     }
 
     #[test]
     fn round_neg_zero_point_five_to_neg_zero() {
-        assert_number(super::round(), -0.5, Float::neg_zero());
+        assert_number(super::round(), -0.5, -0.0);
     }
 
     #[test]

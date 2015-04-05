@@ -662,7 +662,6 @@ impl Parser {
 mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
-    use std::num::Float;
 
     use document::Package;
     use document::dom4::{self,Document,Root,Element,Text};

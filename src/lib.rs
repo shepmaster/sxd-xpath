@@ -29,7 +29,6 @@ extern crate document;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::num::Float;
 use std::{iter,string};
 
 use self::Value::{Boolean,Number,String};
@@ -79,7 +78,7 @@ pub enum Value<'d> {
 }
 
 fn str_to_num(s: &str) -> f64 {
-    s.trim().parse().unwrap_or(Float::nan())
+    s.trim().parse().unwrap_or(::std::f64::NAN)
 }
 
 impl<'d> Value<'d> {
@@ -253,7 +252,6 @@ impl Factory {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::num::Float;
 
     use document::Package;
 
@@ -323,31 +321,31 @@ mod test {
 
     #[test]
     fn string_of_nan_is_nan() {
-        let v = Value::Number(Float::nan());
+        let v = Value::Number(::std::f64::NAN);
         assert_eq!("NaN", v.string());
     }
 
     #[test]
     fn string_of_positive_zero_is_zero() {
-        let v = Value::Number(Float::zero());
+        let v = Value::Number(0.0);
         assert_eq!("0", v.string());
     }
 
     #[test]
     fn string_of_negative_zero_is_zero() {
-        let v = Value::Number(Float::neg_zero());
+        let v = Value::Number(-0.0);
         assert_eq!("0", v.string());
     }
 
     #[test]
     fn string_of_positive_infinity_is_infinity() {
-        let v = Value::Number(Float::infinity());
+        let v = Value::Number(::std::f64::INFINITY);
         assert_eq!("Infinity", v.string());
     }
 
     #[test]
     fn string_of_negative_infinity_is_minus_infinity() {
-        let v = Value::Number(Float::neg_infinity());
+        let v = Value::Number(::std::f64::NEG_INFINITY);
         assert_eq!("-Infinity", v.string());
     }
 
