@@ -1,7 +1,7 @@
 use std::borrow::ToOwned;
 use std::{error,fmt,string};
 
-use peresil::{self,Point,Identifier};
+use peresil::{self,StringPoint,ParseMaster,Identifier,Recoverable};
 use document::parser::XmlParseExt;
 
 use super::node_test;
@@ -16,10 +16,26 @@ pub struct Tokenizer {
     prefer_recognition_of_operator_names: bool,
 }
 
+type XPathMaster<'a> = ParseMaster<StringPoint<'a>, TokenizerErr>;
+type XPathProgress<'a, T, E> = peresil::Progress<StringPoint<'a>, T, E>;
+
 pub type TokenResult = Result<Token, TokenizerErr>;
 
 #[derive(Debug,PartialEq,Clone,Copy)]
 pub enum TokenizerErr {
+    ExpectedQuote,
+    ExpectedNumber,
+    ExpectedCurrentNode,
+    ExpectedNamedOperator,
+    ExpectedAxis,
+    ExpectedAxisSeparator,
+    ExpectedNodeTest,
+    ExpectedPrefixedName,
+    ExpectedNameTest,
+    ExpectedVariableReference,
+    ExpectedToken,
+    ExpectedLeftParenthesis,
+    NotTokenizingNamedOperators,
     MismatchedQuoteCharacters,
     UnableToCreateToken,
 }
@@ -27,32 +43,65 @@ pub enum TokenizerErr {
 impl error::Error for TokenizerErr {
     fn description(&self) -> &str {
         use self::TokenizerErr::*;
-        match self {
-            &MismatchedQuoteCharacters => "mismatched quote character",
-            &UnableToCreateToken       => "unable to create token",
+        match *self {
+            ExpectedQuote =>
+                "expected a single or double quote",
+            ExpectedNumber =>
+                "expected a number",
+            ExpectedCurrentNode =>
+                "Expected the current node token",
+            ExpectedNamedOperator =>
+                "expected a named operator",
+            ExpectedAxis =>
+                "expected an axis name",
+            ExpectedAxisSeparator =>
+                "expected an axis separator",
+            ExpectedNodeTest =>
+                "expected a node test",
+            ExpectedPrefixedName =>
+                "expected an optionally prefixed name",
+            ExpectedNameTest =>
+                "expected a name test",
+            ExpectedVariableReference =>
+                "expected a variable reference",
+            ExpectedToken =>
+                "expected a token",
+            ExpectedLeftParenthesis =>
+                "expected a left parenthesis",
+            NotTokenizingNamedOperators =>
+                "internal error",
+            MismatchedQuoteCharacters =>
+                "mismatched quote character",
+            UnableToCreateToken =>
+                "unable to create token",
         }
     }
 }
 
 impl fmt::Display for TokenizerErr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use self::TokenizerErr::*;
         let as_err = self as &error::Error;
-        match self {
-            &MismatchedQuoteCharacters |
-            &UnableToCreateToken       => {
-                as_err.description().fmt(fmt)
-            },
+        as_err.description().fmt(fmt)
+    }
+}
+
+impl Recoverable for TokenizerErr {
+    fn recoverable(&self) -> bool {
+        use self::TokenizerErr::*;
+        match *self {
+            MismatchedQuoteCharacters |
+            UnableToCreateToken       => false,
+            _ => true,
         }
     }
 }
 
 trait XPathParseExt<'a> {
-    fn consume_quoted_string<E>(&self, quote: &str) -> peresil::Result<'a, &'a str, E>;
+    fn consume_quoted_string(&self, quote: &str) -> XPathProgress<'a, &'a str, ()>;
 }
 
-impl<'a> XPathParseExt<'a> for Point<'a> {
-    fn consume_quoted_string<E>(&self, quote: &str) -> peresil::Result<'a, &'a str, E> {
+impl<'a> XPathParseExt<'a> for StringPoint<'a> {
+    fn consume_quoted_string(&self, quote: &str) -> XPathProgress<'a, &'a str, ()> {
         let end_of_str = self.s.find(quote).or(Some(self.s.len()));
         self.consume_to(end_of_str)
     }
@@ -115,139 +164,148 @@ static NODE_TESTS: [Identifier<'static, NodeTestName>; 4] = [
     ("node", NodeTestName::Node),
 ];
 
-fn parse_literal<'a>(p: Point<'a>) -> peresil::Result<'a, &'a str, TokenizerErr> {
-    fn with_quote<'a>(p: Point<'a>, quote: &str)
-                     -> peresil::Result<'a, &'a str, TokenizerErr>
+fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, &'a str, TokenizerErr> {
+    fn with_quote<'a>(p: StringPoint<'a>, quote: &str)
+                     -> XPathProgress<'a, &'a str, TokenizerErr>
     {
-        let (_, p) = try_parse!(p.consume_literal(quote));
-        let (v, p) = try_parse!(p.consume_quoted_string(quote));
-        let (_, p) = try_parse!(p.consume_literal(quote), MismatchedQuoteCharacters);
+        let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| ExpectedQuote));
+        let (p, v) = try_parse!(p.consume_quoted_string(quote).map_err(|_| unreachable!()));
+        let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| MismatchedQuoteCharacters));
 
-        peresil::Result::success(v, p)
+        peresil::Progress::success(p, v)
     }
 
-    with_quote(p, "\x22") // "
-        .or_else(|| with_quote(p, "\x27")) // '
+    pm.alternate()
+        .one(|_| with_quote(p, "\x22")) // "
+        .one(|_| with_quote(p, "\x27")) // '
+        .finish()
 }
 
-fn parse_quoted_literal<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    parse_literal(p).map(|v| Token::Literal(v.to_owned()))
+fn parse_quoted_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    parse_literal(pm, p).map(|v| Token::Literal(v.to_owned()))
 }
 
-fn parse_number<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    fn fractional_part<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
-        let (_, p) = try_parse!(p.consume_literal("."));
-        let (_, p) = p.consume_decimal_chars::<E>().optional(p);
+fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    fn fractional_part<'a>(p: StringPoint<'a>) -> XPathProgress<'a, (), ()> {
+        let (p, _) = try_parse!(p.consume_literal("."));
+        let (p, _) = p.consume_decimal_chars().optional(p);
 
-        peresil::Result::success((), p)
+        peresil::Progress::success(p, ())
     }
 
-    fn with_integer<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
-        let (_, p) = try_parse!(p.consume_decimal_chars());
-        let (_, p) = fractional_part::<E>(p).optional(p);
+    fn with_integer<'a>(p: StringPoint<'a>) -> XPathProgress<'a, (), ()> {
+        let (p, _) = try_parse!(p.consume_decimal_chars());
+        let (p, _) = fractional_part(p).optional(p);
 
-        peresil::Result::success((), p)
+        peresil::Progress::success(p, ())
     }
 
-    fn without_integer<'a, E>(p: Point<'a>) -> peresil::Result<'a, (), E> {
-        let (_, p) = try_parse!(p.consume_literal("."));
-        let (_, p) = try_parse!(p.consume_decimal_chars());
+    fn without_integer<'a>(p: StringPoint<'a>) -> XPathProgress<'a, (), ()> {
+        let (p, _) = try_parse!(p.consume_literal("."));
+        let (p, _) = try_parse!(p.consume_decimal_chars());
 
-        peresil::Result::success((), p)
+        peresil::Progress::success(p, ())
     }
 
     let before_p = p;
 
-    let (_, p) = try_parse!(with_integer(p)
-                            .or_else(|| without_integer(p)));
+    let (p, _) = try_parse!({
+        pm.alternate()
+            .one(|_| with_integer(p).map_err(|_| ExpectedNumber))
+            .one(|_| without_integer(p).map_err(|_| ExpectedNumber))
+            .finish()
+    });
 
     let num = before_p.to(p);
     let num = num.parse().unwrap();
 
-    peresil::Result::success(Token::Number(num), p)
+    peresil::Progress::success(p, Token::Number(num))
 }
 
-fn parse_current_node<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    let (_, p) = try_parse!(p.consume_literal("."));
+fn parse_current_node<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    let (p, _) = try_parse!(p.consume_literal(".").map_err(|_| ExpectedCurrentNode));
 
-    peresil::Result::success(Token::CurrentNode, p)
+    peresil::Progress::success(p, Token::CurrentNode)
 }
 
-fn parse_named_operators<'a>(p: Point<'a>, prefer_named_ops: bool)
-                          -> peresil::Result<'a, Token, TokenizerErr>
+fn parse_named_operators<'a>(p: StringPoint<'a>, prefer_named_ops: bool)
+                          -> XPathProgress<'a, Token, TokenizerErr>
 {
     if prefer_named_ops {
-        p.consume_identifier(&NAMED_OPERATORS)
+        p.consume_identifier(&NAMED_OPERATORS).map_err(|_| ExpectedNamedOperator)
     } else {
-        peresil::Result::failure(None, p)
+        // This is ugly, but we have to return some error
+        peresil::Progress::failure(p, NotTokenizingNamedOperators)
     }
 }
 
-fn parse_axis_specifier<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
+fn parse_axis_specifier<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
-    let (axis, p) = try_parse!(p.consume_identifier(&AXES));
-    let (_, p) = try_parse!(p.consume_literal("::"));
+    let (p, axis) = try_parse!(p.consume_identifier(&AXES).map_err(|_| ExpectedAxis));
+    let (p, _) = try_parse!(p.consume_literal("::").map_err(|_| ExpectedAxisSeparator));
 
-    peresil::Result::success(Token::Axis(axis), p)
+    peresil::Progress::success(p, Token::Axis(axis))
 }
 
-fn parse_node_type<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    fn without_arg<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
-        let (node_type, p) = try_parse!(p.consume_identifier(&NODE_TESTS));
-        let (_, p) = try_parse!(p.consume_literal("()"));
+fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    fn without_arg<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
+        let (p, node_type) = try_parse!(p.consume_identifier(&NODE_TESTS));
+        let (p, _) = try_parse!(p.consume_literal("()"));
 
-        peresil::Result::success(Token::NodeTest(node_type), p)
+        peresil::Progress::success(p, Token::NodeTest(node_type))
     }
 
-    fn with_arg<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-        let (_, p) = try_parse!(p.consume_literal("processing-instruction("));
-        let (arg, p) = try_parse!(parse_literal(p));
-        let (_, p) = try_parse!(p.consume_literal(")"));
+    fn with_arg<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
+        let (p, _) = try_parse!(p.consume_literal("processing-instruction("));
+        let (p, arg) = try_parse!(parse_literal(pm, p).map_err(|_| ()));
+        let (p, _) = try_parse!(p.consume_literal(")"));
 
         let name = NodeTestName::ProcessingInstruction(Some(arg.to_owned()));
-        peresil::Result::success(Token::NodeTest(name), p)
+        peresil::Progress::success(p, Token::NodeTest(name))
     }
 
-    without_arg(p)
-        .or_else(|| with_arg(p))
+    pm.alternate()
+        .one(|_| without_arg(p).map_err(|_| ExpectedNodeTest))
+        .one(|pm| with_arg(pm, p).map_err(|_| ExpectedNodeTest))
+        .finish()
 }
 
-fn parse_function_call<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    let (name, p) = try_parse!(p.consume_prefixed_name());
+fn parse_function_call<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
     // Do not advance the point here. We want to know if there *is* a
     // left-paren, but do not want to actually consume it here.
-    try_parse!(p.consume_literal("("));
+    try_parse!(p.consume_literal("(").map_err(|_| ExpectedLeftParenthesis));
 
     // TODO: We should be using the prefix here!
     let name = name.local_part().to_owned();
-    peresil::Result::success(Token::Function(name), p)
+    peresil::Progress::success(p, Token::Function(name))
 }
 
-fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    fn wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
-        let (wc, p) = try_parse!(p.consume_literal("*"));
+fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    fn wildcard<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
+        let (p, wc) = try_parse!(p.consume_literal("*"));
 
         let name = node_test::NameTest {
             prefix: None,
             local_part: wc.to_owned(),
         };
-        peresil::Result::success(Token::NameTest(name), p)
+        peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_wildcard<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
-        let (prefix, p) = try_parse!(p.consume_ncname());
-        let (_, p) = try_parse!(p.consume_literal(":"));
-        let (wc, p) = try_parse!(p.consume_literal("*"));
+    fn prefixed_wildcard<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
+        let (p, prefix) = try_parse!(p.consume_ncname());
+        let (p, _) = try_parse!(p.consume_literal(":"));
+        let (p, wc) = try_parse!(p.consume_literal("*"));
 
         let name = node_test::NameTest {
             prefix: Some(prefix.to_owned()),
             local_part: wc.to_owned(),
         };
-        peresil::Result::success(Token::NameTest(name), p)
+        peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_name<'a, E>(p: Point<'a>) -> peresil::Result<'a, Token, E> {
+    fn prefixed_name<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
                 prefix: name.prefix().map(|p| p.to_owned()),
@@ -256,18 +314,20 @@ fn parse_name_test<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr>
         })
     }
 
-    wildcard(p)
-        .or_else(|| prefixed_wildcard(p))
-        .or_else(|| prefixed_name(p))
+    pm.alternate()
+        .one(|_| wildcard(p).map_err(|_| ExpectedNameTest))
+        .one(|_| prefixed_wildcard(p).map_err(|_| ExpectedNameTest))
+        .one(|_| prefixed_name(p).map_err(|_| ExpectedNameTest))
+        .finish()
 }
 
-fn parse_variable_reference<'a>(p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-    let (_, p) = try_parse!(p.consume_literal("$"));
-    let (name, p) = try_parse!(p.consume_prefixed_name());
+fn parse_variable_reference<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    let (p, _) = try_parse!(p.consume_literal("$").map_err(|_| ExpectedVariableReference));
+    let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
 
     // TODO: We should be using the prefix here!
     let name = name.local_part().to_owned();
-    peresil::Result::success(Token::Variable(name), p)
+    peresil::Progress::success(p, Token::Variable(name))
 }
 
 impl Tokenizer {
@@ -283,43 +343,47 @@ impl Tokenizer {
         self.xpath.len() > self.start
     }
 
-    fn parse_token<'a>(&self, p: Point<'a>) -> peresil::Result<'a, Token, TokenizerErr> {
-        let (_, p) = p.consume_space().optional(p);
+    fn parse_token<'a>(&self, pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+        let (p, _) = p.consume_space().optional(p);
 
-        let (tok, p) = try_parse!({
-            p.consume_identifier(&TWO_CHAR_TOKENS)
-                .or_else(|| p.consume_identifier(&SINGLE_CHAR_TOKENS))
-                .or_else(|| parse_quoted_literal(p))
-                .or_else(|| parse_number(p))
-                .or_else(|| parse_current_node(p))
-                .or_else(|| parse_named_operators(p, self.prefer_recognition_of_operator_names))
-                .or_else(|| parse_axis_specifier(p))
-                .or_else(|| parse_node_type(p))
-                .or_else(|| parse_function_call(p))
-                .or_else(|| parse_name_test(p))
-                .or_else(|| parse_variable_reference(p))
+        let (p, tok) = try_parse!({
+            pm.alternate()
+                .one(|_| p.consume_identifier(&TWO_CHAR_TOKENS).map_err(|_| ExpectedToken))
+                .one(|_| p.consume_identifier(&SINGLE_CHAR_TOKENS).map_err(|_| ExpectedToken))
+                .one(|pm| parse_quoted_literal(pm, p))
+                .one(|pm| parse_number(pm, p))
+                .one(|_| parse_current_node(p))
+                .one(|_| parse_named_operators(p, self.prefer_recognition_of_operator_names))
+                .one(|_| parse_axis_specifier(p))
+                .one(|pm| parse_node_type(pm, p))
+                .one(|_| parse_function_call(p))
+                .one(|pm| parse_name_test(pm, p))
+                .one(|_| parse_variable_reference(p))
+                .finish()
         });
 
-        let (_, p) = p.consume_space().optional(p);
+        let (p, _) = p.consume_space().optional(p);
 
-        peresil::Result::success(tok, p)
+        peresil::Progress::success(p, tok)
     }
 
     fn raw_next_token(&mut self) -> TokenResult {
-        let p = Point { s: &self.xpath[self.start..], offset: self.start };
+        let mut pm = ParseMaster::new();
+        let p = StringPoint { s: &self.xpath[self.start..], offset: self.start };
 
-        match self.parse_token(p) {
-            peresil::Result::Success(p) => {
-                self.start = p.point.offset;
-                Ok(p.data)
+        let r = self.parse_token(&mut pm, p);
+        match pm.finish(r) {
+            peresil::Progress { status: peresil::Status::Success(data), point } => {
+                self.start = point.offset;
+                Ok(data)
             },
-            peresil::Result::Partial{ failure: p, .. } |
-            peresil::Result::Failure(p) => {
-                match p.data {
-                    Some(e) => Err(e),
-                    None    => Err(UnableToCreateToken),
+            peresil::Progress { status: peresil::Status::Failure(mut e), point } => {
+                if point.offset == self.start {
+                    Err(UnableToCreateToken)
+                } else {
+                    Err(e.pop().unwrap())
                 }
-            }
+            },
         }
     }
 
@@ -878,11 +942,8 @@ mod test {
     #[test]
     fn converts_at_sign_to_attribute_axis() {
         let input_tokens: Vec<TokenResult> = vec!(Ok(Token::AtSign));
-        // let iter: &Iterator<TokenResult> = &input_tokens.into_iter();
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
-        // let a: () = deabbrv.next();
-        // println!("{}",a );
 
         assert_eq!(all_tokens(deabbrv), vec![Token::Axis(AxisName::Attribute)]);
     }

@@ -55,7 +55,7 @@ fn load_xml<R>(input: R) -> document::Package
 
     match p.parse(&data) {
         Ok(d) => d,
-        Err(point) => panic!("Unable to parse: {}", pretty_error(&data, point)),
+        Err((point, _)) => panic!("Unable to parse: {}", pretty_error(&data, point)),
     }
 }
 
