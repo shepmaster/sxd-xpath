@@ -69,14 +69,14 @@ unpack!(Node, processing_instruction, ProcessingInstruction, dom4::ProcessingIns
 impl<'d> Node<'d> {
     pub fn document(&self) -> &'d dom4::Document<'d> {
         use self::Node::*;
-        match self {
-            &Root(n)                  => n.document(),
-            &Element(n)               => n.document(),
-            &Attribute(n)             => n.document(),
-            &Text(n)                  => n.document(),
-            &Comment(n)               => n.document(),
-            &ProcessingInstruction(n) => n.document(),
-            &Namespace(n)             => n.document(),
+        match *self {
+            Root(n)                  => n.document(),
+            Element(n)               => n.document(),
+            Attribute(n)             => n.document(),
+            Text(n)                  => n.document(),
+            Comment(n)               => n.document(),
+            ProcessingInstruction(n) => n.document(),
+            Namespace(n)             => n.document(),
         }
     }
 
@@ -95,32 +95,32 @@ impl<'d> Node<'d> {
             }
         };
 
-        match self {
-            &Root(_)                  => None,
-            &Element(n)               => {
+        match *self {
+            Root(_)                  => None,
+            Element(n)               => {
                 Some(qname_prefixed_name(n, n.name(), n.preferred_prefix()))
             },
-            &Attribute(n)             => {
+            Attribute(n)             => {
                 let parent = n.parent().expect("Cannot process attribute without parent");
                 Some(qname_prefixed_name(parent, n.name(), n.preferred_prefix()))
             },
-            &Text(_)                  => None,
-            &Comment(_)               => None,
-            &ProcessingInstruction(n) => Some(n.target().to_owned()),
-            &Namespace(n)             => Some(n.prefix().to_owned()),
+            Text(_)                  => None,
+            Comment(_)               => None,
+            ProcessingInstruction(n) => Some(n.target().to_owned()),
+            Namespace(n)             => Some(n.prefix().to_owned()),
         }
     }
 
     pub fn expanded_name(&self) -> Option<QName<'d>> {
         use self::Node::*;
-        match self {
-            &Root(_)                  => None,
-            &Element(n)               => Some(n.name()),
-            &Attribute(n)             => Some(n.name()),
-            &Text(_)                  => None,
-            &Comment(_)               => None,
-            &ProcessingInstruction(n) => Some(QName::new(n.target())),
-            &Namespace(n)             => Some(n.expanded_name())
+        match *self {
+            Root(_)                  => None,
+            Element(n)               => Some(n.name()),
+            Attribute(n)             => Some(n.name()),
+            Text(_)                  => None,
+            Comment(_)               => None,
+            ProcessingInstruction(n) => Some(QName::new(n.target())),
+            Namespace(n)             => Some(n.expanded_name())
         }
     }
 
@@ -195,14 +195,14 @@ impl<'d> Node<'d> {
             result
         }
 
-        match self {
-            &Root(_)                  => text_descendants_string_value(self),
-            &Element(_)               => text_descendants_string_value(self),
-            &Attribute(n)             => n.value().to_owned(),
-            &ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
-            &Comment(n)               => n.text().to_owned(),
-            &Text(n)                  => n.text().to_owned(),
-            &Namespace(n)             => n.uri().to_owned(),
+        match *self {
+            Root(_)                  => text_descendants_string_value(self),
+            Element(_)               => text_descendants_string_value(self),
+            Attribute(n)             => n.value().to_owned(),
+            ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
+            Comment(n)               => n.text().to_owned(),
+            Text(n)                  => n.text().to_owned(),
+            Namespace(n)             => n.uri().to_owned(),
         }
     }
 }
