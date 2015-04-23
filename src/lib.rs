@@ -33,7 +33,7 @@ use std::{iter,string};
 
 use self::Value::{Boolean,Number,String};
 
-use nodeset::{Nodeset,Node,ToNode};
+use nodeset::{Nodeset,Node};
 use parser::Parser;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 
@@ -158,10 +158,10 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
                   variables: &'a Variables<'d>,
                   namespaces: &'a Namespaces)
                   -> EvaluationContext<'a, 'd>
-        where N: ToNode<'d>
+        where N: Into<Node<'d>>
     {
         EvaluationContext {
-            node: node.into_node(),
+            node: node.into(),
             functions: functions,
             variables: variables,
             namespaces: namespaces,
@@ -171,10 +171,10 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
     }
 
     fn new_context_for<N>(&self, node: N) -> EvaluationContext<'a, 'd>
-        where N: ToNode<'d>
+        where N: Into<Node<'d>>
     {
         EvaluationContext {
-            node: node.into_node(),
+            node: node.into(),
             .. *self
         }
     }

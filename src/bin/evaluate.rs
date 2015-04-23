@@ -15,7 +15,6 @@ use std::io::{self,Read};
 
 use document::parser::Parser;
 
-use xpath::nodeset::ToNode;
 use xpath::{EvaluationContext,Factory,Expression,Value};
 
 use getopts::Options;
@@ -155,14 +154,13 @@ fn main() {
         };
 
         let doc = package.as_document();
-        let root = doc.root().into_node();
 
         let functions = build_functions();
         let variables = build_variables(&arguments);
         let namespaces = build_namespaces(&arguments);
 
         let context = EvaluationContext::new(
-            root,
+            doc.root(),
             &functions,
             &variables,
             &namespaces,

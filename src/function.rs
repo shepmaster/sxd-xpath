@@ -597,7 +597,7 @@ mod test {
     use document::Package;
 
     use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
-    use super::super::nodeset::ToNode;
+    use super::super::nodeset::Node;
     use super::{
         Function,
         Error,
@@ -635,7 +635,7 @@ mod test {
 
         fn evaluate<N, F>(&self, node: N, f: F, args: Vec<Value<'d>>)
             -> Result<Value<'d>, Error>
-            where N: ToNode<'d>,
+            where N: Into<Node<'d>>,
                   F: Function
         {
             let context = EvaluationContext::new(

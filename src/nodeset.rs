@@ -22,21 +22,11 @@ macro_rules! unpack(
 );
 
 macro_rules! conversion_trait(
-    ($tr_name:ident, $method:ident, $res_type:ident,
-        { $(dom4::$leaf_type:ident => Node::$variant:ident),* }
-    ) => (
-        pub trait $tr_name<'d> {
-            fn $method(self) -> $res_type<'d>;
-        }
-
-        impl<'d> $tr_name<'d> for $res_type<'d> {
-            fn $method(self) -> $res_type<'d> {
-                self
-            }
-        }
-
-        $(impl<'d> $tr_name<'d> for dom4::$leaf_type<'d> {
-            fn $method(self) -> $res_type<'d> {
+    ($res_type:ident, {
+        $(dom4::$leaf_type:ident => Node::$variant:ident),*
+    }) => (
+        $(impl<'d> Into<$res_type<'d>> for dom4::$leaf_type<'d> {
+            fn into(self) -> $res_type<'d> {
                 Node::$variant(self)
             }
         })*
@@ -136,53 +126,53 @@ impl<'d> Node<'d> {
 
     pub fn parent(&self) -> Option<Node<'d>> {
         use self::Node::*;
-        match self {
-            &Root(_)                  => None,
-            &Element(n)               => n.parent().map(|n| n.into_node()),
-            &Attribute(n)             => n.parent().map(|n| n.into_node()),
-            &Text(n)                  => n.parent().map(|n| n.into_node()),
-            &Comment(n)               => n.parent().map(|n| n.into_node()),
-            &ProcessingInstruction(n) => n.parent().map(|n| n.into_node()),
-            &Namespace(n)             => Some(n.parent().into_node()),
+        match *self {
+            Root(_)                  => None,
+            Element(n)               => n.parent().map(|n| n.into()),
+            Attribute(n)             => n.parent().map(|n| n.into()),
+            Text(n)                  => n.parent().map(|n| n.into()),
+            Comment(n)               => n.parent().map(|n| n.into()),
+            ProcessingInstruction(n) => n.parent().map(|n| n.into()),
+            Namespace(n)             => Some(n.parent().into()),
         }
     }
 
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
-        match self {
-            &Root(n)                  => n.children().iter().map(|n| n.into_node()).collect(),
-            &Element(n)               => n.children().iter().map(|n| n.into_node()).collect(),
-            &Attribute(_)             => Vec::new(),
-            &Text(_)                  => Vec::new(),
-            &Comment(_)               => Vec::new(),
-            &ProcessingInstruction(_) => Vec::new(),
-            &Namespace(_)             => Vec::new(),
+        match *self {
+            Root(n)                  => n.children().iter().map(|&n| n.into()).collect(),
+            Element(n)               => n.children().iter().map(|&n| n.into()).collect(),
+            Attribute(_)             => Vec::new(),
+            Text(_)                  => Vec::new(),
+            Comment(_)               => Vec::new(),
+            ProcessingInstruction(_) => Vec::new(),
+            Namespace(_)             => Vec::new(),
         }
     }
 
     pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
-        match self {
-            &Root(_)                  => Vec::new(),
-            &Element(n)               => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
-            &Attribute(_)             => Vec::new(),
-            &Text(n)                  => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
-            &Comment(n)               => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
-            &ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|n| n.into_node()).collect(),
-            &Namespace(_)             => Vec::new(),
+        match *self {
+            Root(_)                  => Vec::new(),
+            Element(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Attribute(_)             => Vec::new(),
+            Text(n)                  => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Comment(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Namespace(_)             => Vec::new(),
         }
     }
 
     pub fn following_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
-        match self {
-            &Root(_)                  => Vec::new(),
-            &Element(n)               => n.following_siblings().iter().map(|n| n.into_node()).collect(),
-            &Attribute(_)             => Vec::new(),
-            &Text(n)                  => n.following_siblings().iter().map(|n| n.into_node()).collect(),
-            &Comment(n)               => n.following_siblings().iter().map(|n| n.into_node()).collect(),
-            &ProcessingInstruction(n) => n.following_siblings().iter().map(|n| n.into_node()).collect(),
-            &Namespace(_)             => Vec::new(),
+        match *self {
+            Root(_)                  => Vec::new(),
+            Element(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Attribute(_)             => Vec::new(),
+            Text(n)                  => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Comment(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            ProcessingInstruction(n) => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Namespace(_)             => Vec::new(),
         }
     }
 
@@ -217,17 +207,17 @@ impl<'d> Node<'d> {
     }
 }
 
-conversion_trait!(ToNode, into_node, Node, {
-    dom4::Root => Node::Root,
-    dom4::Element => Node::Element,
-    dom4::Attribute => Node::Attribute,
-    dom4::Text => Node::Text,
-    dom4::Comment => Node::Comment,
+conversion_trait!(Node, {
+    dom4::Root                  => Node::Root,
+    dom4::Element               => Node::Element,
+    dom4::Attribute             => Node::Attribute,
+    dom4::Text                  => Node::Text,
+    dom4::Comment               => Node::Comment,
     dom4::ProcessingInstruction => Node::ProcessingInstruction
 });
 
-impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
-    fn into_node(self) -> Node<'d> {
+impl<'d> Into<Node<'d>> for dom4::ChildOfRoot<'d> {
+    fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
             dom4::ChildOfRoot::Element(n)               => Element(n),
@@ -237,8 +227,8 @@ impl<'d> ToNode<'d> for dom4::ChildOfRoot<'d> {
     }
 }
 
-impl<'d> ToNode<'d> for dom4::ChildOfElement<'d> {
-    fn into_node(self) -> Node<'d> {
+impl<'d> Into<Node<'d>> for dom4::ChildOfElement<'d> {
+    fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
             dom4::ChildOfElement::Element(n)               => Element(n),
@@ -249,8 +239,8 @@ impl<'d> ToNode<'d> for dom4::ChildOfElement<'d> {
     }
 }
 
-impl<'d> ToNode<'d> for dom4::ParentOfChild<'d> {
-    fn into_node(self) -> Node<'d> {
+impl<'d> Into<Node<'d>> for dom4::ParentOfChild<'d> {
+    fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
             dom4::ParentOfChild::Root(n)    => Root(n),
@@ -270,8 +260,10 @@ impl<'d> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
     }
 
-    pub fn add<N : ToNode<'d>>(&mut self, node: N) {
-        self.nodes.push(node.into_node());
+    pub fn add<N>(&mut self, node: N)
+        where N: Into<Node<'d>>
+    {
+        self.nodes.push(node.into());
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
@@ -297,7 +289,7 @@ impl<'d> Nodeset<'d> {
         };
 
         let mut idx = 0;
-        let mut stack = vec![doc.root().into_node()];
+        let mut stack = vec![doc.root().into()];
         let mut order: HashMap<Node, usize> = HashMap::new();
 
         // Rebuilding this each time cannot possibly be performant,
@@ -313,7 +305,7 @@ impl<'d> Nodeset<'d> {
 
             if let Node::Element(e) = n {
                 // TODO: namespaces
-                stack.extend(e.attributes().into_iter().map(|a| a.into_node()));
+                stack.extend(e.attributes().into_iter().map(|a| a.into()));
             }
         }
 
@@ -363,7 +355,9 @@ mod test {
         Root,
         Text,
     };
-    use super::{Nodeset,ToNode};
+    use super::{Nodeset,Node};
+
+    fn into_node<'d, T: Into<Node<'d>>>(n: T) -> Node<'d> { n.into() }
 
     #[test]
     fn nodeset_can_include_all_node_types() {
@@ -431,7 +425,7 @@ mod test {
 
         let nodes = nodeset![c2, c1];
 
-        assert_eq!(Some(c1.into_node()), nodes.document_order_first());
+        assert_eq!(Some(into_node(c1)), nodes.document_order_first());
     }
 
     #[test]
@@ -448,7 +442,7 @@ mod test {
 
         let nodes = nodeset![child, attr];
 
-        assert_eq!(Some(attr.into_node()), nodes.document_order_first());
+        assert_eq!(Some(attr.into()), nodes.document_order_first());
     }
 
     #[test]
@@ -459,7 +453,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         e.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node = e.into_node();
+        let node: Node = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -471,7 +465,7 @@ mod test {
 
         let e = doc.create_element(("uri", "wow"));
         e.register_prefix("prefix", "uri");
-        let node = e.into_node();
+        let node: Node = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -483,7 +477,7 @@ mod test {
         let doc = package.as_document();
 
         let e = doc.create_element(("uri", "wow"));
-        let node = e.into_node();
+        let node: Node = e.into();
 
         assert_eq!(Some("wow".to_owned()), node.prefixed_name());
     }
@@ -497,7 +491,7 @@ mod test {
         let a = e.set_attribute_value(("uri", "attr"), "value");
         a.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node = a.into_node();
+        let node: Node = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -510,7 +504,7 @@ mod test {
         let e = doc.create_element("element");
         let a = e.set_attribute_value(("uri", "attr"), "value");
         e.register_prefix("prefix", "uri");
-        let node = a.into_node();
+        let node: Node = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -521,7 +515,7 @@ mod test {
         let doc = package.as_document();
 
         let pi = doc.create_processing_instruction("target", Some("value"));
-        let node = pi.into_node();
+        let node: Node = pi.into();
 
         assert_eq!(Some("target".to_owned()), node.prefixed_name());
     }
@@ -542,7 +536,7 @@ mod test {
         child.append_child(text2);
         element.append_child(text3);
 
-        assert_eq!("Presenting: Earth!", element.into_node().string_value());
+        assert_eq!("Presenting: Earth!", into_node(element).string_value());
     }
 
     #[test]
@@ -550,7 +544,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let element = doc.create_element("hello");
-        let attribute = element.set_attribute_value("world", "Earth").into_node();
+        let attribute: Node = element.set_attribute_value("world", "Earth").into();
         assert_eq!("Earth", attribute.string_value());
     }
 
@@ -558,7 +552,7 @@ mod test {
     fn string_value_of_pi_node_is_empty_when_no_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi = doc.create_processing_instruction("hello", None).into_node();
+        let pi: Node = doc.create_processing_instruction("hello", None).into();
         assert_eq!("", pi.string_value());
     }
 
@@ -566,7 +560,7 @@ mod test {
     fn string_value_of_pi_node_is_the_value_when_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi = doc.create_processing_instruction("hello", Some("world")).into_node();
+        let pi: Node = doc.create_processing_instruction("hello", Some("world")).into();
         assert_eq!("world", pi.string_value());
     }
 
@@ -574,7 +568,7 @@ mod test {
     fn string_value_of_comment_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let comment = doc.create_comment("hello world").into_node();
+        let comment: Node = doc.create_comment("hello world").into();
         assert_eq!("hello world", comment.string_value());
     }
 
@@ -582,7 +576,7 @@ mod test {
     fn string_value_of_text_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let text = doc.create_text("hello world").into_node();
+        let text: Node = doc.create_text("hello world").into();
         assert_eq!("hello world", text.string_value());
     }
 }

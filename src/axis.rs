@@ -299,7 +299,7 @@ mod test {
 
     use super::super::EvaluationContext;
     use super::super::node_test::NodeTest;
-    use super::super::nodeset::{Nodeset,ToNode};
+    use super::super::nodeset::{Nodeset,Node};
 
     use super::{
         Axis,
@@ -322,7 +322,7 @@ mod test {
     fn execute<'n, A, N>(axis: A, node: N)
         -> Nodeset<'n>
         where A: Axis,
-              N: ToNode<'n>,
+              N: Into<Node<'n>>,
     {
         let functions = &HashMap::new();
         let variables = &HashMap::new();

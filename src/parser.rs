@@ -670,7 +670,7 @@ mod test {
     use super::super::{Functions,Variables,Namespaces};
     use super::super::{Value,EvaluationContext};
 
-    use super::super::nodeset::{Node,ToNode};
+    use super::super::nodeset::Node;
 
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
@@ -831,8 +831,10 @@ mod test {
             self.evaluate_on(expr, self.doc.top_node())
         }
 
-        fn evaluate_on<N : ToNode<'d>>(&self, expr: &Expression, node: N) -> Value<'d> {
-            let node = node.into_node();
+        fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
+            where N: Into<Node<'d>>
+        {
+            let node = node.into();
             let context = EvaluationContext::new(
                 node,
                 &self.functions,
