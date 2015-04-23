@@ -169,7 +169,7 @@ mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
 
-    use document::{Package,IntoQName};
+    use document::{Package,QName};
     use document::dom4::{Document,Element,Attribute};
 
     use super::super::{EvaluationContext,Functions,Variables,Namespaces};
@@ -201,7 +201,7 @@ mod test {
 
         fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
                                         -> (Attribute<'d>, EvaluationContext<'d, 'd>)
-            where N: IntoQName<'n>
+            where N: Into<QName<'n>>
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
@@ -218,7 +218,7 @@ mod test {
 
         fn context_for_element<'n, N>(&'d self, name: N)
                                   -> (Element<'d>, EvaluationContext<'d, 'd>)
-            where N: IntoQName<'n>
+            where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
             let c = EvaluationContext::new(e, &self.functions, &self.variables, &self.namespaces);
