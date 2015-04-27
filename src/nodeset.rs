@@ -25,9 +25,9 @@ macro_rules! conversion_trait(
     ($res_type:ident, {
         $(dom4::$leaf_type:ident => Node::$variant:ident),*
     }) => (
-        $(impl<'d> Into<$res_type<'d>> for dom4::$leaf_type<'d> {
-            fn into(self) -> $res_type<'d> {
-                Node::$variant(self)
+        $(impl<'d> From<dom4::$leaf_type<'d>> for $res_type<'d>  {
+            fn from(v: dom4::$leaf_type<'d>) -> $res_type<'d> {
+                Node::$variant(v)
             }
         })*
     )
