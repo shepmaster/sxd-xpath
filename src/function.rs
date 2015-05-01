@@ -384,7 +384,7 @@ impl Function for Substring {
         let start = round_ties_to_positive_infinity(start);
         let s = try!(args.pop_string());
 
-        let chars = s.graphemes(true).enumerate();
+        let chars = s.chars().enumerate();
         let selected_chars = chars.filter_map(|(p, s)| {
             let p = (p+1) as f64; // 1-based indexing
             if p >= start && p < start + len {
@@ -408,7 +408,7 @@ impl Function for StringLength {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = try!(args.pop_string_value_or_context_node(context));
-        Ok(Value::Number(arg.graphemes(true).count() as f64))
+        Ok(Value::Number(arg.chars().count() as f64))
     }
 }
 
@@ -444,15 +444,15 @@ impl Function for Translate {
         let s = try!(args.pop_string());
 
         let mut replacements = HashMap::new();
-        let pairs = from.graphemes(true).zip(to.graphemes(true).chain(iter::repeat("")));
+        let pairs = from.chars().zip(to.chars().map(|c| Some(c)).chain(iter::repeat(None)));
         for (from, to) in pairs {
             if let Entry::Vacant(entry) = replacements.entry(from) {
                 entry.insert(to);
             }
         }
 
-        let s = s.graphemes(true).map(|c| {
-            replacements.get(c).map(|&s| s).unwrap_or(c)
+        let s = s.chars().filter_map(|c| {
+            replacements.get(&c).map(|&s| s).unwrap_or(Some(c))
         }).collect();
 
         Ok(Value::String(s))

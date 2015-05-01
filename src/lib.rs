@@ -20,7 +20,7 @@
 #![feature(box_syntax)]
 #![feature(collections)]
 #![feature(core)]
-#![feature(unicode)]
+#![feature(collections_drain)]
 #![cfg_attr(test, feature(slice_patterns))]
 
 #[macro_use]
