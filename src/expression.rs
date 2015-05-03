@@ -431,7 +431,7 @@ pub struct Step {
 impl Step {
     pub fn new(axis: StepAxis, node_test: StepTest, predicates: Vec<SubExpression>) -> Step {
         let mut predicates = predicates;
-        let preds = predicates.drain().map(|p| Predicate { expression: p }).collect();
+        let preds = predicates.drain(..).map(|p| Predicate { expression: p }).collect();
         Step { axis: axis, node_test: node_test, predicates: preds }
     }
 
