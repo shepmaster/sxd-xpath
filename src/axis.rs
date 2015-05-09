@@ -409,7 +409,10 @@ mod test {
         assert_eq!(result, nodeset![child2, child3]);
     }
 
-    fn setup_preceding_following<'d>(doc: &'d dom4::Document<'d>) -> [dom4::Element<'d>; 5] {
+    fn setup_preceding_following<'d>(doc: &'d dom4::Document<'d>) ->
+        (dom4::Element<'d>, dom4::Element<'d>, dom4::Element<'d>,
+         dom4::Element<'d>, dom4::Element<'d>)
+    {
         let parent = doc.create_element("parent");
 
         let a1 = doc.create_element("a1");
@@ -428,14 +431,14 @@ mod test {
         a2.append_child(b2);
         a2.append_child(b3);
 
-        [a1, b1, b2, b3, a3]
+        (a1, b1, b2, b3, a3)
     }
 
     #[test]
     fn preceding_selects_in_reverse_document_order() {
         let package = Package::new();
         let doc = package.as_document();
-        let [a1, b1, b2, _, _] = setup_preceding_following(&doc);
+        let (a1, b1, b2, _, _) = setup_preceding_following(&doc);
 
         let result = execute(Preceding, b2);
 
@@ -446,7 +449,7 @@ mod test {
     fn following_selects_in_document_order() {
         let package = Package::new();
         let doc = package.as_document();
-        let [_, _, b2, b3, a3] = setup_preceding_following(&doc);
+        let (_, _, b2, b3, a3) = setup_preceding_following(&doc);
 
         let result = execute(Following, b2);
 
