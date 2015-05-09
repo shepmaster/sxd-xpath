@@ -4,6 +4,10 @@ name = "xpath"
 version = "0.0.1"
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 
+[features]
+
+unstable = []
+
 [dependencies]
 
 getopts = "0.2.4"

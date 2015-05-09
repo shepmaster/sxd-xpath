@@ -255,6 +255,27 @@ pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
 
+#[cfg(not(feature = "unstable"))]
+fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
+    nodes.iter().fold(None, |earliest, node| {
+        match earliest {
+            None => Some(node),
+            Some(current) => {
+                if order[node] < order[current] {
+                    Some(node)
+                } else {
+                    Some(current)
+                }
+            }
+        }
+    }).cloned()
+}
+
+#[cfg(feature = "unstable")]
+fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
+    nodes.iter().min_by(|&n| order[n]).cloned()
+}
+
 impl<'d> Nodeset<'d> {
     pub fn new() -> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
@@ -267,19 +288,19 @@ impl<'d> Nodeset<'d> {
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
-        Iter { iter: self.nodes.iter() }
+        IntoIterator::into_iter(self)
     }
 
-    pub fn add_nodeset(& mut self, other: &Nodeset<'d>) {
-        self.nodes.push_all(&other.nodes);
+    pub fn into_iter(self) -> IntoIter<'d> {
+        IntoIterator::into_iter(self)
+    }
+
+    pub fn add_nodeset(&mut self, other: &Nodeset<'d>) {
+        self.nodes.extend(other);
     }
 
     pub fn size(&self) -> usize {
         self.nodes.len()
-    }
-
-    pub fn into_iter(self) -> IntoIter<'d> {
-        IntoIter { iter: self.nodes.into_iter() }
     }
 
     pub fn document_order_first(&self) -> Option<Node<'d>> {
@@ -309,7 +330,25 @@ impl<'d> Nodeset<'d> {
             }
         }
 
-        self.nodes.iter().min_by(|&n| order[n]).map(|n| *n)
+        first_node_in_order(&self.nodes, order)
+    }
+}
+
+impl<'a, 'd : 'a> IntoIterator for &'a Nodeset<'d> {
+    type Item = Node<'d>;
+    type IntoIter = Iter<'a, 'd>;
+
+    fn into_iter(self) -> Iter<'a, 'd> {
+        Iter { iter: self.nodes.iter() }
+    }
+}
+
+impl<'d> IntoIterator for Nodeset<'d> {
+    type Item = Node<'d>;
+    type IntoIter = IntoIter<'d>;
+
+    fn into_iter(self) -> IntoIter<'d> {
+        IntoIter { iter: self.nodes.into_iter() }
     }
 }
 
@@ -328,8 +367,8 @@ pub struct Iter<'a, 'd : 'a> {
 }
 
 impl<'a, 'd : 'a> Iterator for Iter<'a, 'd> {
-    type Item = &'a Node<'d>;
-    fn next(&mut self) -> Option<&'a Node<'d>> { self.iter.next() }
+    type Item = Node<'d>;
+    fn next(&mut self) -> Option<Node<'d>> { self.iter.next().cloned() }
 }
 
 pub struct IntoIter<'d> {
@@ -382,12 +421,12 @@ mod test {
         let node_vec: Vec<_> = nodes.iter().collect();
 
         assert_eq!(6, node_vec.len());
-        assert_eq!(node_vec[0], &Root(r));
-        assert_eq!(node_vec[1], &Element(e));
-        assert_eq!(node_vec[2], &Attribute(a));
-        assert_eq!(node_vec[3], &Text(t));
-        assert_eq!(node_vec[4], &Comment(c));
-        assert_eq!(node_vec[5], &ProcessingInstruction(p));
+        assert_eq!(node_vec[0], Root(r));
+        assert_eq!(node_vec[1], Element(e));
+        assert_eq!(node_vec[2], Attribute(a));
+        assert_eq!(node_vec[3], Text(t));
+        assert_eq!(node_vec[4], Comment(c));
+        assert_eq!(node_vec[5], ProcessingInstruction(p));
     }
 
     #[test]

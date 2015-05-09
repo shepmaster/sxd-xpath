@@ -526,7 +526,7 @@ impl Function for Sum {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
-        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).sum();
+        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).fold(0.0, |acc, i| acc + i);
         Ok(Value::Number(r))
     }
 }
@@ -562,31 +562,31 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
 fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 
 pub fn register_core_functions(functions: &mut Functions) {
-    functions.insert("last".to_owned(), box Last);
-    functions.insert("position".to_owned(), box Position);
-    functions.insert("count".to_owned(), box Count);
-    functions.insert("local-name".to_owned(), box LocalName);
-    functions.insert("namespace-uri".to_owned(), box NamespaceUri);
-    functions.insert("name".to_owned(), box Name);
-    functions.insert("string".to_owned(), box StringFn);
-    functions.insert("concat".to_owned(), box Concat);
-    functions.insert("starts-with".to_owned(), box starts_with());
-    functions.insert("contains".to_owned(), box contains());
-    functions.insert("substring-before".to_owned(), box substring_before());
-    functions.insert("substring-after".to_owned(), box substring_after());
-    functions.insert("substring".to_owned(), box Substring);
-    functions.insert("string-length".to_owned(), box StringLength);
-    functions.insert("normalize-space".to_owned(), box NormalizeSpace);
-    functions.insert("translate".to_owned(), box Translate);
-    functions.insert("boolean".to_owned(), box BooleanFn);
-    functions.insert("not".to_owned(), box Not);
-    functions.insert("true".to_owned(), box true_fn());
-    functions.insert("false".to_owned(), box false_fn());
-    functions.insert("number".to_owned(), box NumberFn);
-    functions.insert("sum".to_owned(), box Sum);
-    functions.insert("floor".to_owned(), box floor());
-    functions.insert("ceiling".to_owned(), box ceiling());
-    functions.insert("round".to_owned(), box round());
+    functions.insert("last".to_owned(), Box::new(Last));
+    functions.insert("position".to_owned(), Box::new(Position));
+    functions.insert("count".to_owned(), Box::new(Count));
+    functions.insert("local-name".to_owned(), Box::new(LocalName));
+    functions.insert("namespace-uri".to_owned(), Box::new(NamespaceUri));
+    functions.insert("name".to_owned(), Box::new(Name));
+    functions.insert("string".to_owned(), Box::new(StringFn));
+    functions.insert("concat".to_owned(), Box::new(Concat));
+    functions.insert("starts-with".to_owned(), Box::new(starts_with()));
+    functions.insert("contains".to_owned(), Box::new(contains()));
+    functions.insert("substring-before".to_owned(), Box::new(substring_before()));
+    functions.insert("substring-after".to_owned(), Box::new(substring_after()));
+    functions.insert("substring".to_owned(), Box::new(Substring));
+    functions.insert("string-length".to_owned(), Box::new(StringLength));
+    functions.insert("normalize-space".to_owned(), Box::new(NormalizeSpace));
+    functions.insert("translate".to_owned(), Box::new(Translate));
+    functions.insert("boolean".to_owned(), Box::new(BooleanFn));
+    functions.insert("not".to_owned(), Box::new(Not));
+    functions.insert("true".to_owned(), Box::new(true_fn()));
+    functions.insert("false".to_owned(), Box::new(false_fn()));
+    functions.insert("number".to_owned(), Box::new(NumberFn));
+    functions.insert("sum".to_owned(), Box::new(Sum));
+    functions.insert("floor".to_owned(), Box::new(floor()));
+    functions.insert("ceiling".to_owned(), Box::new(ceiling()));
+    functions.insert("round".to_owned(), Box::new(round()));
 }
 
 #[cfg(test)]

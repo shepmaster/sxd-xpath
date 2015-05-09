@@ -1,12 +1,9 @@
 #![cfg_attr(test, allow(dead_code))]
 
-#![feature(collections)]
-
 extern crate document;
 extern crate xpath;
 extern crate getopts;
 
-use std::cmp::min;
 use std::borrow::ToOwned;
 use std::env;
 use std::collections::HashMap;
@@ -24,10 +21,9 @@ fn print_usage(program: &str, opts: &Options) {
     print!("{}", opts.usage(&brief));
 }
 
-fn pretty_error(xml: &str, position: usize) -> &str {
+fn pretty_error(xml: &str, position: usize) -> String {
     let s = &xml[position..];
-    let l = s.chars().count();
-    s.slice_chars(0, min(l, 15))
+    s.chars().take(15).collect()
 }
 
 fn build_xpath(xpath_str: &str) -> Box<Expression> {
@@ -133,7 +129,7 @@ fn main() {
     opts.optmulti("", "number", "set number variable", "NAME=VALUE");
     opts.optmulti("", "boolean", "set boolean variable", "NAME=VALUE");
 
-    let arguments = match opts.parse(args.tail()) {
+    let arguments = match opts.parse(&args[1..]) {
         Ok(x) => x,
         Err(x) => {
             println!("{}", x);

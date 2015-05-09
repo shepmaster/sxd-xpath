@@ -17,11 +17,7 @@
 
 #![crate_name = "xpath"]
 
-#![feature(box_syntax)]
-#![feature(collections)]
-#![feature(core)]
-#![feature(collections_drain)]
-#![cfg_attr(test, feature(slice_patterns))]
+#![cfg_attr(feature = "unstable", feature(core))]
 
 #[macro_use]
 extern crate peresil;
