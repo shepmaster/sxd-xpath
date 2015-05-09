@@ -526,7 +526,7 @@ impl Function for Sum {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
-        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).sum();
+        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).fold(0.0, |acc, i| acc + i);
         Ok(Value::Number(r))
     }
 }
