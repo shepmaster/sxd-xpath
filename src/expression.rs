@@ -451,7 +451,7 @@ impl Step {
         let mut result = Nodeset::new();
 
         for node in starting_nodes.iter() {
-            let child_context = context.new_context_for(*node);
+            let child_context = context.new_context_for(node);
             self.axis.select_nodes(&child_context, &*self.node_test, &mut result);
         }
 

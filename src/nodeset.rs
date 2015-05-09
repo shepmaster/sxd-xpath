@@ -267,7 +267,11 @@ impl<'d> Nodeset<'d> {
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
-        Iter { iter: self.nodes.iter() }
+        IntoIterator::into_iter(self)
+    }
+
+    pub fn into_iter(self) -> IntoIter<'d> {
+        IntoIterator::into_iter(self)
     }
 
     pub fn add_nodeset(& mut self, other: &Nodeset<'d>) {
@@ -276,10 +280,6 @@ impl<'d> Nodeset<'d> {
 
     pub fn size(&self) -> usize {
         self.nodes.len()
-    }
-
-    pub fn into_iter(self) -> IntoIter<'d> {
-        IntoIter { iter: self.nodes.into_iter() }
     }
 
     pub fn document_order_first(&self) -> Option<Node<'d>> {
@@ -313,6 +313,24 @@ impl<'d> Nodeset<'d> {
     }
 }
 
+impl<'a, 'd : 'a> IntoIterator for &'a Nodeset<'d> {
+    type Item = Node<'d>;
+    type IntoIter = Iter<'a, 'd>;
+
+    fn into_iter(self) -> Iter<'a, 'd> {
+        Iter { iter: self.nodes.iter() }
+    }
+}
+
+impl<'d> IntoIterator for Nodeset<'d> {
+    type Item = Node<'d>;
+    type IntoIter = IntoIter<'d>;
+
+    fn into_iter(self) -> IntoIter<'d> {
+        IntoIter { iter: self.nodes.into_iter() }
+    }
+}
+
 impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
     fn from_iter<T>(iterator: T) -> Nodeset<'d>
         where T: IntoIterator<Item=EvaluationContext<'a, 'd>>
@@ -328,8 +346,8 @@ pub struct Iter<'a, 'd : 'a> {
 }
 
 impl<'a, 'd : 'a> Iterator for Iter<'a, 'd> {
-    type Item = &'a Node<'d>;
-    fn next(&mut self) -> Option<&'a Node<'d>> { self.iter.next() }
+    type Item = Node<'d>;
+    fn next(&mut self) -> Option<Node<'d>> { self.iter.next().cloned() }
 }
 
 pub struct IntoIter<'d> {
@@ -382,12 +400,12 @@ mod test {
         let node_vec: Vec<_> = nodes.iter().collect();
 
         assert_eq!(6, node_vec.len());
-        assert_eq!(node_vec[0], &Root(r));
-        assert_eq!(node_vec[1], &Element(e));
-        assert_eq!(node_vec[2], &Attribute(a));
-        assert_eq!(node_vec[3], &Text(t));
-        assert_eq!(node_vec[4], &Comment(c));
-        assert_eq!(node_vec[5], &ProcessingInstruction(p));
+        assert_eq!(node_vec[0], Root(r));
+        assert_eq!(node_vec[1], Element(e));
+        assert_eq!(node_vec[2], Attribute(a));
+        assert_eq!(node_vec[3], Text(t));
+        assert_eq!(node_vec[4], Comment(c));
+        assert_eq!(node_vec[5], ProcessingInstruction(p));
     }
 
     #[test]
