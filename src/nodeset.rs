@@ -274,8 +274,8 @@ impl<'d> Nodeset<'d> {
         IntoIterator::into_iter(self)
     }
 
-    pub fn add_nodeset(& mut self, other: &Nodeset<'d>) {
-        self.nodes.push_all(&other.nodes);
+    pub fn add_nodeset(&mut self, other: &Nodeset<'d>) {
+        self.nodes.extend(other);
     }
 
     pub fn size(&self) -> usize {

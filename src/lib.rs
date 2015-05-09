@@ -17,7 +17,6 @@
 
 #![crate_name = "xpath"]
 
-#![feature(collections)]
 #![feature(core)]
 #![feature(collections_drain)]
 #![cfg_attr(test, feature(slice_patterns))]
