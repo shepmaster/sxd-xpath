@@ -214,22 +214,22 @@ impl Parser {
             let name = consume_value!(source, Token::Axis);
 
             match name {
-                AxisName::SelfAxis => Ok(box axis::SelfAxis),
-                AxisName::Parent => Ok(box axis::Parent),
-                AxisName::Descendant => Ok(box axis::Descendant),
-                AxisName::DescendantOrSelf => Ok(box axis::DescendantOrSelf),
-                AxisName::Attribute => Ok(box axis::Attribute),
-                AxisName::Namespace => Ok(box axis::Namespace),
-                AxisName::Ancestor => Ok(box axis::Ancestor),
-                AxisName::AncestorOrSelf => Ok(box axis::AncestorOrSelf),
-                AxisName::PrecedingSibling => Ok(box axis::PrecedingSibling),
-                AxisName::FollowingSibling => Ok(box axis::FollowingSibling),
-                AxisName::Preceding => Ok(box axis::Preceding),
-                AxisName::Following => Ok(box axis::Following),
+                AxisName::SelfAxis => Ok(Box::new(axis::SelfAxis)),
+                AxisName::Parent => Ok(Box::new(axis::Parent)),
+                AxisName::Descendant => Ok(Box::new(axis::Descendant)),
+                AxisName::DescendantOrSelf => Ok(Box::new(axis::DescendantOrSelf)),
+                AxisName::Attribute => Ok(Box::new(axis::Attribute)),
+                AxisName::Namespace => Ok(Box::new(axis::Namespace)),
+                AxisName::Ancestor => Ok(Box::new(axis::Ancestor)),
+                AxisName::AncestorOrSelf => Ok(Box::new(axis::AncestorOrSelf)),
+                AxisName::PrecedingSibling => Ok(Box::new(axis::PrecedingSibling)),
+                AxisName::FollowingSibling => Ok(Box::new(axis::FollowingSibling)),
+                AxisName::Preceding => Ok(Box::new(axis::Preceding)),
+                AxisName::Following => Ok(Box::new(axis::Following)),
                 _ => unimplemented!(),
             }
         } else {
-            Ok(box axis::Child)
+            Ok(Box::new(axis::Child))
         }
     }
 
@@ -240,11 +240,11 @@ impl Parser {
             let name = consume_value!(source, Token::NodeTest);
 
             match name {
-                NodeTestName::Node    => Ok(Some(box node_test::Node)),
-                NodeTestName::Text    => Ok(Some(box node_test::Text)),
-                NodeTestName::Comment => Ok(Some(box node_test::Comment)),
+                NodeTestName::Node    => Ok(Some(Box::new(node_test::Node))),
+                NodeTestName::Text    => Ok(Some(Box::new(node_test::Text))),
+                NodeTestName::Comment => Ok(Some(Box::new(node_test::Comment))),
                 NodeTestName::ProcessingInstruction(target) =>
-                    Ok(Some(box node_test::ProcessingInstruction::new(target))),
+                    Ok(Some(Box::new(node_test::ProcessingInstruction::new(target)))),
             }
         } else {
             Ok(None)
@@ -259,9 +259,9 @@ impl Parser {
             let name = consume_value!(source, Token::NameTest);
 
             let test: SubNodeTest = match axis.principal_node_type() {
-                PrincipalNodeType::Attribute => box node_test::Attribute::new(name),
-                PrincipalNodeType::Element   => box node_test::Element::new(name),
-                PrincipalNodeType::Namespace => box node_test::Namespace::new(name),
+                PrincipalNodeType::Attribute => Box::new(node_test::Attribute::new(name)),
+                PrincipalNodeType::Element   => Box::new(node_test::Element::new(name)),
+                PrincipalNodeType::Namespace => Box::new(node_test::Namespace::new(name)),
             };
 
             Ok(Some(test))
@@ -288,7 +288,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Variable) {
             let name = consume_value!(source, Token::Variable);
-            Ok(Some(box expression::Variable { name: name }))
+            Ok(Some(Box::new(expression::Variable { name: name })))
         } else {
             Ok(None)
         }
@@ -299,7 +299,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(box expression::Literal { value: LiteralValue::String(value) }))
+            Ok(Some(Box::new(expression::Literal { value: LiteralValue::String(value) })))
         } else {
             Ok(None)
         }
@@ -310,7 +310,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(box expression::Literal { value: LiteralValue::Number(value) }))
+            Ok(Some(Box::new(expression::Literal { value: LiteralValue::Number(value) })))
         } else {
             Ok(None)
         }
@@ -356,7 +356,7 @@ impl Parser {
             let arguments = try!(self.parse_function_args(source));
             try!(source.consume(&Token::RightParen));
 
-            Ok(Some(box expression::Function{ name: name, arguments: arguments }))
+            Ok(Some(Box::new(expression::Function{ name: name, arguments: arguments })))
         } else {
             Ok(None)
         }
@@ -454,7 +454,7 @@ impl Parser {
     fn parse_relative_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
         where I: Iterator<Item=TokenResult>
     {
-        let start_point = box expression::ContextNode;
+        let start_point = Box::new(expression::ContextNode);
         self.parse_relative_location_path_raw(source, start_point)
     }
 
@@ -464,10 +464,10 @@ impl Parser {
         if source.next_token_is(&Token::Slash) {
             try!(source.consume(&Token::Slash));
 
-            let start_point = box expression::RootNode;
+            let start_point = Box::new(expression::RootNode);
             match try!(self.parse_relative_location_path_raw(source, start_point)) {
                 Some(expr) => Ok(Some(expr)),
-                None => Ok(Some(box expression::RootNode)),
+                None => Ok(Some(Box::new(expression::RootNode))),
             }
         } else {
             Ok(None)
@@ -550,7 +550,7 @@ impl Parser {
 
             match expr {
                 Some(expr) => {
-                    let expr: SubExpression = box expression::Negation { expression: expr };
+                    let expr: SubExpression = Box::new(expression::Negation { expression: expr });
                     Ok(Some(expr))
                 },
                 None => Err(RightHandSideExpressionMissing),

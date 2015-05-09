@@ -69,7 +69,7 @@ macro_rules! binary_constructor(
     ($t:ident) => (
         impl $t {
             pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
-                box $t{left: left, right: right}
+                Box::new($t{left: left, right: right})
             }
         }
     );
@@ -166,9 +166,9 @@ pub struct NotEqual {
 
 impl NotEqual {
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
-        box NotEqual {
+        Box::new(NotEqual {
             equal: Equal{left: left, right: right}
-        }
+        })
     }
 }
 
@@ -221,23 +221,23 @@ fn  modulus(a: f64, b: f64) -> f64 {a % b}
 
 impl Math {
     pub fn addition(left: SubExpression, right: SubExpression) -> SubExpression {
-        box Math{left: left, right: right, operation: add}
+        Box::new(Math{left: left, right: right, operation: add})
     }
 
     pub fn subtraction(left: SubExpression, right: SubExpression) -> SubExpression {
-        box Math{left: left, right: right, operation: subtract}
+        Box::new(Math{left: left, right: right, operation: subtract})
     }
 
     pub fn multiplication(left: SubExpression, right: SubExpression) -> SubExpression {
-        box Math{left: left, right: right, operation: multiply}
+        Box::new(Math{left: left, right: right, operation: multiply})
     }
 
     pub fn division(left: SubExpression, right: SubExpression) -> SubExpression {
-        box Math{left: left, right: right, operation: divide}
+        Box::new(Math{left: left, right: right, operation: divide})
     }
 
     pub fn remainder(left: SubExpression, right: SubExpression) -> SubExpression {
-        box Math{left: left, right: right, operation: modulus}
+        Box::new(Math{left: left, right: right, operation: modulus})
     }
 }
 
@@ -291,7 +291,7 @@ pub struct Path {
 
 impl Path {
     pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
-        box Path {start_point: start_point, steps: steps}
+        Box::new(Path {start_point: start_point, steps: steps})
     }
 }
 
@@ -317,7 +317,7 @@ pub struct Filter {
 impl Filter {
     pub fn new(node_selector: SubExpression, predicate: SubExpression) -> SubExpression {
         let predicate = Predicate { expression: predicate };
-        box Filter { node_selector: node_selector, predicate: predicate }
+        Box::new(Filter { node_selector: node_selector, predicate: predicate })
     }
 }
 
@@ -344,22 +344,22 @@ fn greater_than_or_equal(left: f64, right: f64) -> bool { left >= right }
 impl Relational {
     pub fn less_than(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box Relational{left: left, right: right, operation: less_than}
+        Box::new(Relational{left: left, right: right, operation: less_than})
     }
 
     pub fn less_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box Relational{left: left, right: right, operation: less_than_or_equal}
+        Box::new(Relational{left: left, right: right, operation: less_than_or_equal})
     }
 
     pub fn greater_than(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box Relational{left: left, right: right, operation: greater_than}
+        Box::new(Relational{left: left, right: right, operation: greater_than})
     }
 
     pub fn greater_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
     {
-        box Relational{left: left, right: right, operation: greater_than_or_equal}
+        Box::new(Relational{left: left, right: right, operation: greater_than_or_equal})
     }
 }
 
@@ -579,8 +579,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: LiteralValue::Boolean(true)};
-        let right = box Literal{value: LiteralValue::Boolean(true)};
+        let left  = Box::new(Literal{value: LiteralValue::Boolean(true)});
+        let right = Box::new(Literal{value: LiteralValue::Boolean(true)});
 
         let expr = And{left: left, right: right};
 
@@ -595,8 +595,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: LiteralValue::Boolean(false)};
-        let right = box FailExpression;
+        let left  = Box::new(Literal{value: LiteralValue::Boolean(false)});
+        let right = Box::new(FailExpression);
 
         let expr = And{left: left, right: right};
 
@@ -615,8 +615,8 @@ mod test {
         setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1]));
         setup.vars.insert("right".to_owned(), Value::Nodeset(nodeset![string_value_2]));
 
-        let left  = box Variable{name: "left".to_owned()};
-        let right = box Variable{name: "right".to_owned()};
+        let left  = Box::new(Variable{name: "left".to_owned()});
+        let right = Box::new(Variable{name: "right".to_owned()});
 
         let expr = Equal{left: left, right: right};
 
@@ -634,8 +634,8 @@ mod test {
         let string_value = setup.doc.create_text("3.14");
         setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value]));
 
-        let left  = box Variable{name: "left".to_owned()};
-        let right = box Literal{value: LiteralValue::Number(6.28)};
+        let left  = Box::new(Variable{name: "left".to_owned()});
+        let right = Box::new(Literal{value: LiteralValue::Number(6.28)});
 
         let expr = Equal{left: left, right: right};
 
@@ -654,8 +654,8 @@ mod test {
         let string_value_2 = setup.doc.create_text("boat");
         setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
-        let left  = box Variable{name: "left".to_owned()};
-        let right = box Literal{value: LiteralValue::String("boat".to_owned())};
+        let left  = Box::new(Variable{name: "left".to_owned()});
+        let right = Box::new(Literal{value: LiteralValue::String("boat".to_owned())});
 
         let expr = Equal{left: left, right: right};
 
@@ -670,8 +670,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_bool = box Literal{value: LiteralValue::Boolean(false)};
-        let truthy_str = box Literal{value: LiteralValue::String("hello".to_owned())};
+        let actual_bool = Box::new(Literal{value: LiteralValue::Boolean(false)});
+        let truthy_str = Box::new(Literal{value: LiteralValue::String("hello".to_owned())});
 
         let expr = Equal{left: actual_bool, right: truthy_str};
 
@@ -686,8 +686,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_number = box Literal{value: LiteralValue::Number(-42.0)};
-        let number_str = box Literal{value: LiteralValue::String("-42.0".to_owned())};
+        let actual_number = Box::new(Literal{value: LiteralValue::Number(-42.0)});
+        let number_str = Box::new(Literal{value: LiteralValue::String("-42.0".to_owned())});
 
         let expr = Equal{left: number_str, right: actual_number};
 
@@ -702,8 +702,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = box Literal{value: LiteralValue::String("hello".to_owned())};
-        let b_str = box Literal{value: LiteralValue::String("World".to_owned())};
+        let a_str = Box::new(Literal{value: LiteralValue::String("hello".to_owned())});
+        let b_str = Box::new(Literal{value: LiteralValue::String("World".to_owned())});
 
         let expr = Equal{left: a_str, right: b_str};
 
@@ -718,8 +718,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = box Literal{value: LiteralValue::Boolean(true)};
-        let b_str = box Literal{value: LiteralValue::Boolean(false)};
+        let a_str = Box::new(Literal{value: LiteralValue::Boolean(true)});
+        let b_str = Box::new(Literal{value: LiteralValue::Boolean(false)});
 
         let expr = NotEqual::new(a_str, b_str);
 
@@ -747,8 +747,8 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
-        let arg_expr: Box<Expression> = box Literal{value: LiteralValue::Boolean(true)};
-        let fun = box StubFunction{value: "the function ran"};
+        let arg_expr: Box<Expression> = Box::new(Literal{value: LiteralValue::Boolean(true)});
+        let fun = Box::new(StubFunction{value: "the function ran"});
         setup.funs.insert("test-fn".to_owned(), fun);
 
         let expr = expression::Function{name: "test-fn".to_owned(), arguments: vec!(arg_expr)};
@@ -777,8 +777,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: LiteralValue::Number(10.0)};
-        let right = box Literal{value: LiteralValue::Number(5.0)};
+        let left  = Box::new(Literal{value: LiteralValue::Number(10.0)});
+        let right = Box::new(Literal{value: LiteralValue::Number(5.0)});
 
         let expr = Math::multiplication(left, right);
 
@@ -799,8 +799,8 @@ mod test {
 
         setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
 
-        let selected_nodes = box Variable{name: "nodes".to_owned()};
-        let predicate = box Literal{value: LiteralValue::Number(1.0)};
+        let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
+        let predicate = Box::new(Literal{value: LiteralValue::Number(1.0)});
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -821,8 +821,8 @@ mod test {
 
         setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
 
-        let selected_nodes = box Variable{name: "nodes".to_owned()};
-        let predicate = box Literal{value: LiteralValue::Boolean(false)};
+        let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
+        let predicate = Box::new(Literal{value: LiteralValue::Boolean(false)});
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -837,8 +837,8 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = box Literal{value: LiteralValue::Number(10.0)};
-        let right = box Literal{value: LiteralValue::Number(5.0)};
+        let left  = Box::new(Literal{value: LiteralValue::Number(10.0)});
+        let right = Box::new(Literal{value: LiteralValue::Number(5.0)});
 
         let expr = Relational::less_than(left, right);
 
@@ -900,7 +900,7 @@ mod test {
         let axis = MockAxis::new();
         let node_test = DummyNodeTest;
 
-        let expr = Step::new(box axis.clone(), box node_test, vec![]);
+        let expr = Step::new(Box::new(axis.clone()), Box::new(node_test), vec![]);
 
         let context = setup.context();
         expr.evaluate(&context, nodeset![context.node]).ok().unwrap();
@@ -916,12 +916,12 @@ mod test {
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
         setup.vars.insert("left".to_owned(), Value::Nodeset(nodes));
-        let left = box Variable{name: "left".to_owned()};
+        let left = Box::new(Variable{name: "left".to_owned()});
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
         setup.vars.insert("right".to_owned(), Value::Nodeset(nodes));
-        let right = box Variable{name: "right".to_owned()};
+        let right = Box::new(Variable{name: "right".to_owned()});
 
         let expr = Union{left: left, right: right};
 

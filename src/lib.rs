@@ -17,7 +17,6 @@
 
 #![crate_name = "xpath"]
 
-#![feature(box_syntax)]
 #![feature(collections)]
 #![feature(core)]
 #![feature(collections_drain)]
