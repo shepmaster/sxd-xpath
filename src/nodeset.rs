@@ -255,6 +255,27 @@ pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
 
+#[cfg(not(feature = "unstable"))]
+fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
+    nodes.iter().fold(None, |earliest, node| {
+        match earliest {
+            None => Some(node),
+            Some(current) => {
+                if order[node] < order[current] {
+                    Some(node)
+                } else {
+                    Some(current)
+                }
+            }
+        }
+    }).cloned()
+}
+
+#[cfg(feature = "unstable")]
+fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
+    nodes.iter().min_by(|&n| order[n]).cloned()
+}
+
 impl<'d> Nodeset<'d> {
     pub fn new() -> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
@@ -309,7 +330,7 @@ impl<'d> Nodeset<'d> {
             }
         }
 
-        self.nodes.iter().min_by(|&n| order[n]).map(|n| *n)
+        first_node_in_order(&self.nodes, order)
     }
 }
 
