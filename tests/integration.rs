@@ -1,12 +1,12 @@
 extern crate sxd_document;
-extern crate xpath;
+extern crate sxd_xpath;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use sxd_document::Package;
 use sxd_document::dom::Document;
 use sxd_document::parser::Parser;
-use xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
+use sxd_xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
 
 #[test]
 fn functions_accept_arguments() {
@@ -57,7 +57,7 @@ struct Setup<'d> {
 impl<'d> Setup<'d> {
     fn new() -> Setup<'d> {
         let mut fns = HashMap::new();
-        xpath::function::register_core_functions(&mut fns);
+        sxd_xpath::function::register_core_functions(&mut fns);
         Setup {
             functions: fns,
             variables: HashMap::new(),

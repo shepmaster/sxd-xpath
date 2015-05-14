@@ -1,6 +1,6 @@
 [package]
 
-name = "xpath"
+name = "sxd-xpath"
 version = "0.0.1"
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 

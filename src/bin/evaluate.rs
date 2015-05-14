@@ -1,7 +1,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 extern crate sxd_document;
-extern crate xpath;
+extern crate sxd_xpath;
 extern crate getopts;
 
 use std::borrow::ToOwned;
@@ -12,7 +12,7 @@ use std::io::{self,Read};
 
 use sxd_document::parser::Parser;
 
-use xpath::{EvaluationContext,Factory,Expression,Value};
+use sxd_xpath::{EvaluationContext,Factory,Expression,Value};
 
 use getopts::Options;
 
@@ -63,13 +63,13 @@ fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
     }
 }
 
-fn build_functions() -> xpath::Functions {
+fn build_functions() -> sxd_xpath::Functions {
     let mut functions = HashMap::new();
-    xpath::function::register_core_functions(&mut functions);
+    sxd_xpath::function::register_core_functions(&mut functions);
     functions
 }
 
-fn build_variables<'a>(arguments: &getopts::Matches) -> xpath::Variables<'a> {
+fn build_variables<'a>(arguments: &getopts::Matches) -> sxd_xpath::Variables<'a> {
     let mut vars = HashMap::new();
 
     for boolean in arguments.opt_strs("boolean") {
@@ -103,7 +103,7 @@ fn build_variables<'a>(arguments: &getopts::Matches) -> xpath::Variables<'a> {
     vars
 }
 
-fn build_namespaces(arguments: &getopts::Matches) -> xpath::Namespaces {
+fn build_namespaces(arguments: &getopts::Matches) -> sxd_xpath::Namespaces {
     let mut namespaces = HashMap::new();
 
     for ns_defn in arguments.opt_strs("namespace") {

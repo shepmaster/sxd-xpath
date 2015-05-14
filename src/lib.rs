@@ -15,8 +15,6 @@
 //! prefixes.
 //!
 
-#![crate_name = "xpath"]
-
 #![cfg_attr(feature = "unstable", feature(core))]
 
 #[macro_use]
