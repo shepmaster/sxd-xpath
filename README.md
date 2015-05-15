@@ -1,6 +1,11 @@
 # SXD-XPath
 
-An XML library in Rust.
+An XML XPath library in Rust.
+
+[![Build Status](https://travis-ci.org/shepmaster/sxd-xpath.svg?branch=master)](https://travis-ci.org/shepmaster/sxd-xpath)
+[![Current Version](http://meritbadge.herokuapp.com/sxd-xpath)](https://crates.io/crates/sxd-xpath)
+
+[Documentation](https://shepmaster.github.io/sxd-xpath/)
 
 ## Overview
 
