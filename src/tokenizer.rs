@@ -2,7 +2,7 @@ use std::borrow::ToOwned;
 use std::{error,fmt,string};
 
 use peresil::{self,StringPoint,ParseMaster,Identifier,Recoverable};
-use document::parser::XmlParseExt;
+use sxd_document::parser::XmlParseExt;
 
 use super::node_test;
 use super::token::{Token,AxisName,NodeTestName};

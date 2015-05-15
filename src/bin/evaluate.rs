@@ -1,6 +1,6 @@
 #![cfg_attr(test, allow(dead_code))]
 
-extern crate document;
+extern crate sxd_document;
 extern crate xpath;
 extern crate getopts;
 
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self,Read};
 
-use document::parser::Parser;
+use sxd_document::parser::Parser;
 
 use xpath::{EvaluationContext,Factory,Expression,Value};
 
@@ -36,7 +36,7 @@ fn build_xpath(xpath_str: &str) -> Box<Expression> {
     }
 }
 
-fn load_xml<R>(input: R) -> document::Package
+fn load_xml<R>(input: R) -> sxd_document::Package
     where R: Read
 {
     let mut input = input;

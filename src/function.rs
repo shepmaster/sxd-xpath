@@ -4,7 +4,7 @@ use std::collections::hash_map::Entry;
 use std::ops::Index;
 use std::{error,fmt,iter};
 
-use document::XmlChar;
+use sxd_document::XmlChar;
 
 use super::{EvaluationContext,Functions,Value};
 use super::nodeset::Nodeset;
@@ -594,7 +594,7 @@ mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
 
-    use document::Package;
+    use sxd_document::Package;
 
     use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
     use super::super::nodeset::Node;

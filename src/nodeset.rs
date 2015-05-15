@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use std::iter::{IntoIterator,FromIterator};
 use std::{slice,vec};
 
-use document::QName;
-use document::dom4;
+use sxd_document::QName;
+use sxd_document::dom;
 
 use super::EvaluationContext;
 
 macro_rules! unpack(
-    ($enum_name:ident, $name:ident, $wrapper:ident, dom4::$inner:ident) => (
+    ($enum_name:ident, $name:ident, $wrapper:ident, dom::$inner:ident) => (
         impl<'d> $enum_name<'d> {
-            pub fn $name(self) -> Option<dom4::$inner<'d>> {
+            pub fn $name(self) -> Option<dom::$inner<'d>> {
                 match self {
                     $enum_name::$wrapper(n) => Some(n),
                     _ => None,
@@ -23,10 +23,10 @@ macro_rules! unpack(
 
 macro_rules! conversion_trait(
     ($res_type:ident, {
-        $(dom4::$leaf_type:ident => Node::$variant:ident),*
+        $(dom::$leaf_type:ident => Node::$variant:ident),*
     }) => (
-        $(impl<'d> From<dom4::$leaf_type<'d>> for $res_type<'d>  {
-            fn from(v: dom4::$leaf_type<'d>) -> $res_type<'d> {
+        $(impl<'d> From<dom::$leaf_type<'d>> for $res_type<'d>  {
+            fn from(v: dom::$leaf_type<'d>) -> $res_type<'d> {
                 Node::$variant(v)
             }
         })*
@@ -35,14 +35,14 @@ macro_rules! conversion_trait(
 
 #[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
 pub struct Namespace<'d> {
-    pub parent: dom4::Element<'d>,
+    pub parent: dom::Element<'d>,
     pub prefix: &'d str,
     pub uri: &'d str,
 }
 
 impl<'d> Namespace<'d> {
-    pub fn document(&self) -> &'d dom4::Document<'d> { self.parent.document() }
-    pub fn parent(&self) -> dom4::Element<'d> { self.parent }
+    pub fn document(&self) -> &'d dom::Document<'d> { self.parent.document() }
+    pub fn parent(&self) -> dom::Element<'d> { self.parent }
     pub fn prefix(&self) -> &'d str { self.prefix }
     pub fn uri(&self) -> &'d str { self.uri }
     pub fn expanded_name(&self) -> QName<'d> { QName::new(self.prefix) }
@@ -50,24 +50,24 @@ impl<'d> Namespace<'d> {
 
 #[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
 pub enum Node<'d> {
-    Root(dom4::Root<'d>),
-    Element(dom4::Element<'d>),
-    Attribute(dom4::Attribute<'d>),
-    Text(dom4::Text<'d>),
-    Comment(dom4::Comment<'d>),
+    Root(dom::Root<'d>),
+    Element(dom::Element<'d>),
+    Attribute(dom::Attribute<'d>),
+    Text(dom::Text<'d>),
+    Comment(dom::Comment<'d>),
     Namespace(Namespace<'d>),
-    ProcessingInstruction(dom4::ProcessingInstruction<'d>),
+    ProcessingInstruction(dom::ProcessingInstruction<'d>),
 }
 
-unpack!(Node, root, Root, dom4::Root);
-unpack!(Node, element, Element, dom4::Element);
-unpack!(Node, attribute, Attribute, dom4::Attribute);
-unpack!(Node, text, Text, dom4::Text);
-unpack!(Node, comment, Comment, dom4::Comment);
-unpack!(Node, processing_instruction, ProcessingInstruction, dom4::ProcessingInstruction);
+unpack!(Node, root, Root, dom::Root);
+unpack!(Node, element, Element, dom::Element);
+unpack!(Node, attribute, Attribute, dom::Attribute);
+unpack!(Node, text, Text, dom::Text);
+unpack!(Node, comment, Comment, dom::Comment);
+unpack!(Node, processing_instruction, ProcessingInstruction, dom::ProcessingInstruction);
 
 impl<'d> Node<'d> {
-    pub fn document(&self) -> &'d dom4::Document<'d> {
+    pub fn document(&self) -> &'d dom::Document<'d> {
         use self::Node::*;
         match *self {
             Root(n)                  => n.document(),
@@ -83,7 +83,7 @@ impl<'d> Node<'d> {
     pub fn prefixed_name(&self) -> Option<String> {
         use self::Node::*;
 
-        fn qname_prefixed_name(element: dom4::Element, name: QName, preferred_prefix: Option<&str>) -> String {
+        fn qname_prefixed_name(element: dom::Element, name: QName, preferred_prefix: Option<&str>) -> String {
             if let Some(ns_uri) = name.namespace_uri() {
                 if let Some(prefix) = element.prefix_for_namespace_uri(ns_uri, preferred_prefix) {
                     format!("{}:{}", prefix, name.local_part())
@@ -208,43 +208,43 @@ impl<'d> Node<'d> {
 }
 
 conversion_trait!(Node, {
-    dom4::Root                  => Node::Root,
-    dom4::Element               => Node::Element,
-    dom4::Attribute             => Node::Attribute,
-    dom4::Text                  => Node::Text,
-    dom4::Comment               => Node::Comment,
-    dom4::ProcessingInstruction => Node::ProcessingInstruction
+    dom::Root                  => Node::Root,
+    dom::Element               => Node::Element,
+    dom::Attribute             => Node::Attribute,
+    dom::Text                  => Node::Text,
+    dom::Comment               => Node::Comment,
+    dom::ProcessingInstruction => Node::ProcessingInstruction
 });
 
-impl<'d> Into<Node<'d>> for dom4::ChildOfRoot<'d> {
+impl<'d> Into<Node<'d>> for dom::ChildOfRoot<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom4::ChildOfRoot::Element(n)               => Element(n),
-            dom4::ChildOfRoot::Comment(n)               => Comment(n),
-            dom4::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstruction(n),
+            dom::ChildOfRoot::Element(n)               => Element(n),
+            dom::ChildOfRoot::Comment(n)               => Comment(n),
+            dom::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
 }
 
-impl<'d> Into<Node<'d>> for dom4::ChildOfElement<'d> {
+impl<'d> Into<Node<'d>> for dom::ChildOfElement<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom4::ChildOfElement::Element(n)               => Element(n),
-            dom4::ChildOfElement::Text(n)                  => Text(n),
-            dom4::ChildOfElement::Comment(n)               => Comment(n),
-            dom4::ChildOfElement::ProcessingInstruction(n) => ProcessingInstruction(n),
+            dom::ChildOfElement::Element(n)               => Element(n),
+            dom::ChildOfElement::Text(n)                  => Text(n),
+            dom::ChildOfElement::Comment(n)               => Comment(n),
+            dom::ChildOfElement::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
 }
 
-impl<'d> Into<Node<'d>> for dom4::ParentOfChild<'d> {
+impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom4::ParentOfChild::Root(n)    => Root(n),
-            dom4::ParentOfChild::Element(n) => Element(n),
+            dom::ParentOfChild::Root(n)    => Root(n),
+            dom::ParentOfChild::Element(n) => Element(n),
         }
     }
 }
@@ -384,7 +384,7 @@ impl<'d> Iterator for IntoIter<'d> {
 mod test {
     use std::borrow::ToOwned;
 
-    use document::Package;
+    use sxd_document::Package;
 
     use super::Node::{
         Attribute,

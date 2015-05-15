@@ -663,8 +663,8 @@ mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
 
-    use document::Package;
-    use document::dom4::{self,Document,Root,Element,Text};
+    use sxd_document::Package;
+    use sxd_document::dom::{self,Document,Root,Element,Text};
 
     use super::super::Value::{Boolean,Number,String};
     use super::super::{Functions,Variables,Namespaces};
@@ -780,13 +780,13 @@ mod test {
             tn
         }
 
-        fn add_comment(&'d self, parent: Element<'d>, value: &str) -> dom4::Comment<'d> {
+        fn add_comment(&'d self, parent: Element<'d>, value: &str) -> dom::Comment<'d> {
             let cn = self.0.create_comment(value);
             parent.append_child(cn);
             cn
         }
 
-        fn add_processing_instruction(&'d self, parent: Element<'d>, name: &str, value: Option<&str>) -> dom4::ProcessingInstruction<'d> {
+        fn add_processing_instruction(&'d self, parent: Element<'d>, name: &str, value: Option<&str>) -> dom::ProcessingInstruction<'d> {
             let pi = self.0.create_processing_instruction(name, value);
             parent.append_child(pi);
             pi

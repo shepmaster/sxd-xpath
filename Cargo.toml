@@ -12,7 +12,4 @@ unstable = []
 
 getopts = "0.2.4"
 peresil = "0.2.0"
-
-[dependencies.document]
-
-git = "https://github.com/shepmaster/sxd-document.git"
+sxd-document = "0.1.0"

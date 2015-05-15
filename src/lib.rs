@@ -21,7 +21,7 @@
 
 #[macro_use]
 extern crate peresil;
-extern crate document;
+extern crate sxd_document;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
@@ -249,7 +249,7 @@ impl Factory {
 mod test {
     use std::borrow::ToOwned;
 
-    use document::Package;
+    use sxd_document::Package;
 
     use super::Value;
 

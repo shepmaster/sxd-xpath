@@ -1,4 +1,4 @@
-extern crate document;
+extern crate sxd_document;
 
 use std::fmt;
 
@@ -294,8 +294,8 @@ impl Axis for SelfAxis {
 mod test {
     use std::collections::HashMap;
 
-    use document::Package;
-    use document::dom4;
+    use sxd_document::Package;
+    use sxd_document::dom;
 
     use super::super::EvaluationContext;
     use super::super::node_test::NodeTest;
@@ -409,9 +409,9 @@ mod test {
         assert_eq!(result, nodeset![child2, child3]);
     }
 
-    fn setup_preceding_following<'d>(doc: &'d dom4::Document<'d>) ->
-        (dom4::Element<'d>, dom4::Element<'d>, dom4::Element<'d>,
-         dom4::Element<'d>, dom4::Element<'d>)
+    fn setup_preceding_following<'d>(doc: &'d dom::Document<'d>) ->
+        (dom::Element<'d>, dom::Element<'d>, dom::Element<'d>,
+         dom::Element<'d>, dom::Element<'d>)
     {
         let parent = doc.create_element("parent");
 

@@ -514,8 +514,8 @@ mod test {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use document::Package;
-    use document::dom4::Document;
+    use sxd_document::Package;
+    use sxd_document::dom::Document;
 
     use super::super::{LiteralValue,Value};
     use super::super::Value::{Boolean, Number, String};

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use document::QName;
+use sxd_document::QName;
 
 use super::EvaluationContext;
 use super::nodeset::{self,Nodeset};
@@ -169,8 +169,8 @@ mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
 
-    use document::{Package,QName};
-    use document::dom4::{Document,Element,Attribute};
+    use sxd_document::{Package,QName};
+    use sxd_document::dom::{Document,Element,Attribute};
 
     use super::super::{EvaluationContext,Functions,Variables,Namespaces};
     use super::super::nodeset::Nodeset;

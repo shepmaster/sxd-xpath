@@ -1,11 +1,11 @@
-extern crate document;
+extern crate sxd_document;
 extern crate xpath;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use document::Package;
-use document::dom4::Document;
-use document::parser::Parser;
+use sxd_document::Package;
+use sxd_document::dom::Document;
+use sxd_document::parser::Parser;
 use xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
 
 #[test]
