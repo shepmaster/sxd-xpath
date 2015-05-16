@@ -41,7 +41,7 @@ pub struct Namespace<'d> {
 }
 
 impl<'d> Namespace<'d> {
-    pub fn document(&self) -> &'d dom::Document<'d> { self.parent.document() }
+    pub fn document(&self) -> dom::Document<'d> { self.parent.document() }
     pub fn parent(&self) -> dom::Element<'d> { self.parent }
     pub fn prefix(&self) -> &'d str { self.prefix }
     pub fn uri(&self) -> &'d str { self.uri }
@@ -67,7 +67,7 @@ unpack!(Node, comment, Comment, dom::Comment);
 unpack!(Node, processing_instruction, ProcessingInstruction, dom::ProcessingInstruction);
 
 impl<'d> Node<'d> {
-    pub fn document(&self) -> &'d dom::Document<'d> {
+    pub fn document(&self) -> dom::Document<'d> {
         use self::Node::*;
         match *self {
             Root(n)                  => n.document(),
