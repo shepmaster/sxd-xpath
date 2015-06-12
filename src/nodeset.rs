@@ -326,7 +326,7 @@ impl<'d> Nodeset<'d> {
 
             if let Node::Element(e) = n {
                 // TODO: namespaces
-                stack.extend(e.attributes().into_iter().map(|a| a.into()));
+                stack.extend(e.attributes().into_iter().map(|a| -> Node<'d> { a.into() }));
             }
         }
 
