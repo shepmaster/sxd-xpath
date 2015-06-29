@@ -3,6 +3,7 @@ sudo: false
 rust:
 - nightly
 - beta
+- stable
 env:
   matrix:
   - FEATURES=""
@@ -12,6 +13,8 @@ env:
 matrix:
   exclude:
   - rust: beta
+    env: FEATURES="unstable"
+  - rust: stable
     env: FEATURES="unstable"
 script: |
   cargo build --verbose --features "${FEATURES}"
