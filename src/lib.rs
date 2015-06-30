@@ -15,7 +15,7 @@
 //! prefixes.
 //!
 
-#![cfg_attr(feature = "unstable", feature(core))]
+#![cfg_attr(feature = "unstable", feature(iter_cmp))]
 
 #[macro_use]
 extern crate peresil;
