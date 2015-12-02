@@ -33,6 +33,7 @@ use tokenizer::{Tokenizer,TokenDeabbreviator};
 
 pub use function::Function;
 pub use expression::Expression;
+pub use expression::Error as ExpressionError;
 
 #[macro_use]
 pub mod macros;
