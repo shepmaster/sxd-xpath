@@ -3,14 +3,13 @@ extern crate sxd_xpath;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use sxd_document::Package;
 use sxd_document::dom::Document;
-use sxd_document::parser::Parser;
+use sxd_document::parser::parse;
 use sxd_xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
 
 #[test]
 fn functions_accept_arguments() {
-    let package = parse("<a/>");
+    let package = parse("<a/>").unwrap();
     let doc = package.as_document();
 
     let result = evaluate(&doc, "concat('hello', ' ', 'world')");
@@ -20,7 +19,7 @@ fn functions_accept_arguments() {
 
 #[test]
 fn axis_is_fully_applied_before_predicates_filter() {
-    let package = parse("<a><b/></a>");
+    let package = parse("<a><b/></a>").unwrap();
     let doc = package.as_document();
 
     let result = evaluate(&doc, "count(//*[1])");
@@ -30,16 +29,12 @@ fn axis_is_fully_applied_before_predicates_filter() {
 
 #[test]
 fn position_function_in_predicate() {
-    let package = parse("<a><b/><b/></a>");
+    let package = parse("<a><b/><b/></a>").unwrap();
     let doc = package.as_document();
 
     let result = evaluate(&doc, "count(//a/*[position() = 2])");
 
     assert_eq!(Value::Number(1.0), result);
-}
-
-fn parse(xml: &str) -> Package {
-    Parser::new().parse(xml).unwrap()
 }
 
 fn evaluate<'d>(package: &'d Document<'d>, xpath: &str) -> Value<'d> {
