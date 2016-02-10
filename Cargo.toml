@@ -18,5 +18,5 @@ unstable = []
 
 [dependencies]
 getopts = "0.2.4"
-peresil = "0.2.0"
-sxd-document = "0.1.0"
+peresil = "0.3.0"
+sxd-document = "0.2.0"

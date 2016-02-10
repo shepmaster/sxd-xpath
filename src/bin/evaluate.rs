@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self,Read};
 
-use sxd_document::parser::Parser;
+use sxd_document::parser::parse;
 
 use sxd_xpath::{EvaluationContext,Factory,Expression,Value};
 
@@ -46,9 +46,7 @@ fn load_xml<R>(input: R) -> sxd_document::Package
         panic!("Can't read: {}", x);
     }
 
-    let p = Parser::new();
-
-    match p.parse(&data) {
+    match parse(&data) {
         Ok(d) => d,
         Err((point, _)) => panic!("Unable to parse: {}", pretty_error(&data, point)),
     }
