@@ -6,7 +6,6 @@ use sxd_document::parser::XmlParseExt;
 
 use super::node_test;
 use super::token::{Token,AxisName,NodeTestName};
-use super::token::Token::*;
 
 use self::TokenizerErr::*;
 
