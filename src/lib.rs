@@ -15,8 +15,6 @@
 //! prefixes.
 //!
 
-#![cfg_attr(feature = "unstable", feature(iter_cmp))]
-
 #[macro_use]
 extern crate peresil;
 extern crate sxd_document;
