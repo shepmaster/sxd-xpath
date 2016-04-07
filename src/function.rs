@@ -424,7 +424,7 @@ impl Function for NormalizeSpace {
         let arg = try!(args.pop_string_value_or_context_node(context));
         // TODO: research itertools or another pure-iterator solution
         let s: Vec<_> = arg.split(XmlChar::is_space_char).filter(|s| !s.is_empty()).collect();
-        let s = s.connect(" ");
+        let s = s.join(" ");
         Ok(Value::String(s))
     }
 }

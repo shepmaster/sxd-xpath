@@ -15,8 +15,6 @@
 //! prefixes.
 //!
 
-#![cfg_attr(feature = "unstable", feature(iter_cmp))]
-
 #[macro_use]
 extern crate peresil;
 extern crate sxd_document;
@@ -132,7 +130,7 @@ impl<'d> Value<'d> {
     }
 }
 
-type BoxFunc = Box<Function + 'static>;
+pub type BoxFunc = Box<Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 pub type Namespaces = HashMap<string::String, string::String>;
