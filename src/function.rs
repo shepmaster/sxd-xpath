@@ -147,7 +147,7 @@ impl<'d> Args<'d> {
         }
     }
 
-    fn pop_value_or_context_node<'_>(&mut self, context: &EvaluationContext<'_, 'd>) -> Value<'d> {
+    fn pop_value_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         self.0.pop()
             .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
@@ -161,7 +161,7 @@ impl<'d> Args<'d> {
     }
 
 
-    fn pop_nodeset_or_context_node<'_>(&mut self, context: &EvaluationContext<'_, 'd>)
+    fn pop_nodeset_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>)
                                        -> Result<Nodeset<'d>, Error>
     {
         match self.0.pop() {
