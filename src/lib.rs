@@ -245,7 +245,7 @@ impl Factory {
 }
 
 /// Evaluate an absolute XPath expression
-/// # Example
+/// # Examples
 ///
 /// ```no_run
 /// extern crate sxd_document;
@@ -257,7 +257,7 @@ impl Factory {
 /// use sxd_xpath::evaluate_absolute_xpath;
 ///
 /// let mut buffer = String::new();
-/// let mut file = File::open("C:\\path\\to\\some\\file.xml").expect(failed to read the file);
+/// let mut file = File::open("C:\\path\\to\\some\\file.xml").expect("failed to read the file");
 /// let _ = file.read_to_string(&mut buffer);
 /// let package = parser::parse(&buffer).expect("failed to parse the XML");
 /// let document = package.as_document();
