@@ -2,7 +2,7 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::ops::Index;
-use std::{error,fmt,iter};
+use std::iter;
 
 use sxd_document::XmlChar;
 
@@ -23,11 +23,22 @@ pub enum ArgumentType {
     String,
 }
 
-#[derive(Copy,Clone,Debug,PartialEq,Hash)]
-pub enum Error {
-    TooManyArguments{ expected: usize, actual: usize },
-    NotEnoughArguments{ expected: usize, actual: usize },
-    WrongType{ expected: ArgumentType, actual: ArgumentType },
+quick_error! {
+    #[derive(Debug, Copy, Clone, PartialEq, Hash)]
+    pub enum Error {
+        TooManyArguments { expected: usize, actual: usize } {
+            description("too many arguments")
+            display("too many arguments, expected {} but had {}", expected, actual)
+        }
+        NotEnoughArguments { expected: usize, actual: usize } {
+            description("not enough arguments")
+            display("not enough arguments, expected {} but had {}", expected, actual)
+        }
+        WrongType { expected: ArgumentType, actual: ArgumentType } {
+            description("argument of wrong type")
+            display("argument was the wrong type, expected {:?} but had {:?}", expected, actual)
+        }
+    }
 }
 
 impl Error {
@@ -39,38 +50,7 @@ impl Error {
             Value::Boolean(..) => ArgumentType::Boolean,
         };
 
-        Error::WrongType {
-            expected: expected,
-            actual: actual
-        }
-    }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        use self::Error::*;
-        match *self {
-            TooManyArguments{..}   => "too many arguments",
-            NotEnoughArguments{..} => "not enough arguments",
-            WrongType{..}          => "argument of wrong type",
-        }
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use self::Error::*;
-        match *self {
-            TooManyArguments{expected, actual} => {
-                write!(fmt, "too many arguments, expected {} but had {}", expected, actual)
-            },
-            NotEnoughArguments{expected, actual} => {
-                write!(fmt, "not enough arguments, expected {} but had {}", expected, actual)
-            },
-            WrongType{expected, actual} => {
-                write!(fmt, "argument was the wrong type, expected {:?} but had {:?}", expected, actual)
-            },
-        }
+        Error::WrongType { expected: expected, actual: actual }
     }
 }
 
@@ -82,7 +62,7 @@ impl<'d> Args<'d> {
     fn at_least(&self, minimum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < minimum {
-            Err(Error::NotEnoughArguments{expected: minimum, actual: actual})
+            Err(Error::NotEnoughArguments { expected: minimum, actual: actual })
         } else {
             Ok(())
         }
@@ -91,7 +71,7 @@ impl<'d> Args<'d> {
     fn at_most(&self, maximum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual > maximum {
-            Err(Error::TooManyArguments{expected: maximum, actual: actual})
+            Err(Error::TooManyArguments { expected: maximum, actual: actual })
         } else {
             Ok(())
         }
@@ -100,9 +80,9 @@ impl<'d> Args<'d> {
     fn exactly(&self, expected: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < expected {
-            Err(Error::NotEnoughArguments{ expected: expected, actual: actual })
+            Err(Error::NotEnoughArguments { expected: expected, actual: actual })
         } else if actual > expected {
-            Err(Error::TooManyArguments{ expected: expected, actual: actual })
+            Err(Error::TooManyArguments { expected: expected, actual: actual })
         } else {
             Ok(())
         }
