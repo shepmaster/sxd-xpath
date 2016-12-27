@@ -66,11 +66,17 @@ impl LiteralValue {
     }
 }
 
-#[derive(PartialEq,Debug,Clone)]
+/// The primary types of values that an XPath expression accepts
+/// as an argument or returns as a result.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value<'d> {
+    /// A true or false value
     Boolean(bool),
+    /// A IEEE-754 double-precision floating point number
     Number(f64),
+    /// A string
     String(string::String),
+    /// A collection of unique nodes
     Nodeset(Nodeset<'d>),
 }
 
