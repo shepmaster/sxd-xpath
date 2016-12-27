@@ -572,6 +572,9 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
 
 fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 
+/// Adds the [XPath 1.0 core function library][corelib].
+///
+/// [corelib]: https://www.w3.org/TR/xpath/#corelib
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_owned(), Box::new(Last));
     functions.insert("position".to_owned(), Box::new(Position));
