@@ -677,11 +677,11 @@ mod test {
         let doc = package.as_document();
         let setup = Setup::new();
 
-        let args = args.into_iter().map(|a| a.into_value()).collect();
+        let args = args.into_iter().map(Into::into).collect();
 
         let r = setup.evaluate(doc.root(), f, args);
 
-        r.map(|r| r.into_literal_value())
+        r.map(Into::into)
     }
 
     #[test]

@@ -191,7 +191,7 @@ impl From<LiteralValue> for Literal {
 
 impl Expression for Literal {
     fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        Ok(self.value.clone().into_value())
+        Ok(self.value.clone().into())
     }
 }
 
