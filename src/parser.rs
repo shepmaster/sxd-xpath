@@ -1,7 +1,6 @@
 use std::iter::Peekable;
-use std::{error,fmt};
 
-use self::ParseErr::*;
+use self::Error::*;
 
 use super::LiteralValue;
 use super::token::{Token,AxisName,NodeTestName};
@@ -19,59 +18,42 @@ impl Parser {
     }
 }
 
-#[derive(Debug,PartialEq,Clone)]
-pub enum ParseErr {
-    EmptyPredicate,
-    ExtraUnparsedTokens,
-    RanOutOfInput,
-    RightHandSideExpressionMissing,
-    ArgumentMissing,
-    TokenizerError(tokenizer::Error),
-    TrailingSlash,
-    UnexpectedToken(Token),
-}
-
-impl error::Error for ParseErr {
-    fn description(&self) -> &str {
-        use self::ParseErr::*;
-        match self {
-            &EmptyPredicate                 => "empty predicate",
-            &ExtraUnparsedTokens            => "extra unparsed tokens",
-            &RanOutOfInput                  => "ran out of input",
-            &RightHandSideExpressionMissing => "right hand side of expression is missing",
-            &ArgumentMissing                => "function argument is missing",
-            &TokenizerError(ref e)          => e.description(),
-            &TrailingSlash                  => "trailing slash",
-            &UnexpectedToken(..)            => "unexpected token",
+quick_error! {
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum Error {
+        EmptyPredicate {
+            description("empty predicate")
+        }
+        ExtraUnparsedTokens {
+            description("extra unparsed tokens")
+        }
+        RanOutOfInput {
+            description("ran out of input")
+        }
+        RightHandSideExpressionMissing {
+            description("right hand side of expression is missing")
+        }
+        ArgumentMissing {
+            description("function argument is missing")
+        }
+        Tokenizer(err: tokenizer::Error) {
+            from()
+            cause(err)
+            description(err.description())
+            display("tokenizer error: {}", err)
+        }
+        TrailingSlash {
+            description("trailing slash")
+        }
+        UnexpectedToken(token: Token) {
+            from()
+            description("unexpected token")
+            display("unexpected token: {:?}", token)
         }
     }
 }
 
-impl fmt::Display for ParseErr {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use self::ParseErr::*;
-        let as_err = self as &error::Error;
-        match self {
-            &EmptyPredicate                 |
-            &ExtraUnparsedTokens            |
-            &RanOutOfInput                  |
-            &RightHandSideExpressionMissing |
-            &ArgumentMissing                |
-            &TrailingSlash                  => {
-                as_err.description().fmt(fmt)
-            },
-            &UnexpectedToken(ref t) => {
-                write!(fmt, "unexpected token: {:?}", t)
-            },
-            &TokenizerError(ref e) => {
-                try!(write!(fmt, "tokenizer error: "));
-                e.fmt(fmt)
-            },
-        }
-    }
-}
-
-pub type ParseResult = Result<Option<SubExpression>, ParseErr>;
+pub type ParseResult = Result<Option<SubExpression>, Error>;
 
 type BinaryExpressionBuilder = fn(SubExpression, SubExpression) -> SubExpression;
 
@@ -89,7 +71,7 @@ type TokenSource<'a, I> = &'a mut Peekable<I>;
 trait XCompat {
     fn has_more_tokens(&mut self) -> bool;
     fn next_token_is(&mut self, token: &Token) -> bool;
-    fn consume(&mut self, token: &Token) -> Result<(), ParseErr>;
+    fn consume(&mut self, token: &Token) -> Result<(), Error>;
 }
 
 impl<I> XCompat for Peekable<I>
@@ -106,10 +88,10 @@ impl<I> XCompat for Peekable<I>
         }
     }
 
-    fn consume(&mut self, token: &Token) -> Result<(), ParseErr> {
+    fn consume(&mut self, token: &Token) -> Result<(), Error> {
         match self.next() {
             None => Err(RanOutOfInput),
-            Some(Err(x)) => Err(TokenizerError(x)),
+            Some(Err(x)) => Err(Tokenizer(x)),
             Some(Ok(x)) =>
                 if &x == token {
                     Ok(())
@@ -126,7 +108,7 @@ macro_rules! consume_value(
     ($source:expr, Token::$token:ident) => (
         match $source.next() {
             None => return Err(RanOutOfInput),
-            Some(Err(x)) => return Err(TokenizerError(x)),
+            Some(Err(x)) => return Err(Tokenizer(x)),
             Some(Ok(Token::$token(x))) => x,
             Some(Ok(x)) => return Err(UnexpectedToken(x)),
         }
@@ -207,7 +189,7 @@ fn first_matching_rule<I>(child_parses: &[&Rule<I>],
 }
 
 impl Parser {
-    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<SubAxis, ParseErr>
+    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<SubAxis, Error>
         where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::Axis) {
@@ -233,7 +215,7 @@ impl Parser {
         }
     }
 
-    fn parse_node_test<I>(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, ParseErr>
+    fn parse_node_test<I>(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, Error>
         where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::NodeTest) {
@@ -252,7 +234,7 @@ impl Parser {
     }
 
     fn default_node_test<I>(&self, source: TokenSource<I>, axis: &Axis)
-                            -> Result<Option<SubNodeTest>,ParseErr>
+                            -> Result<Option<SubNodeTest>,Error>
         where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::NameTest) {
@@ -317,7 +299,7 @@ impl Parser {
     }
 
     fn parse_function_args_tail<I>(&self, source: TokenSource<I>, mut arguments: Vec<SubExpression>)
-                                   -> Result<Vec<SubExpression>, ParseErr>
+                                   -> Result<Vec<SubExpression>, Error>
         where I: Iterator<Item=TokenResult>
     {
         while source.next_token_is(&Token::Comma) {
@@ -333,7 +315,7 @@ impl Parser {
     }
 
     fn parse_function_args<I>(&self, source: TokenSource<I>)
-                              -> Result<Vec<SubExpression>, ParseErr>
+                              -> Result<Vec<SubExpression>, Error>
         where I: Iterator<Item=TokenResult>
     {
         let mut arguments = Vec::new();
@@ -395,7 +377,7 @@ impl Parser {
     }
 
     fn parse_predicates<I>(&self, source: TokenSource<I>)
-                           -> Result<Vec<SubExpression>,ParseErr>
+                           -> Result<Vec<SubExpression>,Error>
         where I: Iterator<Item=TokenResult>
     {
         let mut predicates = Vec::new();
@@ -407,7 +389,7 @@ impl Parser {
         Ok(predicates)
     }
 
-    fn parse_step<I>(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, ParseErr>
+    fn parse_step<I>(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, Error>
         where I: Iterator<Item=TokenResult>
     {
         let axis = try!(self.parse_axis(source));
@@ -681,12 +663,12 @@ mod test {
     use super::super::expression::{Expression,SubExpression};
 
     use super::super::parser::{Parser,ParseResult};
-    use super::super::parser::ParseErr::{
+    use super::super::parser::Error::{
         EmptyPredicate,
         ExtraUnparsedTokens,
         RanOutOfInput,
         RightHandSideExpressionMissing,
-        TokenizerError,
+        Tokenizer,
         TrailingSlash,
         UnexpectedToken,
     };
@@ -1845,6 +1827,6 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TokenizerError(tokenizer::Error::UnableToCreateToken)), res.err());
+        assert_eq!(Some(Tokenizer(tokenizer::Error::UnableToCreateToken)), res.err());
     }
 }

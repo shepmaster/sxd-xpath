@@ -249,7 +249,7 @@ impl Factory {
 quick_error! {
     #[derive(Debug, Clone, PartialEq)]
     pub enum EvaluationError {
-        Parsing(err: parser::ParseErr) {
+        Parsing(err: parser::Error) {
             from()
             cause(err)
             description("Unable to parse XPath")
@@ -458,7 +458,7 @@ mod test {
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
             use EvaluationError::*;
-            use parser::ParseErr::*;
+            use parser::Error::*;
 
             let result = evaluate_xpath(&doc, "/root/child/");
 
