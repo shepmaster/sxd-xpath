@@ -23,6 +23,8 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::{iter,string};
 
+use sxd_document::dom::Document;
+
 use self::Value::{Boolean,Number,String};
 
 use nodeset::{Nodeset,Node};
@@ -242,13 +244,55 @@ impl Factory {
     }
 }
 
+/// Evaluate an absolute XPath expression
+/// # Examples
+///
+/// ```no_run
+/// # fn foo() {
+/// extern crate sxd_document;
+/// extern crate sxd_xpath;
+///
+/// use std::fs::File;
+/// use std::io::Read;
+/// use sxd_document::parser;
+/// use sxd_xpath::evaluate_absolute_xpath;
+///
+/// let mut buffer = String::new();
+/// let mut file = File::open("C:\\path\\to\\some\\file.xml").expect("failed to read the file");
+/// let _ = file.read_to_string(&mut buffer);
+/// let package = parser::parse(&buffer).expect("failed to parse the XML");
+/// let document = package.as_document();
+///
+/// let result = evaluate_absolute_xpath(&document, "/some/absolute/XPath");
+/// # }
+/// ```
+pub fn evaluate_absolute_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Option<Result<Value<'d>, ExpressionError>> {
+    let mut functions = HashMap::new();
+    let variables = HashMap::new();
+    let namespaces = HashMap::new();
+    let factory = Factory::new();
+    function::register_core_functions(&mut functions);
+    let context = EvaluationContext::new(
+        document.root(),
+        &functions,
+        &variables,
+        &namespaces,
+    );
+    let expression = factory.build(xpath);
+    match expression {
+        Err(e) => Some(Err(ExpressionError::InvalidXPath(format!("{}", e)))),
+        Ok(None) => None,
+        Ok(Some(r)) => Some(r.evaluate(&context))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
 
-    use sxd_document::Package;
+    use sxd_document::{Package, parser};
 
-    use super::Value;
+    use super::{Value, ExpressionError, evaluate_absolute_xpath};
 
     #[test]
     fn number_of_string_is_ieee_754_number() {
@@ -366,5 +410,21 @@ mod test {
 
         let v = Value::Nodeset(nodeset![c2, c1]);
         assert_eq!("comment 1", v.string());
+    }
+
+    #[test]
+    fn absolute_xpath_evaluation() {
+        let package = parser::parse("<?xml version='1.0'?><root><child>content</child></root>").unwrap();
+        let doc = package.as_document();
+
+        let result1 = evaluate_absolute_xpath(&doc, "/root/child");
+        let result2 = evaluate_absolute_xpath(&doc, "/root/child/");
+        let result3 = evaluate_absolute_xpath(&doc, "2 + 2");
+        let result4 = evaluate_absolute_xpath(&doc, "");
+
+        assert_eq!("content", result1.unwrap().unwrap().string());
+        assert_eq!(Some(Err(ExpressionError::InvalidXPath("trailing slash".to_owned()))), result2);
+        assert_eq!(Some(Ok(Value::Number(4.0))), result3);
+        assert_eq!(None, result4);
     }
 }

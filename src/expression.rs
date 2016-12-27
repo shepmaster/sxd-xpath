@@ -15,6 +15,7 @@ pub enum Error {
     NotANodeset,
     UnknownFunction(String),
     UnknownVariable(String),
+    InvalidXPath(String),
     FunctionEvaluation(function::Error),
 }
 
@@ -25,6 +26,7 @@ impl error::Error for Error {
             &NotANodeset               => "expression did not evaluate to a nodeset",
             &UnknownFunction(..)       => "unknown function",
             &UnknownVariable(..)       => "unknown variable",
+            &InvalidXPath(..)          => "invalid XPath",
             &FunctionEvaluation(ref f) => f.description(),
         }
     }
@@ -43,6 +45,9 @@ impl fmt::Display for Error {
             },
             &UnknownVariable(ref v) => {
                 write!(fmt, "unknown variable {}", v)
+            },
+            &InvalidXPath(ref x) => {
+                write!(fmt, "invalid XPath {}", x)
             },
             &FunctionEvaluation(ref f) => {
                 try!(write!(fmt, "error while evaluating function: "));
