@@ -18,10 +18,14 @@
 #[macro_use]
 extern crate peresil;
 extern crate sxd_document;
+#[macro_use]
+extern crate quick_error;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::{iter,string};
+
+use sxd_document::dom::Document;
 
 use self::Value::{Boolean,Number,String};
 
@@ -242,13 +246,79 @@ impl Factory {
     }
 }
 
+quick_error! {
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum EvaluationError {
+        Parsing(err: parser::ParseErr) {
+            from()
+            cause(err)
+            description("Unable to parse XPath")
+            display("Unable to parse XPath: {}", err)
+        }
+        NoXPath {
+            description("XPath was empty")
+        }
+        Executing(err: expression::Error) {
+            from()
+            cause(err)
+            description("Unable to execute XPath")
+            display("Unable to execute XPath: {}", err)
+        }
+    }
+}
+
+/// Easily evaluate an XPath expression
+///
+/// The core XPath 1.0 functions will be available, and no variables
+/// or namespaces will be defined. The root of the document is the
+/// context node.
+///
+/// If you will be evaluating multiple XPaths or the same XPath
+/// multiple times, this may not be the most performant solution.
+///
+/// # Examples
+///
+/// ```
+/// extern crate sxd_document;
+/// extern crate sxd_xpath;
+///
+/// use sxd_document::parser;
+/// use sxd_xpath::{evaluate_xpath, Value};
+///
+/// fn main() {
+///     let package = parser::parse("<root><a>1</a><b>2</b></root>").expect("failed to parse the XML");
+///     let document = package.as_document();
+///
+///     assert_eq!(Ok(Value::Number(3.0)), evaluate_xpath(&document, "/*/a + /*/b"));
+/// }
+/// ```
+pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, EvaluationError> {
+    let factory = Factory::new();
+    let expression = factory.build(xpath)?;
+    let expression = expression.ok_or(EvaluationError::NoXPath)?;
+
+    let mut functions = HashMap::new();
+    function::register_core_functions(&mut functions);
+    let variables = HashMap::new();
+    let namespaces = HashMap::new();
+
+    let context = EvaluationContext::new(
+        document.root(),
+        &functions,
+        &variables,
+        &namespaces,
+    );
+
+    expression.evaluate(&context).map_err(Into::into)
+}
+
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
 
-    use sxd_document::Package;
+    use sxd_document::{self, dom, Package};
 
-    use super::Value;
+    use super::*;
 
     #[test]
     fn number_of_string_is_ieee_754_number() {
@@ -366,5 +436,54 @@ mod test {
 
         let v = Value::Nodeset(nodeset![c2, c1]);
         assert_eq!("comment 1", v.string());
+    }
+
+    fn with_document<F>(xml: &str, f: F)
+        where F: FnOnce(dom::Document),
+    {
+        let package = sxd_document::parser::parse(xml).expect("Unable to parse test XML");
+        f(package.as_document());
+    }
+
+    #[test]
+    fn xpath_evaluation_success() {
+        with_document("<root><child>content</child></root>", |doc| {
+            let result = evaluate_xpath(&doc, "/root/child");
+
+            assert_eq!(Ok("content".to_owned()), result.map(|v| v.string()));
+        });
+    }
+
+    #[test]
+    fn xpath_evaluation_parsing_error() {
+        with_document("<root><child>content</child></root>", |doc| {
+            use EvaluationError::*;
+            use parser::ParseErr::*;
+
+            let result = evaluate_xpath(&doc, "/root/child/");
+
+            assert_eq!(Err(Parsing(TrailingSlash)), result);
+        });
+    }
+
+    #[test]
+    fn xpath_evaluation_execution_error() {
+        with_document("<root><child>content</child></root>", |doc| {
+            use EvaluationError::*;
+            use expression::Error::*;
+
+            let result = evaluate_xpath(&doc, "$foo");
+
+            assert_eq!(Err(Executing(UnknownVariable("foo".to_owned()))), result);
+        });
+    }
+
+    #[test]
+    fn xpath_evaluation_no_xpath_error() {
+        with_document("<root><child>content</child></root>", |doc| {
+            let result = evaluate_xpath(&doc, "");
+
+            assert_eq!(Err(EvaluationError::NoXPath), result);
+        });
     }
 }
