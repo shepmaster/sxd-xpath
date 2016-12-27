@@ -235,6 +235,8 @@ impl<'a, 'd, 'p> Iterator for EvaluationContextPredicateIter<'a, 'd, 'p> {
     }
 }
 
+/// The primary entrypoint to convert an XPath represented as a string
+/// to a structure that can be evaluated.
 pub struct Factory {
     parser: Parser,
 }
@@ -244,6 +246,7 @@ impl Factory {
         Factory { parser: Parser::new() }
     }
 
+    /// Compiles the given string into an XPath structure.
     pub fn build(&self, xpath: &str) -> parser::ParseResult {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
