@@ -736,7 +736,7 @@ mod test {
         let fun = Box::new(StubFunction{value: "the function ran"});
         setup.funs.insert("test-fn".to_owned(), fun);
 
-        let expr = expression::Function{name: "test-fn".to_owned(), arguments: vec!(arg_expr)};
+        let expr = expression::Function{name: "test-fn".to_owned(), arguments: vec![arg_expr]};
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -749,7 +749,7 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = expression::Function{name: "unknown-fn".to_owned(), arguments: vec!()};
+        let expr = expression::Function{name: "unknown-fn".to_owned(), arguments: vec![]};
 
         let context = setup.context();
         let res = expr.evaluate(&context);
