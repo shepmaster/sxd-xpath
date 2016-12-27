@@ -1,5 +1,5 @@
 use std::borrow::ToOwned;
-use std::{error,fmt,string};
+use std::string;
 
 use peresil::{self,StringPoint,ParseMaster,Identifier,Recoverable};
 use sxd_document::parser::XmlParseExt;
@@ -7,7 +7,7 @@ use sxd_document::parser::XmlParseExt;
 use super::node_test;
 use super::token::{Token,AxisName,NodeTestName};
 
-use self::TokenizerErr::*;
+use self::Error::*;
 
 pub struct Tokenizer {
     xpath: string::String,
@@ -15,78 +15,65 @@ pub struct Tokenizer {
     prefer_recognition_of_operator_names: bool,
 }
 
-type XPathMaster<'a> = ParseMaster<StringPoint<'a>, TokenizerErr>;
+type XPathMaster<'a> = ParseMaster<StringPoint<'a>, Error>;
 type XPathProgress<'a, T, E> = peresil::Progress<StringPoint<'a>, T, E>;
 
-pub type TokenResult = Result<Token, TokenizerErr>;
+pub type TokenResult = Result<Token, Error>;
 
-#[derive(Debug,PartialEq,Clone,Copy)]
-pub enum TokenizerErr {
-    ExpectedQuote,
-    ExpectedNumber,
-    ExpectedCurrentNode,
-    ExpectedNamedOperator,
-    ExpectedAxis,
-    ExpectedAxisSeparator,
-    ExpectedNodeTest,
-    ExpectedPrefixedName,
-    ExpectedNameTest,
-    ExpectedVariableReference,
-    ExpectedToken,
-    ExpectedLeftParenthesis,
-    NotTokenizingNamedOperators,
-    MismatchedQuoteCharacters,
-    UnableToCreateToken,
-}
-
-impl error::Error for TokenizerErr {
-    fn description(&self) -> &str {
-        use self::TokenizerErr::*;
-        match *self {
-            ExpectedQuote =>
-                "expected a single or double quote",
-            ExpectedNumber =>
-                "expected a number",
-            ExpectedCurrentNode =>
-                "Expected the current node token",
-            ExpectedNamedOperator =>
-                "expected a named operator",
-            ExpectedAxis =>
-                "expected an axis name",
-            ExpectedAxisSeparator =>
-                "expected an axis separator",
-            ExpectedNodeTest =>
-                "expected a node test",
-            ExpectedPrefixedName =>
-                "expected an optionally prefixed name",
-            ExpectedNameTest =>
-                "expected a name test",
-            ExpectedVariableReference =>
-                "expected a variable reference",
-            ExpectedToken =>
-                "expected a token",
-            ExpectedLeftParenthesis =>
-                "expected a left parenthesis",
-            NotTokenizingNamedOperators =>
-                "internal error",
-            MismatchedQuoteCharacters =>
-                "mismatched quote character",
-            UnableToCreateToken =>
-                "unable to create token",
+quick_error! {
+    #[derive(Debug, Copy, Clone, PartialEq)]
+    pub enum Error {
+        ExpectedQuote {
+            description("expected a single or double quote")
+        }
+        ExpectedNumber {
+            description("expected a number")
+        }
+        ExpectedCurrentNode {
+            description("Expected the current node token")
+        }
+        ExpectedNamedOperator {
+            description("expected a named operator")
+        }
+        ExpectedAxis {
+            description("expected an axis name")
+        }
+        ExpectedAxisSeparator {
+            description("expected an axis separator")
+        }
+        ExpectedNodeTest {
+            description("expected a node test")
+        }
+        ExpectedPrefixedName {
+            description("expected an optionally prefixed name")
+        }
+        ExpectedNameTest {
+            description("expected a name test")
+        }
+        ExpectedVariableReference {
+            description("expected a variable reference")
+        }
+        ExpectedToken {
+            description("expected a token")
+        }
+        ExpectedLeftParenthesis {
+            description("expected a left parenthesis")
+        }
+        NotTokenizingNamedOperators {
+            description("internal error")
+        }
+        MismatchedQuoteCharacters {
+            description("mismatched quote character")
+        }
+        UnableToCreateToken {
+            description("unable to create token")
         }
     }
 }
 
-impl fmt::Display for TokenizerErr {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let as_err = self as &error::Error;
-        as_err.description().fmt(fmt)
-    }
-}
-
-impl Recoverable for TokenizerErr {
+impl Recoverable for Error {
     fn recoverable(&self) -> bool {
-        use self::TokenizerErr::*;
+        use self::Error::*;
         match *self {
             MismatchedQuoteCharacters |
             UnableToCreateToken       => false,
@@ -163,9 +150,9 @@ static NODE_TESTS: [Identifier<'static, NodeTestName>; 4] = [
     ("node", NodeTestName::Node),
 ];
 
-fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, &'a str, TokenizerErr> {
+fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, &'a str, Error> {
     fn with_quote<'a>(p: StringPoint<'a>, quote: &str)
-                     -> XPathProgress<'a, &'a str, TokenizerErr>
+                     -> XPathProgress<'a, &'a str, Error>
     {
         let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| ExpectedQuote));
         let (p, v) = try_parse!(p.consume_quoted_string(quote).map_err(|_| unreachable!()));
@@ -180,11 +167,11 @@ fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgr
         .finish()
 }
 
-fn parse_quoted_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_quoted_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     parse_literal(pm, p).map(|v| Token::Literal(v.to_owned()))
 }
 
-fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     fn fractional_part<'a>(p: StringPoint<'a>) -> XPathProgress<'a, (), ()> {
         let (p, _) = try_parse!(p.consume_literal("."));
         let (p, _) = p.consume_decimal_chars().optional(p);
@@ -221,14 +208,14 @@ fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgre
     peresil::Progress::success(p, Token::Number(num))
 }
 
-fn parse_current_node<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_current_node<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     let (p, _) = try_parse!(p.consume_literal(".").map_err(|_| ExpectedCurrentNode));
 
     peresil::Progress::success(p, Token::CurrentNode)
 }
 
 fn parse_named_operators<'a>(p: StringPoint<'a>, prefer_named_ops: bool)
-                          -> XPathProgress<'a, Token, TokenizerErr>
+                          -> XPathProgress<'a, Token, Error>
 {
     if prefer_named_ops {
         p.consume_identifier(&NAMED_OPERATORS).map_err(|_| ExpectedNamedOperator)
@@ -238,7 +225,7 @@ fn parse_named_operators<'a>(p: StringPoint<'a>, prefer_named_ops: bool)
     }
 }
 
-fn parse_axis_specifier<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_axis_specifier<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
     let (p, axis) = try_parse!(p.consume_identifier(&AXES).map_err(|_| ExpectedAxis));
@@ -247,7 +234,7 @@ fn parse_axis_specifier<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Toke
     peresil::Progress::success(p, Token::Axis(axis))
 }
 
-fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     fn without_arg<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
         let (p, node_type) = try_parse!(p.consume_identifier(&NODE_TESTS));
         let (p, _) = try_parse!(p.consume_literal("()"));
@@ -270,7 +257,7 @@ fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
         .finish()
 }
 
-fn parse_function_call<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_function_call<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
     // Do not advance the point here. We want to know if there *is* a
     // left-paren, but do not want to actually consume it here.
@@ -281,7 +268,7 @@ fn parse_function_call<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Token
     peresil::Progress::success(p, Token::Function(name))
 }
 
-fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     fn wildcard<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, ()> {
         let (p, wc) = try_parse!(p.consume_literal("*"));
 
@@ -320,7 +307,7 @@ fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
         .finish()
 }
 
-fn parse_variable_reference<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+fn parse_variable_reference<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
     let (p, _) = try_parse!(p.consume_literal("$").map_err(|_| ExpectedVariableReference));
     let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
 
@@ -342,7 +329,7 @@ impl Tokenizer {
         self.xpath.len() > self.start
     }
 
-    fn parse_token<'a>(&self, pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, TokenizerErr> {
+    fn parse_token<'a>(&self, pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
         let (p, _) = p.consume_space().optional(p);
 
         let (p, tok) = try_parse!({
@@ -484,8 +471,8 @@ mod test {
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
 
-    use super::{Tokenizer,TokenDeabbreviator,TokenResult,TokenizerErr};
-    use super::TokenizerErr::{
+    use super::{Tokenizer,TokenDeabbreviator,TokenResult,Error};
+    use super::Error::{
         MismatchedQuoteCharacters,
         UnableToCreateToken,
     };
@@ -494,7 +481,7 @@ mod test {
         ! tokenizer.has_more_tokens()
     }
 
-    fn all_tokens_raw<I>(tokenizer: I) -> Result<Vec<Token>, TokenizerErr>
+    fn all_tokens_raw<I>(tokenizer: I) -> Result<Vec<Token>, Error>
         where I: Iterator<Item=TokenResult>
     {
         tokenizer.collect()

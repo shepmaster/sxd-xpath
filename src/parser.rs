@@ -5,7 +5,7 @@ use self::ParseErr::*;
 
 use super::LiteralValue;
 use super::token::{Token,AxisName,NodeTestName};
-use super::tokenizer::{TokenResult,TokenizerErr};
+use super::tokenizer::{self, TokenResult};
 use super::axis::{self,Axis,SubAxis,PrincipalNodeType};
 use super::expression::{self,SubExpression};
 use super::node_test::{self,SubNodeTest};
@@ -26,7 +26,7 @@ pub enum ParseErr {
     RanOutOfInput,
     RightHandSideExpressionMissing,
     ArgumentMissing,
-    TokenizerError(TokenizerErr),
+    TokenizerError(tokenizer::Error),
     TrailingSlash,
     UnexpectedToken(Token),
 }
@@ -674,7 +674,7 @@ mod test {
 
     use super::super::node_test;
     use super::super::token::{Token,AxisName,NodeTestName};
-    use super::super::tokenizer::{TokenResult,TokenizerErr};
+    use super::super::tokenizer::{self, TokenResult};
 
     use super::super::function::register_core_functions;
 
@@ -1837,7 +1837,7 @@ mod test {
     fn a_tokenizer_error_is_reported_as_an_error() {
         let tokens = vec![
             Ok(Token::Function("func".to_owned())),
-            Err(TokenizerErr::UnableToCreateToken)
+            Err(tokenizer::Error::UnableToCreateToken)
         ];
 
         let package = Package::new();
@@ -1845,6 +1845,6 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TokenizerError(TokenizerErr::UnableToCreateToken)), res.err());
+        assert_eq!(Some(TokenizerError(tokenizer::Error::UnableToCreateToken)), res.err());
     }
 }
