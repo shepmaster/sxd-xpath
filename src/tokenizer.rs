@@ -2,11 +2,11 @@ use std::borrow::ToOwned;
 use std::collections::VecDeque;
 use std::string;
 
-use peresil::{self,StringPoint,ParseMaster,Identifier,Recoverable};
+use peresil::{self, StringPoint, ParseMaster, Identifier, Recoverable};
 use sxd_document::parser::XmlParseExt;
 
 use super::node_test;
-use super::token::{Token,AxisName,NodeTestName};
+use super::token::{Token, AxisName, NodeTestName};
 
 use self::Error::*;
 
@@ -152,9 +152,7 @@ static NODE_TESTS: [Identifier<'static, NodeTestName>; 4] = [
 ];
 
 fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, &'a str, Error> {
-    fn with_quote<'a>(p: StringPoint<'a>, quote: &str)
-                     -> XPathProgress<'a, &'a str, Error>
-    {
+    fn with_quote<'a>(p: StringPoint<'a>, quote: &str) -> XPathProgress<'a, &'a str, Error> {
         let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| ExpectedQuote));
         let (p, v) = try_parse!(p.consume_quoted_string(quote).map_err(|_| unreachable!()));
         let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| MismatchedQuoteCharacters));
@@ -215,9 +213,7 @@ fn parse_current_node<'a>(p: StringPoint<'a>) -> XPathProgress<'a, Token, Error>
     peresil::Progress::success(p, Token::CurrentNode)
 }
 
-fn parse_named_operators<'a>(p: StringPoint<'a>, prefer_named_ops: bool)
-                          -> XPathProgress<'a, Token, Error>
-{
+fn parse_named_operators<'a>(p: StringPoint<'a>, prefer_named_ops: bool) -> XPathProgress<'a, Token, Error> {
     if prefer_named_ops {
         p.consume_identifier(&NAMED_OPERATORS).map_err(|_| ExpectedNamedOperator)
     } else {
@@ -296,7 +292,7 @@ fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
                 prefix: name.prefix().map(|p| p.to_owned()),
-                local_part: name.local_part().to_owned()
+                local_part: name.local_part().to_owned(),
             })
         })
     }
@@ -429,31 +425,31 @@ impl<I> TokenDeabbreviator<I> {
             Token::AtSign => {
                 deabbrev!(self,
                           Token::Axis(AxisName::Attribute))
-            }
+            },
             Token::DoubleSlash => {
                 deabbrev!(self,
                           Token::Slash,
                           Token::Axis(AxisName::DescendantOrSelf),
                           Token::NodeTest(NodeTestName::Node),
                           Token::Slash)
-            }
+            },
             Token::CurrentNode => {
                 deabbrev!(self,
                           Token::Axis(AxisName::SelfAxis),
                           Token::NodeTest(NodeTestName::Node))
-            }
+            },
             Token::ParentNode => {
                 deabbrev!(self,
                           Token::Axis(AxisName::Parent),
                           Token::NodeTest(NodeTestName::Node))
-            }
+            },
             _ => token,
         }
     }
 }
 
 impl<I> Iterator for TokenDeabbreviator<I>
-    where I: Iterator<Item=TokenResult>
+    where I: Iterator<Item = TokenResult>,
 {
     type Item = TokenResult;
 
@@ -476,26 +472,23 @@ mod test {
     use std::borrow::ToOwned;
 
     use super::super::node_test;
-    use super::super::token::{Token,AxisName,NodeTestName};
+    use super::super::token::{Token, AxisName, NodeTestName};
 
-    use super::{Tokenizer,TokenDeabbreviator,TokenResult,Error};
-    use super::Error::{
-        MismatchedQuoteCharacters,
-        UnableToCreateToken,
-    };
+    use super::{Tokenizer, TokenDeabbreviator, TokenResult, Error};
+    use super::Error::{MismatchedQuoteCharacters, UnableToCreateToken};
 
     fn is_finished(tokenizer: &Tokenizer) -> bool {
         ! tokenizer.has_more_tokens()
     }
 
     fn all_tokens_raw<I>(tokenizer: I) -> Result<Vec<Token>, Error>
-        where I: Iterator<Item=TokenResult>
+        where I: Iterator<Item = TokenResult>,
     {
         tokenizer.collect()
     }
 
     fn all_tokens<I>(tokenizer: I) -> Vec<Token>
-        where I: Iterator<Item=TokenResult>
+        where I: Iterator<Item = TokenResult>,
     {
         match all_tokens_raw(tokenizer) {
             Ok(toks) => toks,
@@ -511,23 +504,20 @@ mod test {
     }
 
     #[test]
-    fn empty_string_has_no_tokens()
-    {
+    fn empty_string_has_no_tokens() {
         let tokenizer = Tokenizer::new("");
         assert!(is_finished(&tokenizer));
     }
 
     #[test]
-    fn tokenizes_simple_string()
-    {
+    fn tokenizes_simple_string() {
         let tokenizer = Tokenizer::new("hello");
 
         assert_eq!(all_tokens(tokenizer), vec!(name_test("hello")));
     }
 
     #[test]
-    fn tokenizes_grandchild_selector()
-    {
+    fn tokenizes_grandchild_selector() {
         let tokenizer = Tokenizer::new("hello/world");
 
         assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
@@ -536,8 +526,7 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_great_grandchild_selector()
-    {
+    fn tokenizes_great_grandchild_selector() {
         let tokenizer = Tokenizer::new("hello/there/world");
 
         assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
@@ -548,8 +537,7 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_qualified_names()
-    {
+    fn tokenizes_qualified_names() {
         let tokenizer = Tokenizer::new("ns:foo");
 
         let name = node_test::NameTest {
@@ -560,8 +548,7 @@ mod test {
     }
 
     #[test]
-    fn ignores_whitespace_around_tokens()
-    {
+    fn ignores_whitespace_around_tokens() {
         let tokenizer = Tokenizer::new(" @\t@\n@\r");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::AtSign,
@@ -570,16 +557,14 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_wildcard_name_test()
-    {
+    fn tokenizes_wildcard_name_test() {
         let tokenizer = Tokenizer::new("*");
 
         assert_eq!(all_tokens(tokenizer), vec!(name_test("*")));
     }
 
     #[test]
-    fn tokenizes_axis_selector()
-    {
+    fn tokenizes_axis_selector() {
         let tokenizer = Tokenizer::new("ancestor::world");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::Ancestor),
@@ -587,8 +572,7 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_axis_selector_that_contains_another_axis()
-    {
+    fn tokenizes_axis_selector_that_contains_another_axis() {
         let tokenizer = Tokenizer::new("ancestor-or-self::world");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Axis(AxisName::AncestorOrSelf),
@@ -596,24 +580,21 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_single_slash()
-    {
+    fn tokenizes_single_slash() {
         let tokenizer = Tokenizer::new("/");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Slash));
     }
 
     #[test]
-    fn tokenizes_double_slash()
-    {
+    fn tokenizes_double_slash() {
         let tokenizer = Tokenizer::new("//");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::DoubleSlash));
     }
 
     #[test]
-    fn tokenizes_double_slash_separator()
-    {
+    fn tokenizes_double_slash_separator() {
         let tokenizer = Tokenizer::new("hello//world");
 
         assert_eq!(all_tokens(tokenizer), vec!(name_test("hello"),
@@ -622,184 +603,161 @@ mod test {
     }
 
     #[test]
-    fn tokenizes_left_paren()
-    {
+    fn tokenizes_left_paren() {
         let tokenizer = Tokenizer::new("(");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::LeftParen));
     }
 
     #[test]
-    fn tokenizes_right_paren()
-    {
+    fn tokenizes_right_paren() {
         let tokenizer = Tokenizer::new(")");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::RightParen));
     }
 
     #[test]
-    fn tokenizes_at_sign()
-    {
+    fn tokenizes_at_sign() {
         let tokenizer = Tokenizer::new("@");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::AtSign));
     }
 
     #[test]
-    fn tokenizes_single_dot()
-    {
+    fn tokenizes_single_dot() {
         let tokenizer = Tokenizer::new(".");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::CurrentNode));
     }
 
     #[test]
-    fn tokenizes_double_dot()
-    {
+    fn tokenizes_double_dot() {
         let tokenizer = Tokenizer::new("..");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::ParentNode));
     }
 
     #[test]
-    fn tokenizes_integral_number()
-    {
+    fn tokenizes_integral_number() {
         let tokenizer = Tokenizer::new("42");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(42.0)));
     }
 
     #[test]
-    fn tokenizes_decimal_number()
-    {
+    fn tokenizes_decimal_number() {
         let tokenizer = Tokenizer::new("42.42");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(42.42)));
     }
 
     #[test]
-    fn tokenizes_decimal_number_without_integral_part()
-    {
+    fn tokenizes_decimal_number_without_integral_part() {
         let tokenizer = Tokenizer::new(".40");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(0.40)));
     }
 
     #[test]
-    fn tokenizes_left_bracket()
-    {
+    fn tokenizes_left_bracket() {
         let tokenizer = Tokenizer::new("[");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::LeftBracket));
     }
 
     #[test]
-    fn tokenizes_right_bracket()
-    {
+    fn tokenizes_right_bracket() {
         let tokenizer = Tokenizer::new("]");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::RightBracket));
     }
 
     #[test]
-    fn tokenizes_apostrophe_literal()
-    {
+    fn tokenizes_apostrophe_literal() {
         let tokenizer = Tokenizer::new("'hello!'");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("hello!".to_owned())));
     }
 
     #[test]
-    fn tokenizes_double_quote_literal()
-    {
+    fn tokenizes_double_quote_literal() {
         let tokenizer = Tokenizer::new("\"1.23\"");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Literal("1.23".to_owned())));
     }
 
     #[test]
-    fn tokenizes_variable_reference()
-    {
+    fn tokenizes_variable_reference() {
         let tokenizer = Tokenizer::new("$yo");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Variable("yo".to_owned())));
     }
 
     #[test]
-    fn tokenizes_plus_sign()
-    {
+    fn tokenizes_plus_sign() {
         let tokenizer = Tokenizer::new("+");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::PlusSign));
     }
 
     #[test]
-    fn tokenizes_minus_sign()
-    {
+    fn tokenizes_minus_sign() {
         let tokenizer = Tokenizer::new("-");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::MinusSign));
     }
 
     #[test]
-    fn tokenizes_pipe()
-    {
+    fn tokenizes_pipe() {
         let tokenizer = Tokenizer::new("|");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Pipe));
     }
 
     #[test]
-    fn tokenizes_equal_sign()
-    {
+    fn tokenizes_equal_sign() {
         let tokenizer = Tokenizer::new("=");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Equal));
     }
 
     #[test]
-    fn tokenizes_not_equal_sign()
-    {
+    fn tokenizes_not_equal_sign() {
         let tokenizer = Tokenizer::new("!=");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::NotEqual));
     }
 
     #[test]
-    fn tokenizes_less_than()
-    {
+    fn tokenizes_less_than() {
         let tokenizer = Tokenizer::new("<");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::LessThan));
     }
 
     #[test]
-    fn tokenizes_less_than_or_equal()
-    {
+    fn tokenizes_less_than_or_equal() {
         let tokenizer = Tokenizer::new("<=");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::LessThanOrEqual));
     }
 
     #[test]
-    fn tokenizes_greater_than()
-    {
+    fn tokenizes_greater_than() {
         let tokenizer = Tokenizer::new(">");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::GreaterThan));
     }
 
     #[test]
-    fn tokenizes_greater_than_or_equal()
-    {
+    fn tokenizes_greater_than_or_equal() {
         let tokenizer = Tokenizer::new(">=");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::GreaterThanOrEqual));
     }
 
     #[test]
-    fn special_preceding_token_forces_named_operator_and()
-    {
+    fn special_preceding_token_forces_named_operator_and() {
         let tokenizer = Tokenizer::new("1andz2");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(1.0),
@@ -808,8 +766,7 @@ mod test {
     }
 
     #[test]
-    fn special_preceding_token_forces_named_operator_or()
-    {
+    fn special_preceding_token_forces_named_operator_or() {
         let tokenizer = Tokenizer::new("2oror");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(2.0),
@@ -818,8 +775,7 @@ mod test {
     }
 
     #[test]
-    fn special_preceding_token_forces_named_operator_mod()
-    {
+    fn special_preceding_token_forces_named_operator_mod() {
         let tokenizer = Tokenizer::new("3moddiv");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(3.0),
@@ -828,8 +784,7 @@ mod test {
     }
 
     #[test]
-    fn special_preceding_token_forces_named_operator_div()
-    {
+    fn special_preceding_token_forces_named_operator_div() {
         let tokenizer = Tokenizer::new("1divz2");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(1.0),
@@ -838,8 +793,7 @@ mod test {
     }
 
     #[test]
-    fn special_preceding_token_forces_named_operator_multiply()
-    {
+    fn special_preceding_token_forces_named_operator_multiply() {
         let tokenizer = Tokenizer::new("1*2");
 
         assert_eq!(all_tokens(tokenizer), vec!(Token::Number(1.0),
@@ -906,8 +860,7 @@ mod test {
     }
 
     #[test]
-    fn exception_thrown_when_nothing_was_tokenized()
-    {
+    fn exception_thrown_when_nothing_was_tokenized() {
         let tokenizer = Tokenizer::new("!");
         let res = all_tokens_raw(tokenizer);
 
@@ -915,8 +868,7 @@ mod test {
     }
 
     #[test]
-    fn exception_thrown_when_name_test_has_no_local_name()
-    {
+    fn exception_thrown_when_name_test_has_no_local_name() {
         let tokenizer = Tokenizer::new("ns:");
         let res = all_tokens_raw(tokenizer);
 
@@ -924,8 +876,7 @@ mod test {
     }
 
     #[test]
-    fn exception_thrown_when_quote_characters_mismatched()
-    {
+    fn exception_thrown_when_quote_characters_mismatched() {
         let tokenizer = Tokenizer::new("'hello\"");
         let res = all_tokens_raw(tokenizer);
 
