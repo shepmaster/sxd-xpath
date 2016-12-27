@@ -23,6 +23,17 @@ pub enum ArgumentType {
     String,
 }
 
+impl<'a> From<&'a Value<'a>> for ArgumentType {
+    fn from(other: &'a Value<'a>) -> ArgumentType {
+        match *other {
+            Value::Nodeset(..) => ArgumentType::Nodeset,
+            Value::String(..)  => ArgumentType::String,
+            Value::Number(..)  => ArgumentType::Number,
+            Value::Boolean(..) => ArgumentType::Boolean,
+        }
+    }
+}
+
 quick_error! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum Error {
@@ -43,14 +54,7 @@ quick_error! {
 
 impl Error {
     fn wrong_type(actual: &Value, expected: ArgumentType) -> Error {
-        let actual = match *actual {
-            Value::Nodeset(..) => ArgumentType::Nodeset,
-            Value::String(..)  => ArgumentType::String,
-            Value::Number(..)  => ArgumentType::Number,
-            Value::Boolean(..) => ArgumentType::Boolean,
-        };
-
-        Error::WrongType { expected: expected, actual: actual }
+        Error::WrongType { expected: expected, actual: actual.into() }
     }
 }
 
