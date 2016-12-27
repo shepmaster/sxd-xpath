@@ -58,12 +58,15 @@ impl Error {
     }
 }
 
-struct Args<'d>(Vec<Value<'d>>);
+/// Provides common utility functions for dealing with function
+/// argument lists.
+pub struct Args<'d>(pub Vec<Value<'d>>);
 
 impl<'d> Args<'d> {
-    fn len(&self) -> usize { self.0.len() }
+    pub fn len(&self) -> usize { self.0.len() }
 
-    fn at_least(&self, minimum: usize) -> Result<(), Error> {
+    /// Ensures that there are at least the requested number of arguments.
+    pub fn at_least(&self, minimum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < minimum {
             Err(Error::NotEnoughArguments { expected: minimum, actual: actual })
@@ -72,7 +75,8 @@ impl<'d> Args<'d> {
         }
     }
 
-    fn at_most(&self, maximum: usize) -> Result<(), Error> {
+    /// Ensures that there are no more than the requested number of arguments.
+    pub fn at_most(&self, maximum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual > maximum {
             Err(Error::TooManyArguments { expected: maximum, actual: actual })
@@ -81,7 +85,8 @@ impl<'d> Args<'d> {
         }
     }
 
-    fn exactly(&self, expected: usize) -> Result<(), Error> {
+    /// Ensures that there are exactly the requested number of arguments.
+    pub fn exactly(&self, expected: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < expected {
             Err(Error::NotEnoughArguments { expected: expected, actual: actual })
@@ -103,28 +108,40 @@ impl<'d> Args<'d> {
         self.0.into_iter().map(string_arg).collect()
     }
 
-    fn pop_boolean(&mut self) -> Result<bool, Error> {
+    /// Removes the **last** argument and ensures it is a boolean. If
+    /// the argument is not a boolean, a type mismatch error is
+    /// returned.
+    pub fn pop_boolean(&mut self) -> Result<bool, Error> {
         match self.0.pop().unwrap() {
             Value::Boolean(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Boolean)),
         }
     }
 
-    fn pop_number(&mut self) -> Result<f64, Error> {
+    /// Removes the **last** argument and ensures it is a number. If
+    /// the argument is not a number, a type mismatch error is
+    /// returned.
+    pub fn pop_number(&mut self) -> Result<f64, Error> {
         match self.0.pop().unwrap() {
             Value::Number(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Number)),
         }
     }
 
-    fn pop_string(&mut self) -> Result<String, Error> {
+    /// Removes the **last** argument and ensures it is a string. If
+    /// the argument is not a string, a type mismatch error is
+    /// returned.
+    pub fn pop_string(&mut self) -> Result<String, Error> {
         match self.0.pop().unwrap() {
             Value::String(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::String)),
         }
     }
 
-    fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
+    /// Removes the **last** argument and ensures it is a nodeset. If
+    /// the argument is not a nodeset, a type mismatch error is
+    /// returned.
+    pub fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
         match self.0.pop().unwrap() {
             Value::Nodeset(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
