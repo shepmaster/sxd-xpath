@@ -248,7 +248,7 @@ impl Factory {
 /// # Examples
 ///
 /// ```no_run
-/// # fn foo {
+/// # fn foo() {
 /// extern crate sxd_document;
 /// extern crate sxd_xpath;
 ///
