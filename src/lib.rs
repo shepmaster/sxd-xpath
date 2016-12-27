@@ -248,6 +248,7 @@ impl Factory {
 /// # Examples
 ///
 /// ```no_run
+/// # fn foo {
 /// extern crate sxd_document;
 /// extern crate sxd_xpath;
 ///
@@ -263,6 +264,7 @@ impl Factory {
 /// let document = package.as_document();
 ///
 /// let result = evaluate_absolute_xpath(&document, "/some/absolute/XPath");
+/// # }
 /// ```
 pub fn evaluate_absolute_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Option<Result<Value<'d>, ExpressionError>> {
     let mut functions = HashMap::new();
