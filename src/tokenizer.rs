@@ -1,4 +1,5 @@
 use std::borrow::ToOwned;
+use std::collections::VecDeque;
 use std::string;
 
 use peresil::{self,StringPoint,ParseMaster,Identifier,Recoverable};
@@ -403,43 +404,50 @@ impl Iterator for Tokenizer {
 
 pub struct TokenDeabbreviator<I> {
     source: I,
-    buffer: Vec<Token>,
+    buffer: VecDeque<Token>,
+}
+
+// Avoid adding the first element to the buffer, but keep the
+// expansion values nicely co-located.
+macro_rules! deabbrev {
+    ($this:expr, $head:expr $(, $tail:expr)*) => {{
+        $this.buffer.extend([$( $tail, )*].iter().cloned());
+        $head
+    }}
 }
 
 impl<I> TokenDeabbreviator<I> {
     pub fn new(source: I) -> TokenDeabbreviator<I> {
         TokenDeabbreviator {
             source: source,
-            buffer: vec!(),
+            buffer: Default::default(),
         }
     }
 
-    fn push(&mut self, token: Token) {
-        self.buffer.push(token);
-    }
-
-    fn expand_token(&mut self, token: Token) {
+    fn expand_token(&mut self, token: Token) -> Token {
         match token {
             Token::AtSign => {
-                self.push(Token::Axis(AxisName::Attribute));
+                deabbrev!(self,
+                          Token::Axis(AxisName::Attribute))
             }
             Token::DoubleSlash => {
-                self.push(Token::Slash);
-                self.push(Token::Axis(AxisName::DescendantOrSelf));
-                self.push(Token::NodeTest(NodeTestName::Node));
-                self.push(Token::Slash);
+                deabbrev!(self,
+                          Token::Slash,
+                          Token::Axis(AxisName::DescendantOrSelf),
+                          Token::NodeTest(NodeTestName::Node),
+                          Token::Slash)
             }
             Token::CurrentNode => {
-                self.push(Token::Axis(AxisName::SelfAxis));
-                self.push(Token::NodeTest(NodeTestName::Node));
+                deabbrev!(self,
+                          Token::Axis(AxisName::SelfAxis),
+                          Token::NodeTest(NodeTestName::Node))
             }
             Token::ParentNode => {
-                self.push(Token::Axis(AxisName::Parent));
-                self.push(Token::NodeTest(NodeTestName::Node));
+                deabbrev!(self,
+                          Token::Axis(AxisName::Parent),
+                          Token::NodeTest(NodeTestName::Node))
             }
-            _ => {
-                self.push(token);
-            }
+            _ => token,
         }
     }
 }
@@ -450,17 +458,16 @@ impl<I> Iterator for TokenDeabbreviator<I>
     type Item = TokenResult;
 
     fn next(&mut self) -> Option<TokenResult> {
-        if self.buffer.is_empty() {
-            let token = self.source.next();
-
-            match token {
-                None => return token,
-                Some(Err(_)) => return token,
-                Some(Ok(token)) => self.expand_token(token),
-            }
+        if let Some(tok) = self.buffer.pop_front() {
+            return Some(Ok(tok));
         }
 
-        Some(Ok(self.buffer.remove(0)))
+        let token = self.source.next();
+
+        match token {
+            None | Some(Err(_)) => token,
+            Some(Ok(token)) => Some(Ok(self.expand_token(token))),
+        }
     }
 }
 
