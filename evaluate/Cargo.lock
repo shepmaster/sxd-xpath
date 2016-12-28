@@ -1,0 +1,53 @@
+[root]
+name = "evaluate"
+version = "0.1.0"
+dependencies = [
+ "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sxd-document 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sxd-xpath 0.3.0",
+]
+
+[[package]]
+name = "getopts"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "peresil"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "quick-error"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "sxd-document"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "peresil 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typed-arena 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sxd-xpath"
+version = "0.3.0"
+dependencies = [
+ "peresil 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sxd-document 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "typed-arena"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "d9047cfbd08a437050b363d35ef160452c5fe8ea5187ae0a624708c91581d685"
+"checksum peresil 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f658886ed52e196e850cfbbfddab9eaa7f6d90dd0929e264c31e5cec07e09e57"
+"checksum quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0aad603e8d7fb67da22dbdf1f4b826ce8829e406124109e73cf1b2454b93a71c"
+"checksum sxd-document 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e4d4fcc17aa6865705391391a22bf7e7358a5b2f00a42dc74b7415da64260030"
+"checksum typed-arena 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8e2f9dc90da4f9d66ffc9ad3ead2c7d57582a26f4a3292d2ce7011bd29965100"
