@@ -18,21 +18,22 @@ pub trait Function {
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
 }
 
-#[derive(Copy,Clone,Debug,PartialEq,Hash)]
+/// Represents the kind of an XPath value without carrying a value.
+#[derive(Debug, Copy, Clone, PartialEq, Hash)]
 pub enum ArgumentType {
-    Nodeset,
     Boolean,
     Number,
     String,
+    Nodeset,
 }
 
 impl<'a> From<&'a Value<'a>> for ArgumentType {
     fn from(other: &'a Value<'a>) -> ArgumentType {
         match *other {
-            Value::Nodeset(..) => ArgumentType::Nodeset,
-            Value::String(..)  => ArgumentType::String,
-            Value::Number(..)  => ArgumentType::Number,
             Value::Boolean(..) => ArgumentType::Boolean,
+            Value::Number(..)  => ArgumentType::Number,
+            Value::String(..)  => ArgumentType::String,
+            Value::Nodeset(..) => ArgumentType::Nodeset,
         }
     }
 }
