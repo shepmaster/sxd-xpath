@@ -34,7 +34,6 @@ use parser::Parser;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 
 pub use expression::Expression;
-pub use expression::Error as ExpressionError;
 
 #[macro_use]
 pub mod macros;
