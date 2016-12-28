@@ -285,10 +285,6 @@ pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
 
-fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
-    nodes.iter().min_by_key(|&n| order[n]).cloned()
-}
-
 impl<'d> Nodeset<'d> {
     pub fn new() -> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
@@ -327,29 +323,33 @@ impl<'d> Nodeset<'d> {
             None => return None,
         };
 
-        let mut idx = 0;
-        let mut stack = vec![doc.root().into()];
-        let mut order: HashMap<Node, usize> = HashMap::new();
-
         // Rebuilding this each time cannot possibly be performant,
         // but I want to see how widely used this is first before
         // picking an appropriate caching point.
+        let order = build_ordering_of_document(doc);
 
-        while let Some(n) = stack.pop() {
-            order.insert(n, idx);
-            idx += 1;
-            let c = n.children();
-
-            stack.extend(c.into_iter().rev());
-
-            if let Node::Element(e) = n {
-                // TODO: namespaces
-                stack.extend(e.attributes().into_iter().map(|a| -> Node<'d> { a.into() }));
-            }
-        }
-
-        first_node_in_order(&self.nodes, order)
+        self.nodes.iter().min_by_key(|&n| order[n]).cloned()
     }
+}
+
+fn build_ordering_of_document<'d>(doc: dom::Document<'d>) -> HashMap<Node<'d>, usize> {
+    let mut idx = 0;
+    let mut stack: Vec<Node> = vec![doc.root().into()];
+    let mut order = HashMap::new();
+
+    while let Some(n) = stack.pop() {
+        order.insert(n, idx);
+        idx += 1;
+
+        stack.extend(n.children().into_iter().rev());
+
+        if let Node::Element(e) = n {
+            // TODO: namespaces
+            stack.extend(e.attributes().into_iter().map(Node::Attribute));
+        }
+    }
+
+    order
 }
 
 impl<'a, 'd : 'a> IntoIterator for &'a Nodeset<'d> {
