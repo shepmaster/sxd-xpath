@@ -1,3 +1,5 @@
+//! Support for collections of nodes.
+
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::iter::{IntoIterator,FromIterator};
