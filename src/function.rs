@@ -97,6 +97,8 @@ impl<'d> Args<'d> {
         }
     }
 
+    /// Converts all the arguments into strings. Any arguments that
+    /// were not already strings cause a type mismatch error.
     fn into_strings(self) -> Result<Vec<String>, Error> {
         fn string_arg(v: Value) -> Result<String, Error> {
             match v {
@@ -148,11 +150,17 @@ impl<'d> Args<'d> {
         }
     }
 
+    /// Removes the **last** argument. If no argument is present, the
+    /// context node is returned as a nodeset.
     fn pop_value_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         self.0.pop()
             .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
 
+    /// Removes the **last** argument if it is a string. If no
+    /// argument is present, the context node is converted to a string
+    /// and returned. If there is an argument but it is not a string,
+    /// a type mismatch error is returned.
     fn pop_string_value_or_context_node(&mut self, context: &EvaluationContext) -> Result<String, Error> {
         match self.0.pop() {
             Some(Value::String(s)) => Ok(s),
@@ -161,7 +169,10 @@ impl<'d> Args<'d> {
         }
     }
 
-
+    /// Removes the **last** argument if it is a nodeset. If no
+    /// argument is present, the context node is added to a nodeset
+    /// and returned. If there is an argument but it is not a nodeset,
+    /// a type mismatch error is returned.
     fn pop_nodeset_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>)
                                        -> Result<Nodeset<'d>, Error>
     {
@@ -288,7 +299,6 @@ impl Function for StringFn {
         Ok(Value::String(arg.string()))
     }
 }
-
 
 struct Concat;
 
