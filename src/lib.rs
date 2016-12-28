@@ -228,7 +228,78 @@ pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
 pub type Namespaces = HashMap<string::String, string::String>;
 
-#[derive(Copy,Clone)]
+/// Contains the context in which XPath expressions are executed. The
+/// context contains functions, variables, namespaces and the context
+/// node.
+///
+/// ### Examples
+///
+/// A complete example showing all optional settings.
+///
+/// ```
+/// extern crate sxd_document;
+/// extern crate sxd_xpath;
+///
+/// use std::collections::HashMap;
+/// use sxd_document::parser;
+/// use sxd_xpath::{Factory, EvaluationContext, Value};
+/// use sxd_xpath::function::{self, Function};
+///
+/// struct Sigmoid;
+/// impl Function for Sigmoid {
+///     fn evaluate<'a, 'd>(&self,
+///                         _context: &EvaluationContext<'a, 'd>,
+///                         args: Vec<Value<'d>>)
+///                         -> Result<Value<'d>, function::Error>
+///     {
+///         let mut args = function::Args(args);
+///         args.exactly(1)?;
+///         let val = args.pop_number()?;
+///
+///         let computed = (1.0 + (-val).exp()).recip();
+///
+///         Ok(Value::Number(computed))
+///     }
+/// }
+///
+/// fn main() {
+///     let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
+///         .expect("failed to parse XML");
+///     let document = package.as_document();
+///     let node = document.root().children()[0];
+///
+///     let mut functions = HashMap::new();
+///     function::register_core_functions(&mut functions);
+///     functions.insert("sigmoid".to_string(), Box::new(Sigmoid));
+///
+///     let mut variables = HashMap::new();
+///     variables.insert("t".to_string(), Value::Number(2.0));
+///
+///     let mut namespaces = HashMap::new();
+///     namespaces.insert("neural".to_string(), "net:brain".to_string());
+///
+///     let context = EvaluationContext::new(node,
+///                                          &functions,
+///                                          &variables,
+///                                          &namespaces);
+///
+///     let xpath = "sigmoid(@neural:bonus + $t)";
+///
+///     let factory = Factory::new();
+///     let xpath = factory.build(xpath).expect("Could not compile XPath");
+///     let xpath = xpath.expect("No XPath was compiled");
+///
+///     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+///
+///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
+/// }
+/// ```
+///
+/// Note that we are using a custom function (`sigmoid`), a variable
+/// (`$t`), a namespace (`neural:`), and the current node is not the
+/// root of the tree but the top-most element.
+///
+#[derive(Copy, Clone)]
 pub struct EvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
     functions: &'a Functions,
