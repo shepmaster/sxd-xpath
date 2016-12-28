@@ -221,10 +221,8 @@ impl<'d> Value<'d> {
     }
 }
 
-
-pub type BoxFunc = Box<function::Function + 'static>;
 /// A mapping of names to XPath functions.
-pub type Functions = HashMap<string::String, BoxFunc>;
+pub type Functions = HashMap<string::String, Box<function::Function + 'static>>;
 /// A mapping of names to XPath variables.
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
@@ -275,8 +273,8 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         self.size
     }
 
-    fn function_for_name(&self, name: &str) -> Option<&'a BoxFunc> {
-        self.functions.get(&name.to_owned())
+    fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
+        self.functions.get(&name.to_owned()).map(AsRef::as_ref)
     }
 
     fn value_of(&self, name: &str) -> Option<&Value<'d>> {
