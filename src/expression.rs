@@ -40,7 +40,9 @@ fn nodeset<'d>(v: Value<'d>) -> Result<Nodeset<'d>, Error> {
     }
 }
 
+/// The interface of a compiled XPath.
 pub trait Expression: fmt::Debug {
+    /// Evaluate this expression in the given context.
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
