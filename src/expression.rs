@@ -498,9 +498,9 @@ mod test {
     use super::super::{LiteralValue,Value};
     use super::super::Value::{Boolean, Number, String};
     use super::super::{Functions,Variables,Namespaces};
-    use super::super::{EvaluationContext,Function};
+    use super::super::EvaluationContext;
     use super::super::axis::Axis;
-    use super::super::function;
+    use super::super::function::{self,Function};
     use super::super::node_test::NodeTest;
     use super::super::nodeset::Nodeset;
 

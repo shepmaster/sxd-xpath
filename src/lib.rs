@@ -33,20 +33,19 @@ use nodeset::{Nodeset,Node};
 use parser::Parser;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 
-pub use function::Function;
 pub use expression::Expression;
 pub use expression::Error as ExpressionError;
 
 #[macro_use]
 pub mod macros;
 pub mod nodeset;
-pub mod axis;
+mod axis;
 mod expression;
 pub mod function;
 mod node_test;
-pub mod parser;
+mod parser;
 mod token;
-pub mod tokenizer;
+mod tokenizer;
 
 // TODO - this doesn't need to be public, figure out how to make it so
 #[derive(PartialEq,Debug,Clone)]
@@ -140,7 +139,7 @@ impl<'d> Value<'d> {
     }
 }
 
-pub type BoxFunc = Box<Function + 'static>;
+pub type BoxFunc = Box<function::Function + 'static>;
 pub type Functions = HashMap<string::String, BoxFunc>;
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
 pub type Namespaces = HashMap<string::String, string::String>;
