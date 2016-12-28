@@ -9,7 +9,10 @@ use sxd_document::XmlChar;
 use super::{EvaluationContext,Functions,Value};
 use super::nodeset::Nodeset;
 
+/// Types that can be used as XPath functions.
 pub trait Function {
+    /// Evaluate this function in a specific context with a specific
+    /// set of arguments.
     fn evaluate<'a, 'd>(&self,
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
