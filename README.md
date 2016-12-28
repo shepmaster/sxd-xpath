@@ -8,7 +8,7 @@ An XML XPath library in Rust.
 
 ## Overview
 
-The project is currently broken into two crates:
+The project is broken into two crates:
 
 1. [`document`][sxd-document] - Basic DOM manipulation and reading/writing XML from strings.
 2. `xpath` - Implementation of XPath 1.0 expressions.
@@ -22,10 +22,7 @@ In the future, I hope to add support for XSLT 1.0.
 
 ## Goals
 
-This project has two goals, one more achievable than the other:
-
-1. Help me learn Rust.
-2. Replace [libxml] and [libxslt].
+This project has a lofty goal: replace [libxml] and [libxslt].
 
 [libxml]: http://xmlsoft.org/
 [libxslt]: http://xmlsoft.org/

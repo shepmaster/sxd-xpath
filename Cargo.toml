@@ -7,7 +7,6 @@ description = "A Rust XML XPath library"
 readme = "README.md"
 keywords = ["xml", "xpath"]
 
-homepage = "https://github.com/shepmaster/sxd-xpath"
 repository = "https://github.com/shepmaster/sxd-xpath"
 documentation = "https://docs.rs/sxd-xpath/"
 
