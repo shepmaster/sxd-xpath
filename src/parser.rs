@@ -2,12 +2,12 @@ use std::iter::Peekable;
 
 use self::Error::*;
 
-use super::LiteralValue;
-use super::token::{Token,AxisName,NodeTestName};
-use super::tokenizer::{self, TokenResult};
-use super::axis::{self,Axis,SubAxis,PrincipalNodeType};
-use super::expression::{self,SubExpression};
-use super::node_test::{self,SubNodeTest};
+use ::LiteralValue;
+use ::token::{Token, AxisName, NodeTestName};
+use ::tokenizer::{self, TokenResult};
+use ::axis::{self, Axis, SubAxis, PrincipalNodeType};
+use ::expression::{self, SubExpression};
+use ::node_test::{self, SubNodeTest};
 
 #[allow(missing_copy_implementations)]
 pub struct Parser;
@@ -646,32 +646,19 @@ mod test {
     use std::collections::HashMap;
 
     use sxd_document::Package;
-    use sxd_document::dom::{self,Document,Root,Element,Text};
+    use sxd_document::dom::{self, Document, Root, Element, Text};
 
-    use super::super::Value::{Boolean,Number,String};
-    use super::super::{Functions,Variables,Namespaces};
-    use super::super::{Value,EvaluationContext};
+    use ::{Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::Value::{Boolean, Number, String};
+    use ::expression::{Expression, SubExpression};
+    use ::function::register_core_functions;
+    use ::node_test;
+    use ::nodeset::Node;
+    use ::token::{Token, AxisName, NodeTestName};
+    use ::tokenizer::{self, TokenResult};
 
-    use super::super::nodeset::Node;
-
-    use super::super::node_test;
-    use super::super::token::{Token,AxisName,NodeTestName};
-    use super::super::tokenizer::{self, TokenResult};
-
-    use super::super::function::register_core_functions;
-
-    use super::super::expression::{Expression,SubExpression};
-
-    use super::super::parser::{Parser,ParseResult};
-    use super::super::parser::Error::{
-        EmptyPredicate,
-        ExtraUnparsedTokens,
-        RanOutOfInput,
-        RightHandSideExpressionMissing,
-        Tokenizer,
-        TrailingSlash,
-        UnexpectedToken,
-    };
+    use super::{Parser, ParseResult};
+    use super::Error::*;
 
     macro_rules! tokens(
         ($($e:expr),*) => ({

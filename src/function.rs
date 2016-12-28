@@ -8,8 +8,8 @@ use std::iter;
 
 use sxd_document::XmlChar;
 
-use super::{EvaluationContext,Functions,Value};
-use super::nodeset::Nodeset;
+use ::{EvaluationContext, Functions, Value, str_to_num};
+use ::nodeset::Nodeset;
 
 /// Types that can be used as XPath functions.
 pub trait Function {
@@ -548,7 +548,7 @@ impl Function for Sum {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
-        let r = arg.iter().map(|n| super::str_to_num(&n.string_value())).fold(0.0, |acc, i| acc + i);
+        let r = arg.iter().map(|n| str_to_num(&n.string_value())).fold(0.0, |acc, i| acc + i);
         Ok(Value::Number(r))
     }
 }
@@ -621,8 +621,9 @@ mod test {
 
     use sxd_document::Package;
 
-    use super::super::{EvaluationContext,LiteralValue,Value,Functions,Variables,Namespaces};
-    use super::super::nodeset::Node;
+    use ::{EvaluationContext, LiteralValue, Value, Functions, Variables, Namespaces};
+    use ::nodeset::Node;
+
     use super::{
         Function,
         Error,
@@ -641,6 +642,13 @@ mod test {
         BooleanFn,
         NumberFn,
         Sum,
+        starts_with,
+        contains,
+        substring_before,
+        substring_after,
+        floor,
+        ceiling,
+        round,
     };
 
     struct Setup<'d> {
@@ -789,7 +797,7 @@ mod test {
     fn starts_with_checks_prefixes() {
         let args = vec![LiteralValue::String("hello".to_owned()),
                         LiteralValue::String("he".to_owned())];
-        let r = evaluate_literal(super::starts_with(), args);
+        let r = evaluate_literal(starts_with(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
@@ -798,7 +806,7 @@ mod test {
     fn contains_looks_for_a_needle() {
         let args = vec![LiteralValue::String("astronomer".to_owned()),
                         LiteralValue::String("ono".to_owned())];
-        let r = evaluate_literal(super::contains(), args);
+        let r = evaluate_literal(contains(), args);
 
         assert_eq!(Ok(LiteralValue::Boolean(true)), r);
     }
@@ -807,7 +815,7 @@ mod test {
     fn substring_before_slices_before() {
         let args = vec![LiteralValue::String("1999/04/01".to_owned()),
                         LiteralValue::String("/".to_owned())];
-        let r = evaluate_literal(super::substring_before(), args);
+        let r = evaluate_literal(substring_before(), args);
 
         assert_eq!(Ok(LiteralValue::String("1999".to_owned())), r);
     }
@@ -816,7 +824,7 @@ mod test {
     fn substring_after_slices_after() {
         let args = vec![LiteralValue::String("1999/04/01".to_owned()),
                         LiteralValue::String("/".to_owned())];
-        let r = evaluate_literal(super::substring_after(), args);
+        let r = evaluate_literal(substring_after(), args);
 
         assert_eq!(Ok(LiteralValue::String("04/01".to_owned())), r);
     }
@@ -997,46 +1005,46 @@ mod test {
 
     #[test]
     fn floor_rounds_down() {
-        assert_number(super::floor(), 199.99, 199.0);
+        assert_number(floor(), 199.99, 199.0);
     }
 
     #[test]
     fn ceiling_rounds_up() {
-        assert_number(super::ceiling(), 199.99, 200.0);
+        assert_number(ceiling(), 199.99, 200.0);
     }
 
     #[test]
     fn round_nan_to_nan() {
-        assert_number(super::round(), ::std::f64::NAN, ::std::f64::NAN);
+        assert_number(round(), ::std::f64::NAN, ::std::f64::NAN);
     }
 
     #[test]
     fn round_pos_inf_to_pos_inf() {
-        assert_number(super::round(), ::std::f64::INFINITY, ::std::f64::INFINITY);
+        assert_number(round(), ::std::f64::INFINITY, ::std::f64::INFINITY);
     }
 
     #[test]
     fn round_neg_inf_to_neg_inf() {
-        assert_number(super::round(), ::std::f64::NEG_INFINITY, ::std::f64::NEG_INFINITY);
+        assert_number(round(), ::std::f64::NEG_INFINITY, ::std::f64::NEG_INFINITY);
     }
 
     #[test]
     fn round_pos_zero_to_pos_zero() {
-        assert_number(super::round(), 0.0, 0.0);
+        assert_number(round(), 0.0, 0.0);
     }
 
     #[test]
     fn round_neg_zero_to_neg_zero() {
-        assert_number(super::round(), -0.0, -0.0);
+        assert_number(round(), -0.0, -0.0);
     }
 
     #[test]
     fn round_neg_zero_point_five_to_neg_zero() {
-        assert_number(super::round(), -0.5, -0.0);
+        assert_number(round(), -0.5, -0.0);
     }
 
     #[test]
     fn round_pos_zero_point_five_to_pos_one() {
-        assert_number(super::round(), 0.5, 1.0);
+        assert_number(round(), 0.5, 1.0);
     }
 }

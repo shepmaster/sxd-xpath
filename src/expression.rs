@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use super::EvaluationContext;
-use super::{LiteralValue,Value};
-use super::Value::{Boolean,Number};
-
-use super::axis::Axis;
-use super::function;
-use super::node_test::NodeTest;
-use super::nodeset::Nodeset;
+use ::{EvaluationContext, LiteralValue, Value};
+use ::Value::{Boolean, Number};
+use ::axis::Axis;
+use ::function;
+use ::node_test::NodeTest;
+use ::nodeset::Nodeset;
 
 quick_error! {
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -503,30 +501,14 @@ mod test {
     use sxd_document::Package;
     use sxd_document::dom::Document;
 
-    use super::super::{LiteralValue,Value};
-    use super::super::Value::{Boolean, Number, String};
-    use super::super::{Functions,Variables,Namespaces};
-    use super::super::EvaluationContext;
-    use super::super::axis::Axis;
-    use super::super::function::{self,Function};
-    use super::super::node_test::NodeTest;
-    use super::super::nodeset::Nodeset;
+    use ::{LiteralValue, Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::Value::{Boolean, Number, String};
+    use ::axis::Axis;
+    use ::function;
+    use ::node_test::NodeTest;
+    use ::nodeset::Nodeset;
 
-    use super::super::expression;
-    use super::{Expression,Error};
-    use super::{
-        And,
-        Equal,
-        NotEqual,
-        Literal,
-        Math,
-        Filter,
-        Relational,
-        RootNode,
-        Step,
-        Union,
-        Variable
-    };
+    use super::*;
 
     #[derive(Debug)]
     struct FailExpression;
@@ -718,7 +700,7 @@ mod test {
         value: &'static str,
     }
 
-    impl Function for StubFunction {
+    impl function::Function for StubFunction {
         fn evaluate<'a, 'd>(&self,
                             _: &EvaluationContext<'a, 'd>,
                             _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
@@ -736,7 +718,7 @@ mod test {
         let fun = Box::new(StubFunction{value: "the function ran"});
         setup.funs.insert("test-fn".to_owned(), fun);
 
-        let expr = expression::Function{name: "test-fn".to_owned(), arguments: vec![arg_expr]};
+        let expr = Function { name: "test-fn".to_owned(), arguments: vec![arg_expr] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -749,7 +731,7 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = expression::Function{name: "unknown-fn".to_owned(), arguments: vec![]};
+        let expr = Function { name: "unknown-fn".to_owned(), arguments: vec![] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);

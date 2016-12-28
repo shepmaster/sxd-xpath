@@ -8,11 +8,11 @@ use std::borrow::ToOwned;
 use std::env;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self,Read};
+use std::io::{self, Read};
 
 use sxd_document::parser::parse;
 
-use sxd_xpath::{EvaluationContext,Factory,Expression,Value};
+use sxd_xpath::{EvaluationContext, Factory, Expression, Value};
 
 use getopts::Options;
 

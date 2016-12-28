@@ -5,8 +5,8 @@ use std::string;
 use peresil::{self, StringPoint, ParseMaster, Identifier, Recoverable};
 use sxd_document::parser::XmlParseExt;
 
-use super::node_test;
-use super::token::{Token, AxisName, NodeTestName};
+use ::node_test;
+use ::token::{Token, AxisName, NodeTestName};
 
 use self::Error::*;
 
@@ -471,11 +471,11 @@ impl<I> Iterator for TokenDeabbreviator<I>
 mod test {
     use std::borrow::ToOwned;
 
-    use super::super::node_test;
-    use super::super::token::{Token, AxisName, NodeTestName};
+    use ::node_test;
+    use ::token::{Token, AxisName, NodeTestName};
 
-    use super::{Tokenizer, TokenDeabbreviator, TokenResult, Error};
-    use super::Error::{MismatchedQuoteCharacters, UnableToCreateToken};
+    use super::{Tokenizer, TokenDeabbreviator, Error, TokenResult};
+    use super::Error::*;
 
     fn is_finished(tokenizer: &Tokenizer) -> bool {
         ! tokenizer.has_more_tokens()

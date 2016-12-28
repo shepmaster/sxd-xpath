@@ -2,9 +2,9 @@ extern crate sxd_document;
 
 use std::fmt;
 
-use super::EvaluationContext;
-use super::node_test::NodeTest;
-use super::nodeset::{self,Nodeset,Node};
+use ::EvaluationContext;
+use ::node_test::NodeTest;
+use ::nodeset::{self, Nodeset, Node};
 
 #[allow(missing_copy_implementations)]
 pub enum PrincipalNodeType {
@@ -297,19 +297,11 @@ mod test {
     use sxd_document::Package;
     use sxd_document::dom;
 
-    use super::super::EvaluationContext;
-    use super::super::node_test::NodeTest;
-    use super::super::nodeset::{Nodeset,Node};
+    use ::EvaluationContext;
+    use ::node_test::NodeTest;
+    use ::nodeset::{Nodeset, Node};
 
-    use super::{
-        Axis,
-        Ancestor,
-        AncestorOrSelf,
-        PrecedingSibling,
-        FollowingSibling,
-        Preceding,
-        Following,
-    };
+    use super::*;
 
     #[derive(Debug)]
     struct DummyNodeTest;

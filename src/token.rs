@@ -1,6 +1,6 @@
 use std::string;
 
-use super::node_test;
+use ::node_test;
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum AxisName {

@@ -2,13 +2,13 @@
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::iter::{IntoIterator,FromIterator};
-use std::{slice,vec};
+use std::iter::{IntoIterator, FromIterator};
+use std::{slice, vec};
 
 use sxd_document::QName;
 use sxd_document::dom;
 
-use super::EvaluationContext;
+use ::EvaluationContext;
 
 macro_rules! unpack(
     ($enum_name:ident, {
@@ -404,15 +404,8 @@ mod test {
 
     use sxd_document::Package;
 
-    use super::Node::{
-        Attribute,
-        Comment,
-        Element,
-        ProcessingInstruction,
-        Root,
-        Text,
-    };
-    use super::{Nodeset,Node};
+    use super::{Node, Nodeset};
+    use super::Node::*;
 
     fn into_node<'d, T: Into<Node<'d>>>(n: T) -> Node<'d> { n.into() }
 

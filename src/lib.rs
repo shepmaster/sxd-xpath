@@ -107,13 +107,13 @@ extern crate quick_error;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::{iter,string};
+use std::{iter, string};
 
 use sxd_document::dom::Document;
 
-use nodeset::{Nodeset,Node};
+use nodeset::{Nodeset, Node};
 use parser::Parser;
-use tokenizer::{Tokenizer,TokenDeabbreviator};
+use tokenizer::{Tokenizer, TokenDeabbreviator};
 
 pub use expression::Expression;
 
