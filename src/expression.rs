@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::{error,fmt};
+use std::fmt;
 
 use super::EvaluationContext;
 use super::{LiteralValue,Value};
@@ -10,44 +10,25 @@ use super::function;
 use super::node_test::NodeTest;
 use super::nodeset::Nodeset;
 
-#[derive(Clone,Debug,PartialEq,Hash)]
-pub enum Error {
-    NotANodeset,
-    UnknownFunction(String),
-    UnknownVariable(String),
-    FunctionEvaluation(function::Error),
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        use self::Error::*;
-        match self {
-            &NotANodeset               => "expression did not evaluate to a nodeset",
-            &UnknownFunction(..)       => "unknown function",
-            &UnknownVariable(..)       => "unknown variable",
-            &FunctionEvaluation(ref f) => f.description(),
+quick_error! {
+    #[derive(Debug, Clone, PartialEq, Hash)]
+    pub enum Error {
+        NotANodeset {
+            description("expression did not evaluate to a nodeset")
         }
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use self::Error::*;
-        match self {
-            &NotANodeset => {
-                let self_err: &error::Error = self;
-                fmt.write_str(self_err.description())
-            },
-            &UnknownFunction(ref f) => {
-                write!(fmt, "unknown function {}", f)
-            },
-            &UnknownVariable(ref v) => {
-                write!(fmt, "unknown variable {}", v)
-            },
-            &FunctionEvaluation(ref f) => {
-                try!(write!(fmt, "error while evaluating function: "));
-                f.fmt(fmt)
-            },
+        UnknownFunction(name: String) {
+            description("unknown function")
+            display("unknown function {}", name)
+        }
+        UnknownVariable(name: String) {
+            description("unknown variable")
+            display("unknown variable {}", name)
+        }
+        FunctionEvaluation(err: function::Error) {
+            from()
+            cause(err)
+            description(err.description())
+            display("error while evaluating function: {}", err)
         }
     }
 }
@@ -59,7 +40,9 @@ fn nodeset<'d>(v: Value<'d>) -> Result<Nodeset<'d>, Error> {
     }
 }
 
+/// The interface of a compiled XPath.
 pub trait Expression: fmt::Debug {
+    /// Evaluate this expression in the given context.
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
@@ -186,19 +169,24 @@ pub struct Function {
 
 impl Expression for Function {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        if let Some(fun) = context.function_for_name(&self.name) {
-            let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
-
-            fun.evaluate(context, args).map_err(|e| Error::FunctionEvaluation(e))
-        } else {
-            Err(Error::UnknownFunction(self.name.clone()))
-        }
+        context.function_for_name(&self.name)
+            .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
+            .and_then(|fun| {
+                let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
+                fun.evaluate(context, args).map_err(Error::FunctionEvaluation)
+            })
     }
 }
 
 #[derive(Debug)]
 pub struct Literal {
-    pub value: LiteralValue,
+    value: LiteralValue,
+}
+
+impl From<LiteralValue> for Literal {
+    fn from(other: LiteralValue) -> Literal {
+        Literal { value: other }
+    }
 }
 
 impl Expression for Literal {
@@ -499,11 +487,9 @@ pub struct Variable {
 
 impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        if let Some(v) = context.value_of(&self.name) {
-            Ok(v.clone())
-        } else {
-            Err(Error::UnknownVariable(self.name.clone()))
-        }
+        context.value_of(&self.name)
+            .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
+            .map(Clone::clone)
     }
 }
 
@@ -520,9 +506,9 @@ mod test {
     use super::super::{LiteralValue,Value};
     use super::super::Value::{Boolean, Number, String};
     use super::super::{Functions,Variables,Namespaces};
-    use super::super::{EvaluationContext,Function};
+    use super::super::EvaluationContext;
     use super::super::axis::Axis;
-    use super::super::function;
+    use super::super::function::{self,Function};
     use super::super::node_test::NodeTest;
     use super::super::nodeset::Nodeset;
 

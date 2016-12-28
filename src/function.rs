@@ -1,113 +1,115 @@
+//! Support for registering and creating XPath functions.
+
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::ops::Index;
-use std::{error,fmt,iter};
+use std::iter;
 
 use sxd_document::XmlChar;
 
 use super::{EvaluationContext,Functions,Value};
 use super::nodeset::Nodeset;
 
+/// Types that can be used as XPath functions.
 pub trait Function {
+    /// Evaluate this function in a specific context with a specific
+    /// set of arguments.
     fn evaluate<'a, 'd>(&self,
                         context: &EvaluationContext<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
 }
 
-#[derive(Copy,Clone,Debug,PartialEq,Hash)]
+/// Represents the kind of an XPath value without carrying a value.
+#[derive(Debug, Copy, Clone, PartialEq, Hash)]
 pub enum ArgumentType {
-    Nodeset,
     Boolean,
     Number,
     String,
+    Nodeset,
 }
 
-#[derive(Copy,Clone,Debug,PartialEq,Hash)]
-pub enum Error {
-    TooManyArguments{ expected: usize, actual: usize },
-    NotEnoughArguments{ expected: usize, actual: usize },
-    WrongType{ expected: ArgumentType, actual: ArgumentType },
+impl<'a> From<&'a Value<'a>> for ArgumentType {
+    fn from(other: &'a Value<'a>) -> ArgumentType {
+        match *other {
+            Value::Boolean(..) => ArgumentType::Boolean,
+            Value::Number(..)  => ArgumentType::Number,
+            Value::String(..)  => ArgumentType::String,
+            Value::Nodeset(..) => ArgumentType::Nodeset,
+        }
+    }
+}
+
+quick_error! {
+    /// The errors that may occur while evaluating a function
+    #[derive(Debug, Clone, PartialEq, Hash)]
+    pub enum Error {
+        TooManyArguments { expected: usize, actual: usize } {
+            description("too many arguments")
+            display("too many arguments, expected {} but had {}", expected, actual)
+        }
+        NotEnoughArguments { expected: usize, actual: usize } {
+            description("not enough arguments")
+            display("not enough arguments, expected {} but had {}", expected, actual)
+        }
+        WrongType { expected: ArgumentType, actual: ArgumentType } {
+            description("argument of wrong type")
+            display("argument was the wrong type, expected {:?} but had {:?}", expected, actual)
+        }
+        Other(what: String) {
+            description("an error occurred while evaluating a function")
+            display("could not evaluate function: {}", what)
+        }
+    }
 }
 
 impl Error {
     fn wrong_type(actual: &Value, expected: ArgumentType) -> Error {
-        let actual = match *actual {
-            Value::Nodeset(..) => ArgumentType::Nodeset,
-            Value::String(..)  => ArgumentType::String,
-            Value::Number(..)  => ArgumentType::Number,
-            Value::Boolean(..) => ArgumentType::Boolean,
-        };
-
-        Error::WrongType {
-            expected: expected,
-            actual: actual
-        }
+        Error::WrongType { expected: expected, actual: actual.into() }
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        use self::Error::*;
-        match *self {
-            TooManyArguments{..}   => "too many arguments",
-            NotEnoughArguments{..} => "not enough arguments",
-            WrongType{..}          => "argument of wrong type",
-        }
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        use self::Error::*;
-        match *self {
-            TooManyArguments{expected, actual} => {
-                write!(fmt, "too many arguments, expected {} but had {}", expected, actual)
-            },
-            NotEnoughArguments{expected, actual} => {
-                write!(fmt, "not enough arguments, expected {} but had {}", expected, actual)
-            },
-            WrongType{expected, actual} => {
-                write!(fmt, "argument was the wrong type, expected {:?} but had {:?}", expected, actual)
-            },
-        }
-    }
-}
-
-struct Args<'d>(Vec<Value<'d>>);
+/// Provides common utility functions for dealing with function
+/// argument lists.
+pub struct Args<'d>(pub Vec<Value<'d>>);
 
 impl<'d> Args<'d> {
-    fn len(&self) -> usize { self.0.len() }
+    pub fn len(&self) -> usize { self.0.len() }
 
-    fn at_least(&self, minimum: usize) -> Result<(), Error> {
+    /// Ensures that there are at least the requested number of arguments.
+    pub fn at_least(&self, minimum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < minimum {
-            Err(Error::NotEnoughArguments{expected: minimum, actual: actual})
+            Err(Error::NotEnoughArguments { expected: minimum, actual: actual })
         } else {
             Ok(())
         }
     }
 
-    fn at_most(&self, maximum: usize) -> Result<(), Error> {
+    /// Ensures that there are no more than the requested number of arguments.
+    pub fn at_most(&self, maximum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual > maximum {
-            Err(Error::TooManyArguments{expected: maximum, actual: actual})
+            Err(Error::TooManyArguments { expected: maximum, actual: actual })
         } else {
             Ok(())
         }
     }
 
-    fn exactly(&self, expected: usize) -> Result<(), Error> {
+    /// Ensures that there are exactly the requested number of arguments.
+    pub fn exactly(&self, expected: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < expected {
-            Err(Error::NotEnoughArguments{ expected: expected, actual: actual })
+            Err(Error::NotEnoughArguments { expected: expected, actual: actual })
         } else if actual > expected {
-            Err(Error::TooManyArguments{ expected: expected, actual: actual })
+            Err(Error::TooManyArguments { expected: expected, actual: actual })
         } else {
             Ok(())
         }
     }
 
+    /// Converts all the arguments into strings. Any arguments that
+    /// were not already strings cause a type mismatch error.
     fn into_strings(self) -> Result<Vec<String>, Error> {
         fn string_arg(v: Value) -> Result<String, Error> {
             match v {
@@ -119,39 +121,57 @@ impl<'d> Args<'d> {
         self.0.into_iter().map(string_arg).collect()
     }
 
-    fn pop_boolean(&mut self) -> Result<bool, Error> {
+    /// Removes the **last** argument and ensures it is a boolean. If
+    /// the argument is not a boolean, a type mismatch error is
+    /// returned.
+    pub fn pop_boolean(&mut self) -> Result<bool, Error> {
         match self.0.pop().unwrap() {
             Value::Boolean(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Boolean)),
         }
     }
 
-    fn pop_number(&mut self) -> Result<f64, Error> {
+    /// Removes the **last** argument and ensures it is a number. If
+    /// the argument is not a number, a type mismatch error is
+    /// returned.
+    pub fn pop_number(&mut self) -> Result<f64, Error> {
         match self.0.pop().unwrap() {
             Value::Number(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Number)),
         }
     }
 
-    fn pop_string(&mut self) -> Result<String, Error> {
+    /// Removes the **last** argument and ensures it is a string. If
+    /// the argument is not a string, a type mismatch error is
+    /// returned.
+    pub fn pop_string(&mut self) -> Result<String, Error> {
         match self.0.pop().unwrap() {
             Value::String(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::String)),
         }
     }
 
-    fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
+    /// Removes the **last** argument and ensures it is a nodeset. If
+    /// the argument is not a nodeset, a type mismatch error is
+    /// returned.
+    pub fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
         match self.0.pop().unwrap() {
             Value::Nodeset(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
         }
     }
 
+    /// Removes the **last** argument. If no argument is present, the
+    /// context node is returned as a nodeset.
     fn pop_value_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
         self.0.pop()
             .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
 
+    /// Removes the **last** argument if it is a string. If no
+    /// argument is present, the context node is converted to a string
+    /// and returned. If there is an argument but it is not a string,
+    /// a type mismatch error is returned.
     fn pop_string_value_or_context_node(&mut self, context: &EvaluationContext) -> Result<String, Error> {
         match self.0.pop() {
             Some(Value::String(s)) => Ok(s),
@@ -160,7 +180,10 @@ impl<'d> Args<'d> {
         }
     }
 
-
+    /// Removes the **last** argument if it is a nodeset. If no
+    /// argument is present, the context node is added to a nodeset
+    /// and returned. If there is an argument but it is not a nodeset,
+    /// a type mismatch error is returned.
     fn pop_nodeset_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>)
                                        -> Result<Nodeset<'d>, Error>
     {
@@ -287,7 +310,6 @@ impl Function for StringFn {
         Ok(Value::String(arg.string()))
     }
 }
-
 
 struct Concat;
 
@@ -561,6 +583,9 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
 
 fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 
+/// Adds the [XPath 1.0 core function library][corelib].
+///
+/// [corelib]: https://www.w3.org/TR/xpath/#corelib
 pub fn register_core_functions(functions: &mut Functions) {
     functions.insert("last".to_owned(), Box::new(Last));
     functions.insert("position".to_owned(), Box::new(Position));

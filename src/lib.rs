@@ -1,3 +1,87 @@
+//! # SXD-XPath
+//!
+//! This is a pure-Rust implementation of XPath, a language for
+//! addressing parts of an XML document. It aims to implement [version
+//! 1.0 of the XPath specification][spec].
+//!
+//! XPath is wonderful for quickly navigating the complicated
+//! hierarchy that is present in many XML documents while having a
+//! concise syntax.
+//!
+//! [spec]: https://www.w3.org/TR/xpath/
+//!
+//! ### Examples
+//!
+//! The quickest way to evaluate an XPath against an XML document is
+//! to use [`evaluate_xpath`][evaluate_xpath].
+//!
+//! ```
+//! extern crate sxd_document;
+//! extern crate sxd_xpath;
+//!
+//! use sxd_document::parser;
+//! use sxd_xpath::{evaluate_xpath, Value};
+//!
+//! fn main() {
+//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let document = package.as_document();
+//!
+//!     let value = evaluate_xpath(&document, "/root").expect("XPath evaluation failed");
+//!
+//!     assert_eq!("hello", value.string());
+//! }
+//! ```
+//!
+//! Evaluating an XPath returns a [`Value`][], representing the
+//! primary XPath types.
+//!
+//! For more complex needs, XPath parsing and evaluation can be split
+//! apart. This allows the user to specify namespaces, variables,
+//! extra functions, and which node evaluation should begin with. You
+//! may also compile an XPath once and reuse it multiple times.
+//!
+//! Parsing is handled with the [`Factory`][] and evaluation relies on
+//! the [`EvaluationContext`][]. Similar functionality to above can be
+//! accomplished:
+//!
+//! ```
+//! extern crate sxd_document;
+//! extern crate sxd_xpath;
+//!
+//! use std::collections::HashMap;
+//! use sxd_document::parser;
+//! use sxd_xpath::{Factory, EvaluationContext, Value};
+//!
+//! fn main() {
+//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let document = package.as_document();
+//!
+//!     let factory = Factory::new();
+//!     let xpath = factory.build("/root").expect("Could not compile XPath");
+//!     let xpath = xpath.expect("No XPath was compiled");
+//!
+//!     let functions = HashMap::new();
+//!     let variables = HashMap::new();
+//!     let namespaces = HashMap::new();
+//!
+//!     let context = EvaluationContext::new(document.root(),
+//!                                          &functions,
+//!                                          &variables,
+//!                                          &namespaces);
+//!
+//!     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+//!
+//!     assert_eq!("hello", value.string());
+//! }
+//! ```
+//!
+//! See [`EvaluationContext`][] for details on how to customize the
+//! evaluation of the XPath.
+//!
+//! [evaluate_xpath]: fn.evaluate_xpath.html
+//! [`Value`]: enum.Value.html
+//! [`Factory`]: struct.Factory.html
+//! [`EvaluationContext`]: struct.EvaluationContext.html
 //!
 //! ### Namespaces
 //!
@@ -33,24 +117,21 @@ use nodeset::{Nodeset,Node};
 use parser::Parser;
 use tokenizer::{Tokenizer,TokenDeabbreviator};
 
-pub use function::Function;
 pub use expression::Expression;
-pub use expression::Error as ExpressionError;
 
 #[macro_use]
 pub mod macros;
 pub mod nodeset;
-pub mod axis;
+mod axis;
 mod expression;
 pub mod function;
 mod node_test;
-pub mod parser;
+mod parser;
 mod token;
-pub mod tokenizer;
+mod tokenizer;
 
-// TODO - this doesn't need to be public, figure out how to make it so
-#[derive(PartialEq,Debug,Clone)]
-pub enum LiteralValue {
+#[derive(Debug, Clone, PartialEq)]
+enum LiteralValue {
     Boolean(bool),
     Number(f64),
     String(string::String),
@@ -66,11 +147,17 @@ impl LiteralValue {
     }
 }
 
-#[derive(PartialEq,Debug,Clone)]
+/// The primary types of values that an XPath expression accepts
+/// as an argument or returns as a result.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value<'d> {
+    /// A true or false value
     Boolean(bool),
+    /// A IEEE-754 double-precision floating point number
     Number(f64),
+    /// A string
     String(string::String),
+    /// A collection of unique nodes
     Nodeset(Nodeset<'d>),
 }
 
@@ -134,12 +221,85 @@ impl<'d> Value<'d> {
     }
 }
 
-pub type BoxFunc = Box<Function + 'static>;
-pub type Functions = HashMap<string::String, BoxFunc>;
+/// A mapping of names to XPath functions.
+pub type Functions = HashMap<string::String, Box<function::Function + 'static>>;
+/// A mapping of names to XPath variables.
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
+/// A mapping of namespace prefixes to namespace URIs.
 pub type Namespaces = HashMap<string::String, string::String>;
 
-#[derive(Copy,Clone)]
+/// Contains the context in which XPath expressions are executed. The
+/// context contains functions, variables, namespaces and the context
+/// node.
+///
+/// ### Examples
+///
+/// A complete example showing all optional settings.
+///
+/// ```
+/// extern crate sxd_document;
+/// extern crate sxd_xpath;
+///
+/// use std::collections::HashMap;
+/// use sxd_document::parser;
+/// use sxd_xpath::{Factory, EvaluationContext, Value};
+/// use sxd_xpath::function::{self, Function};
+///
+/// struct Sigmoid;
+/// impl Function for Sigmoid {
+///     fn evaluate<'a, 'd>(&self,
+///                         _context: &EvaluationContext<'a, 'd>,
+///                         args: Vec<Value<'d>>)
+///                         -> Result<Value<'d>, function::Error>
+///     {
+///         let mut args = function::Args(args);
+///         args.exactly(1)?;
+///         let val = args.pop_number()?;
+///
+///         let computed = (1.0 + (-val).exp()).recip();
+///
+///         Ok(Value::Number(computed))
+///     }
+/// }
+///
+/// fn main() {
+///     let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
+///         .expect("failed to parse XML");
+///     let document = package.as_document();
+///     let node = document.root().children()[0];
+///
+///     let mut functions = HashMap::new();
+///     function::register_core_functions(&mut functions);
+///     functions.insert("sigmoid".to_string(), Box::new(Sigmoid));
+///
+///     let mut variables = HashMap::new();
+///     variables.insert("t".to_string(), Value::Number(2.0));
+///
+///     let mut namespaces = HashMap::new();
+///     namespaces.insert("neural".to_string(), "net:brain".to_string());
+///
+///     let context = EvaluationContext::new(node,
+///                                          &functions,
+///                                          &variables,
+///                                          &namespaces);
+///
+///     let xpath = "sigmoid(@neural:bonus + $t)";
+///
+///     let factory = Factory::new();
+///     let xpath = factory.build(xpath).expect("Could not compile XPath");
+///     let xpath = xpath.expect("No XPath was compiled");
+///
+///     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+///
+///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
+/// }
+/// ```
+///
+/// Note that we are using a custom function (`sigmoid`), a variable
+/// (`$t`), a namespace (`neural:`), and the current node is not the
+/// root of the tree but the top-most element.
+///
+#[derive(Copy, Clone)]
 pub struct EvaluationContext<'a, 'd : 'a> {
     node: Node<'d>,
     functions: &'a Functions,
@@ -184,8 +344,8 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
         self.size
     }
 
-    fn function_for_name(&self, name: &str) -> Option<&'a BoxFunc> {
-        self.functions.get(&name.to_owned())
+    fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
+        self.functions.get(&name.to_owned()).map(AsRef::as_ref)
     }
 
     fn value_of(&self, name: &str) -> Option<&Value<'d>> {
@@ -229,6 +389,8 @@ impl<'a, 'd, 'p> Iterator for EvaluationContextPredicateIter<'a, 'd, 'p> {
     }
 }
 
+/// The primary entrypoint to convert an XPath represented as a string
+/// to a structure that can be evaluated.
 pub struct Factory {
     parser: Parser,
 }
@@ -238,6 +400,7 @@ impl Factory {
         Factory { parser: Parser::new() }
     }
 
+    /// Compiles the given string into an XPath structure.
     pub fn build(&self, xpath: &str) -> parser::ParseResult {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
@@ -247,17 +410,21 @@ impl Factory {
 }
 
 quick_error! {
+    /// The failure modes of executing an XPath.
     #[derive(Debug, Clone, PartialEq)]
-    pub enum EvaluationError {
-        Parsing(err: parser::ParseErr) {
+    pub enum Error {
+        /// The XPath was syntactically invalid
+        Parsing(err: parser::Error) {
             from()
             cause(err)
             description("Unable to parse XPath")
             display("Unable to parse XPath: {}", err)
         }
+        /// The XPath did not construct an expression
         NoXPath {
             description("XPath was empty")
         }
+        /// The XPath could not be executed
         Executing(err: expression::Error) {
             from()
             cause(err)
@@ -292,10 +459,10 @@ quick_error! {
 ///     assert_eq!(Ok(Value::Number(3.0)), evaluate_xpath(&document, "/*/a + /*/b"));
 /// }
 /// ```
-pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, EvaluationError> {
+pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
     let expression = factory.build(xpath)?;
-    let expression = expression.ok_or(EvaluationError::NoXPath)?;
+    let expression = expression.ok_or(Error::NoXPath)?;
 
     let mut functions = HashMap::new();
     function::register_core_functions(&mut functions);
@@ -457,8 +624,8 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use EvaluationError::*;
-            use parser::ParseErr::*;
+            use Error::*;
+            use parser::Error::*;
 
             let result = evaluate_xpath(&doc, "/root/child/");
 
@@ -469,7 +636,7 @@ mod test {
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use EvaluationError::*;
+            use Error::*;
             use expression::Error::*;
 
             let result = evaluate_xpath(&doc, "$foo");
@@ -483,7 +650,7 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "");
 
-            assert_eq!(Err(EvaluationError::NoXPath), result);
+            assert_eq!(Err(Error::NoXPath), result);
         });
     }
 }

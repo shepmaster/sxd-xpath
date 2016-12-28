@@ -1,3 +1,5 @@
+//! Support for collections of nodes.
+
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::iter::{IntoIterator,FromIterator};
@@ -9,15 +11,17 @@ use sxd_document::dom;
 use super::EvaluationContext;
 
 macro_rules! unpack(
-    ($enum_name:ident, $name:ident, $wrapper:ident, dom::$inner:ident) => (
-        impl<'d> $enum_name<'d> {
+    ($enum_name:ident, {
+        $($name:ident, $wrapper:ident, dom::$inner:ident),*
+    }) => (
+        $(
             pub fn $name(self) -> Option<dom::$inner<'d>> {
                 match self {
                     $enum_name::$wrapper(n) => Some(n),
                     _ => None,
                 }
             }
-        }
+        )*
     )
 );
 
@@ -33,7 +37,11 @@ macro_rules! conversion_trait(
     )
 );
 
-#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
+/// Represents a namespace.
+///
+/// This differs from the DOM, which does not treat namespaces as a
+/// separate item.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Namespace<'d> {
     pub parent: dom::Element<'d>,
     pub prefix: &'d str,
@@ -48,7 +56,8 @@ impl<'d> Namespace<'d> {
     pub fn expanded_name(&self) -> QName<'d> { QName::new(self.prefix) }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
+/// Any of the various types of nodes found in an XML document.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Node<'d> {
     Root(dom::Root<'d>),
     Element(dom::Element<'d>),
@@ -59,14 +68,8 @@ pub enum Node<'d> {
     ProcessingInstruction(dom::ProcessingInstruction<'d>),
 }
 
-unpack!(Node, root, Root, dom::Root);
-unpack!(Node, element, Element, dom::Element);
-unpack!(Node, attribute, Attribute, dom::Attribute);
-unpack!(Node, text, Text, dom::Text);
-unpack!(Node, comment, Comment, dom::Comment);
-unpack!(Node, processing_instruction, ProcessingInstruction, dom::ProcessingInstruction);
-
 impl<'d> Node<'d> {
+    /// The document to which this node belongs.
     pub fn document(&self) -> dom::Document<'d> {
         use self::Node::*;
         match *self {
@@ -80,6 +83,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// The name of the node, including a prefix that corresponds to the namespace, if any.
     pub fn prefixed_name(&self) -> Option<String> {
         use self::Node::*;
 
@@ -111,6 +115,9 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the [expanded name][] of the node, if any.
+    ///
+    /// [expanded name]: https://www.w3.org/TR/xpath/#dt-expanded-name
     pub fn expanded_name(&self) -> Option<QName<'d>> {
         use self::Node::*;
         match *self {
@@ -124,6 +131,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the parent of the node, if any.
     pub fn parent(&self) -> Option<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -137,6 +145,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the children of the node, if any.
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -150,6 +159,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the nodes with the same parent that occur before this node.
     pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -163,6 +173,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the nodes with the same parent that occur after this node.
     pub fn following_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -176,6 +187,9 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the [string value] of this node.
+    ///
+    /// [string value]: https://www.w3.org/TR/xpath/#dt-string-value
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
@@ -203,6 +217,22 @@ impl<'d> Node<'d> {
             Comment(n)               => n.text().to_owned(),
             Text(n)                  => n.text().to_owned(),
             Namespace(n)             => n.uri().to_owned(),
+        }
+    }
+
+    unpack!(Node, {
+        root, Root, dom::Root,
+        element, Element, dom::Element,
+        attribute, Attribute, dom::Attribute,
+        text, Text, dom::Text,
+        comment, Comment, dom::Comment,
+        processing_instruction, ProcessingInstruction, dom::ProcessingInstruction
+    });
+
+    pub fn namespace(self) -> Option<Namespace<'d>> {
+        match self {
+            Node::Namespace(n) => Some(n),
+            _ => None,
         }
     }
 }
@@ -249,8 +279,8 @@ impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
     }
 }
 
-/// A collection of nodes
-#[derive(PartialEq,Debug,Clone)]
+/// A collection of unique nodes
+#[derive(Debug, Clone, PartialEq)]
 pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
@@ -264,6 +294,7 @@ impl<'d> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
     }
 
+    /// Add the given node to the set
     pub fn add<N>(&mut self, node: N)
         where N: Into<Node<'d>>
     {
@@ -278,6 +309,7 @@ impl<'d> Nodeset<'d> {
         IntoIterator::into_iter(self)
     }
 
+    /// Add all the given nodes to the set
     pub fn add_nodeset(&mut self, other: &Nodeset<'d>) {
         self.nodes.extend(other);
     }
@@ -286,6 +318,9 @@ impl<'d> Nodeset<'d> {
         self.nodes.len()
     }
 
+    /// Returns the node that occurs first in [document order]
+    ///
+    /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order_first(&self) -> Option<Node<'d>> {
         let doc = match self.nodes.first() {
             Some(n) => n.document(),
