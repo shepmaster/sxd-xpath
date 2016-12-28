@@ -827,7 +827,7 @@ mod test {
         assert_eq!(res, Ok(Value::Nodeset(nodeset![setup.doc.root()])));
     }
 
-    #[derive(Clone,Debug)]
+    #[derive(Debug, Clone)]
     struct MockAxis {
         calls: Rc<RefCell<usize>>,
     }

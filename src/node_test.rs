@@ -11,7 +11,7 @@ pub trait NodeTest: fmt::Debug {
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NameTest {
     pub prefix: Option<String>,
     pub local_part: String,

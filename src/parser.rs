@@ -233,8 +233,7 @@ impl Parser {
         }
     }
 
-    fn default_node_test<I>(&self, source: TokenSource<I>, axis: &Axis)
-                            -> Result<Option<SubNodeTest>,Error>
+    fn default_node_test<I>(&self, source: TokenSource<I>, axis: &Axis) -> Result<Option<SubNodeTest>, Error>
         where I: Iterator<Item=TokenResult>
     {
         if next_token_is!(source, Token::NameTest) {
@@ -376,8 +375,7 @@ impl Parser {
         }
     }
 
-    fn parse_predicates<I>(&self, source: TokenSource<I>)
-                           -> Result<Vec<SubExpression>,Error>
+    fn parse_predicates<I>(&self, source: TokenSource<I>) -> Result<Vec<SubExpression>, Error>
         where I: Iterator<Item=TokenResult>
     {
         let mut predicates = Vec::new();
