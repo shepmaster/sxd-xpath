@@ -136,11 +136,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => None,
-            Element(n)               => n.parent().map(|n| n.into()),
-            Attribute(n)             => n.parent().map(|n| n.into()),
-            Text(n)                  => n.parent().map(|n| n.into()),
-            Comment(n)               => n.parent().map(|n| n.into()),
-            ProcessingInstruction(n) => n.parent().map(|n| n.into()),
+            Element(n)               => n.parent().map(Into::into),
+            Attribute(n)             => n.parent().map(Into::into),
+            Text(n)                  => n.parent().map(Into::into),
+            Comment(n)               => n.parent().map(Into::into),
+            ProcessingInstruction(n) => n.parent().map(Into::into),
             Namespace(n)             => Some(n.parent().into()),
         }
     }
@@ -149,8 +149,8 @@ impl<'d> Node<'d> {
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(n)                  => n.children().iter().map(|&n| n.into()).collect(),
-            Element(n)               => n.children().iter().map(|&n| n.into()).collect(),
+            Root(n)                  => n.children().into_iter().map(Into::into).collect(),
+            Element(n)               => n.children().into_iter().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
             Text(_)                  => Vec::new(),
             Comment(_)               => Vec::new(),
@@ -164,11 +164,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => Vec::new(),
-            Element(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Element(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
-            Text(n)                  => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
-            Comment(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
-            ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Text(n)                  => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
+            Comment(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
+            ProcessingInstruction(n) => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
             Namespace(_)             => Vec::new(),
         }
     }
@@ -178,11 +178,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => Vec::new(),
-            Element(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Element(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
-            Text(n)                  => n.following_siblings().iter().map(|&n| n.into()).collect(),
-            Comment(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
-            ProcessingInstruction(n) => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Text(n)                  => n.following_siblings().into_iter().map(Into::into).collect(),
+            Comment(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
+            ProcessingInstruction(n) => n.following_siblings().into_iter().map(Into::into).collect(),
             Namespace(_)             => Vec::new(),
         }
     }
@@ -193,25 +193,25 @@ impl<'d> Node<'d> {
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
-        fn document_order_text_nodes(node: &Node, result: &mut String) {
-            for child in node.children().iter() {
+        fn document_order_text_nodes(node: Node, result: &mut String) {
+            for child in node.children() {
                 match child {
-                    &Node::Element(_) => document_order_text_nodes(child, result),
-                    &Node::Text(n) => result.push_str(n.text()),
+                    Node::Element(_) => document_order_text_nodes(child, result),
+                    Node::Text(n) => result.push_str(n.text()),
                     _ => {},
                 }
             }
         };
 
-        fn text_descendants_string_value(node: &Node) -> String {
+        fn text_descendants_string_value(node: Node) -> String {
             let mut result = String::new();
             document_order_text_nodes(node, &mut result);
             result
         }
 
         match *self {
-            Root(_)                  => text_descendants_string_value(self),
-            Element(_)               => text_descendants_string_value(self),
+            Root(_)                  => text_descendants_string_value(*self),
+            Element(_)               => text_descendants_string_value(*self),
             Attribute(n)             => n.value().to_owned(),
             ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
             Comment(n)               => n.text().to_owned(),
