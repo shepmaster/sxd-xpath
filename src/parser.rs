@@ -5,7 +5,7 @@ use self::Error::*;
 use ::LiteralValue;
 use ::token::{Token, AxisName, NodeTestName};
 use ::tokenizer::{self, TokenResult};
-use ::axis::{self, Axis, SubAxis, PrincipalNodeType};
+use ::axis::{Axis, AxisLike, PrincipalNodeType};
 use ::expression::{self, SubExpression};
 use ::node_test::{self, SubNodeTest};
 
@@ -189,29 +189,29 @@ fn first_matching_rule<I>(child_parses: &[&Rule<I>],
 }
 
 impl Parser {
-    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<SubAxis, Error>
+    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<Axis, Error>
         where I: Iterator<Item = TokenResult>
     {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
 
             match name {
-                AxisName::SelfAxis => Ok(Box::new(axis::SelfAxis)),
-                AxisName::Parent => Ok(Box::new(axis::Parent)),
-                AxisName::Descendant => Ok(Box::new(axis::Descendant)),
-                AxisName::DescendantOrSelf => Ok(Box::new(axis::DescendantOrSelf)),
-                AxisName::Attribute => Ok(Box::new(axis::Attribute)),
-                AxisName::Namespace => Ok(Box::new(axis::Namespace)),
-                AxisName::Ancestor => Ok(Box::new(axis::Ancestor)),
-                AxisName::AncestorOrSelf => Ok(Box::new(axis::AncestorOrSelf)),
-                AxisName::PrecedingSibling => Ok(Box::new(axis::PrecedingSibling)),
-                AxisName::FollowingSibling => Ok(Box::new(axis::FollowingSibling)),
-                AxisName::Preceding => Ok(Box::new(axis::Preceding)),
-                AxisName::Following => Ok(Box::new(axis::Following)),
+                AxisName::SelfAxis => Ok(Axis::SelfAxis),
+                AxisName::Parent => Ok(Axis::Parent),
+                AxisName::Descendant => Ok(Axis::Descendant),
+                AxisName::DescendantOrSelf => Ok(Axis::DescendantOrSelf),
+                AxisName::Attribute => Ok(Axis::Attribute),
+                AxisName::Namespace => Ok(Axis::Namespace),
+                AxisName::Ancestor => Ok(Axis::Ancestor),
+                AxisName::AncestorOrSelf => Ok(Axis::AncestorOrSelf),
+                AxisName::PrecedingSibling => Ok(Axis::PrecedingSibling),
+                AxisName::FollowingSibling => Ok(Axis::FollowingSibling),
+                AxisName::Preceding => Ok(Axis::Preceding),
+                AxisName::Following => Ok(Axis::Following),
                 _ => unimplemented!(),
             }
         } else {
-            Ok(Box::new(axis::Child))
+            Ok(Axis::Child)
         }
     }
 
@@ -233,7 +233,7 @@ impl Parser {
         }
     }
 
-    fn default_node_test<I>(&self, source: TokenSource<I>, axis: &Axis) -> Result<Option<SubNodeTest>, Error>
+    fn default_node_test<I>(&self, source: TokenSource<I>, axis: Axis) -> Result<Option<SubNodeTest>, Error>
         where I: Iterator<Item = TokenResult>
     {
         if next_token_is!(source, Token::NameTest) {
@@ -394,7 +394,7 @@ impl Parser {
 
         let node_test = match try!(self.parse_node_test(source)) {
             Some(test) => Some(test),
-            None => try!(self.default_node_test(source, &*axis)),
+            None => try!(self.default_node_test(source, axis)),
         };
 
         let node_test = match node_test {
