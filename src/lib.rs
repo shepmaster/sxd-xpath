@@ -1,3 +1,87 @@
+//! # SXD-XPath
+//!
+//! This is a pure-Rust implementation of XPath, a language for
+//! addressing parts of an XML document. It aims to implement [version
+//! 1.0 of the XPath specification][spec].
+//!
+//! XPath is wonderful for quickly navigating the complicated
+//! hierarchy that is present in many XML documents while having a
+//! concise syntax.
+//!
+//! [spec]: https://www.w3.org/TR/xpath/
+//!
+//! ### Examples
+//!
+//! The quickest way to evaluate an XPath against an XML document is
+//! to use [`evaluate_xpath`][evaluate_xpath].
+//!
+//! ```
+//! extern crate sxd_document;
+//! extern crate sxd_xpath;
+//!
+//! use sxd_document::parser;
+//! use sxd_xpath::{evaluate_xpath, Value};
+//!
+//! fn main() {
+//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let document = package.as_document();
+//!
+//!     let value = evaluate_xpath(&document, "/root").expect("XPath evaluation failed");
+//!
+//!     assert_eq!("hello", value.string());
+//! }
+//! ```
+//!
+//! Evaluating an XPath returns a [`Value`][], representing the
+//! primary XPath types.
+//!
+//! For more complex needs, XPath parsing and evaluation can be split
+//! apart. This allows the user to specify namespaces, variables,
+//! extra functions, and which node evaluation should begin with. You
+//! may also compile an XPath once and reuse it multiple times.
+//!
+//! Parsing is handled with the [`Factory`][] and evaluation relies on
+//! the [`EvaluationContext`][]. Similar functionality to above can be
+//! accomplished:
+//!
+//! ```
+//! extern crate sxd_document;
+//! extern crate sxd_xpath;
+//!
+//! use std::collections::HashMap;
+//! use sxd_document::parser;
+//! use sxd_xpath::{Factory, EvaluationContext, Value};
+//!
+//! fn main() {
+//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let document = package.as_document();
+//!
+//!     let factory = Factory::new();
+//!     let xpath = factory.build("/root").expect("Could not compile XPath");
+//!     let xpath = xpath.expect("No XPath was compiled");
+//!
+//!     let functions = HashMap::new();
+//!     let variables = HashMap::new();
+//!     let namespaces = HashMap::new();
+//!
+//!     let context = EvaluationContext::new(document.root(),
+//!                                          &functions,
+//!                                          &variables,
+//!                                          &namespaces);
+//!
+//!     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+//!
+//!     assert_eq!("hello", value.string());
+//! }
+//! ```
+//!
+//! See [`EvaluationContext`][] for details on how to customize the
+//! evaluation of the XPath.
+//!
+//! [evaluate_xpath]: fn.evaluate_xpath.html
+//! [`Value`]: enum.Value.html
+//! [`Factory`]: struct.Factory.html
+//! [`EvaluationContext`]: struct.EvaluationContext.html
 //!
 //! ### Namespaces
 //!
