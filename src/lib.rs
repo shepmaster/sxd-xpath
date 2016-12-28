@@ -247,17 +247,21 @@ impl Factory {
 }
 
 quick_error! {
+    /// The failure modes of executing an XPath.
     #[derive(Debug, Clone, PartialEq)]
-    pub enum EvaluationError {
+    pub enum Error {
+        /// The XPath was syntactically invalid
         Parsing(err: parser::Error) {
             from()
             cause(err)
             description("Unable to parse XPath")
             display("Unable to parse XPath: {}", err)
         }
+        /// The XPath did not construct an expression
         NoXPath {
             description("XPath was empty")
         }
+        /// The XPath could not be executed
         Executing(err: expression::Error) {
             from()
             cause(err)
@@ -292,10 +296,10 @@ quick_error! {
 ///     assert_eq!(Ok(Value::Number(3.0)), evaluate_xpath(&document, "/*/a + /*/b"));
 /// }
 /// ```
-pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, EvaluationError> {
+pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
     let expression = factory.build(xpath)?;
-    let expression = expression.ok_or(EvaluationError::NoXPath)?;
+    let expression = expression.ok_or(Error::NoXPath)?;
 
     let mut functions = HashMap::new();
     function::register_core_functions(&mut functions);
@@ -457,7 +461,7 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use EvaluationError::*;
+            use Error::*;
             use parser::Error::*;
 
             let result = evaluate_xpath(&doc, "/root/child/");
@@ -469,7 +473,7 @@ mod test {
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use EvaluationError::*;
+            use Error::*;
             use expression::Error::*;
 
             let result = evaluate_xpath(&doc, "$foo");
@@ -483,7 +487,7 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "");
 
-            assert_eq!(Err(EvaluationError::NoXPath), result);
+            assert_eq!(Err(Error::NoXPath), result);
         });
     }
 }
