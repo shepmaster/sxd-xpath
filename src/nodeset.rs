@@ -35,7 +35,11 @@ macro_rules! conversion_trait(
     )
 );
 
-#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
+/// Represents a namespace.
+///
+/// This differs from the DOM, which does not treat namespaces as a
+/// separate item.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Namespace<'d> {
     pub parent: dom::Element<'d>,
     pub prefix: &'d str,
