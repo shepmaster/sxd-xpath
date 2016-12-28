@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(dead_code))]
-
 extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate getopts;
