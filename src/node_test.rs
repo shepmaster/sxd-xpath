@@ -2,8 +2,8 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use super::EvaluationContext;
-use super::nodeset::{self,Nodeset};
+use ::EvaluationContext;
+use ::nodeset::{self, Nodeset};
 
 pub trait NodeTest: fmt::Debug {
     fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
@@ -11,7 +11,7 @@ pub trait NodeTest: fmt::Debug {
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NameTest {
     pub prefix: Option<String>,
     pub local_part: String,
@@ -169,14 +169,13 @@ mod test {
     use std::borrow::ToOwned;
     use std::collections::HashMap;
 
-    use sxd_document::{Package,QName};
-    use sxd_document::dom::{Document,Element,Attribute};
+    use sxd_document::{Package, QName};
+    use sxd_document::dom::{self, Document};
 
-    use super::super::{EvaluationContext,Functions,Variables,Namespaces};
-    use super::super::nodeset::Nodeset;
+    use ::{EvaluationContext, Functions, Variables, Namespaces};
+    use ::nodeset::Nodeset;
 
-    use super::super::node_test;
-    use super::NodeTest;
+    use super::*;
 
     struct Setup<'d> {
         doc: Document<'d>,
@@ -200,7 +199,7 @@ mod test {
         }
 
         fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
-                                        -> (Attribute<'d>, EvaluationContext<'d, 'd>)
+                                        -> (dom::Attribute<'d>, EvaluationContext<'d, 'd>)
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element("element");
@@ -210,14 +209,14 @@ mod test {
         }
 
         fn context_for_ns_attribute(&'d mut self, prefix: &str, nsuri: &str, local: &str, value: &str)
-                                    -> (Attribute<'d>, EvaluationContext<'d, 'd>)
+                                    -> (dom::Attribute<'d>, EvaluationContext<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
             self.context_for_attribute((nsuri, local), value)
         }
 
         fn context_for_element<'n, N>(&'d self, name: N)
-                                  -> (Element<'d>, EvaluationContext<'d, 'd>)
+                                  -> (dom::Element<'d>, EvaluationContext<'d, 'd>)
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
@@ -226,7 +225,7 @@ mod test {
         }
 
         fn context_for_ns_element(&'d mut self, prefix: &str, nsuri: &str, local: &str)
-                                  -> (Element<'d>, EvaluationContext<'d, 'd>)
+                                  -> (dom::Element<'d>, EvaluationContext<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
             self.context_for_element((nsuri, local))
@@ -237,11 +236,11 @@ mod test {
                        -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
-        let name = super::NameTest {
+        let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
             local_part: local.to_owned()
         };
-        let test = node_test::Attribute::new(name);
+        let test = Attribute::new(name);
         test.test(context, &mut result);
         result
     }
@@ -331,11 +330,11 @@ mod test {
                        -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
-        let name = super::NameTest {
+        let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
             local_part: local.to_owned()
         };
-        let test = node_test::Element::new(name);
+        let test = Element::new(name);
         test.test(context, &mut result);
         result
     }

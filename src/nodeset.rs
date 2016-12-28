@@ -2,13 +2,13 @@
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::iter::{IntoIterator,FromIterator};
-use std::{slice,vec};
+use std::iter::{IntoIterator, FromIterator};
+use std::{slice, vec};
 
 use sxd_document::QName;
 use sxd_document::dom;
 
-use super::EvaluationContext;
+use ::EvaluationContext;
 
 macro_rules! unpack(
     ($enum_name:ident, {
@@ -136,11 +136,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => None,
-            Element(n)               => n.parent().map(|n| n.into()),
-            Attribute(n)             => n.parent().map(|n| n.into()),
-            Text(n)                  => n.parent().map(|n| n.into()),
-            Comment(n)               => n.parent().map(|n| n.into()),
-            ProcessingInstruction(n) => n.parent().map(|n| n.into()),
+            Element(n)               => n.parent().map(Into::into),
+            Attribute(n)             => n.parent().map(Into::into),
+            Text(n)                  => n.parent().map(Into::into),
+            Comment(n)               => n.parent().map(Into::into),
+            ProcessingInstruction(n) => n.parent().map(Into::into),
             Namespace(n)             => Some(n.parent().into()),
         }
     }
@@ -149,8 +149,8 @@ impl<'d> Node<'d> {
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(n)                  => n.children().iter().map(|&n| n.into()).collect(),
-            Element(n)               => n.children().iter().map(|&n| n.into()).collect(),
+            Root(n)                  => n.children().into_iter().map(Into::into).collect(),
+            Element(n)               => n.children().into_iter().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
             Text(_)                  => Vec::new(),
             Comment(_)               => Vec::new(),
@@ -164,11 +164,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => Vec::new(),
-            Element(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Element(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
-            Text(n)                  => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
-            Comment(n)               => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
-            ProcessingInstruction(n) => n.preceding_siblings().iter().rev().map(|&n| n.into()).collect(),
+            Text(n)                  => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
+            Comment(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
+            ProcessingInstruction(n) => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
             Namespace(_)             => Vec::new(),
         }
     }
@@ -178,11 +178,11 @@ impl<'d> Node<'d> {
         use self::Node::*;
         match *self {
             Root(_)                  => Vec::new(),
-            Element(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Element(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
             Attribute(_)             => Vec::new(),
-            Text(n)                  => n.following_siblings().iter().map(|&n| n.into()).collect(),
-            Comment(n)               => n.following_siblings().iter().map(|&n| n.into()).collect(),
-            ProcessingInstruction(n) => n.following_siblings().iter().map(|&n| n.into()).collect(),
+            Text(n)                  => n.following_siblings().into_iter().map(Into::into).collect(),
+            Comment(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
+            ProcessingInstruction(n) => n.following_siblings().into_iter().map(Into::into).collect(),
             Namespace(_)             => Vec::new(),
         }
     }
@@ -193,25 +193,25 @@ impl<'d> Node<'d> {
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
-        fn document_order_text_nodes(node: &Node, result: &mut String) {
-            for child in node.children().iter() {
+        fn document_order_text_nodes(node: Node, result: &mut String) {
+            for child in node.children() {
                 match child {
-                    &Node::Element(_) => document_order_text_nodes(child, result),
-                    &Node::Text(n) => result.push_str(n.text()),
+                    Node::Element(_) => document_order_text_nodes(child, result),
+                    Node::Text(n) => result.push_str(n.text()),
                     _ => {},
                 }
             }
         };
 
-        fn text_descendants_string_value(node: &Node) -> String {
+        fn text_descendants_string_value(node: Node) -> String {
             let mut result = String::new();
             document_order_text_nodes(node, &mut result);
             result
         }
 
         match *self {
-            Root(_)                  => text_descendants_string_value(self),
-            Element(_)               => text_descendants_string_value(self),
+            Root(_)                  => text_descendants_string_value(*self),
+            Element(_)               => text_descendants_string_value(*self),
             Attribute(n)             => n.value().to_owned(),
             ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
             Comment(n)               => n.text().to_owned(),
@@ -285,10 +285,6 @@ pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
 
-fn first_node_in_order<'d>(nodes: &[Node<'d>], order: HashMap<Node<'d>, usize>) -> Option<Node<'d>> {
-    nodes.iter().min_by_key(|&n| order[n]).cloned()
-}
-
 impl<'d> Nodeset<'d> {
     pub fn new() -> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
@@ -327,29 +323,33 @@ impl<'d> Nodeset<'d> {
             None => return None,
         };
 
-        let mut idx = 0;
-        let mut stack = vec![doc.root().into()];
-        let mut order: HashMap<Node, usize> = HashMap::new();
-
         // Rebuilding this each time cannot possibly be performant,
         // but I want to see how widely used this is first before
         // picking an appropriate caching point.
+        let order = build_ordering_of_document(doc);
 
-        while let Some(n) = stack.pop() {
-            order.insert(n, idx);
-            idx += 1;
-            let c = n.children();
-
-            stack.extend(c.into_iter().rev());
-
-            if let Node::Element(e) = n {
-                // TODO: namespaces
-                stack.extend(e.attributes().into_iter().map(|a| -> Node<'d> { a.into() }));
-            }
-        }
-
-        first_node_in_order(&self.nodes, order)
+        self.nodes.iter().min_by_key(|&n| order[n]).cloned()
     }
+}
+
+fn build_ordering_of_document<'d>(doc: dom::Document<'d>) -> HashMap<Node<'d>, usize> {
+    let mut idx = 0;
+    let mut stack: Vec<Node> = vec![doc.root().into()];
+    let mut order = HashMap::new();
+
+    while let Some(n) = stack.pop() {
+        order.insert(n, idx);
+        idx += 1;
+
+        stack.extend(n.children().into_iter().rev());
+
+        if let Node::Element(e) = n {
+            // TODO: namespaces
+            stack.extend(e.attributes().into_iter().map(Node::Attribute));
+        }
+    }
+
+    order
 }
 
 impl<'a, 'd : 'a> IntoIterator for &'a Nodeset<'d> {
@@ -372,7 +372,7 @@ impl<'d> IntoIterator for Nodeset<'d> {
 
 impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
     fn from_iter<T>(iterator: T) -> Nodeset<'d>
-        where T: IntoIterator<Item=EvaluationContext<'a, 'd>>
+        where T: IntoIterator<Item = EvaluationContext<'a, 'd>>
     {
         let mut ns = Nodeset::new();
         for n in iterator { ns.add(n.node) };
@@ -404,15 +404,8 @@ mod test {
 
     use sxd_document::Package;
 
-    use super::Node::{
-        Attribute,
-        Comment,
-        Element,
-        ProcessingInstruction,
-        Root,
-        Text,
-    };
-    use super::{Nodeset,Node};
+    use super::{Node, Nodeset};
+    use super::Node::*;
 
     fn into_node<'d, T: Into<Node<'d>>>(n: T) -> Node<'d> { n.into() }
 

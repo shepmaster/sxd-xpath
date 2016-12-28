@@ -107,15 +107,13 @@ extern crate quick_error;
 
 use std::borrow::ToOwned;
 use std::collections::HashMap;
-use std::{iter,string};
+use std::{iter, string};
 
 use sxd_document::dom::Document;
 
-use self::Value::{Boolean,Number,String};
-
-use nodeset::{Nodeset,Node};
+use nodeset::{Nodeset, Node};
 use parser::Parser;
-use tokenizer::{Tokenizer,TokenDeabbreviator};
+use tokenizer::{Tokenizer, TokenDeabbreviator};
 
 pub use expression::Expression;
 
@@ -137,12 +135,14 @@ enum LiteralValue {
     String(string::String),
 }
 
-impl LiteralValue {
-    fn into_value<'d>(self) -> Value<'d> {
-        match self {
-            LiteralValue::Boolean(v) => Boolean(v),
-            LiteralValue::Number(v)  => Number(v),
-            LiteralValue::String(v)  => String(v),
+#[cfg(test)]
+impl<'d> From<Value<'d>> for LiteralValue {
+    fn from(other: Value<'d>) -> LiteralValue {
+        match other {
+            Value::Boolean(v) => LiteralValue::Boolean(v),
+            Value::Number(v)  => LiteralValue::Number(v),
+            Value::String(v)  => LiteralValue::String(v),
+            Value::Nodeset(_) => panic!("Cannot convert a nodeset to a literal"),
         }
     }
 }
@@ -208,15 +208,14 @@ impl<'d> Value<'d> {
             },
         }
     }
+}
 
-    #[allow(dead_code)]
-    fn into_literal_value(self) -> LiteralValue {
-        use Value::*;
-        match self {
-            Boolean(v) => LiteralValue::Boolean(v),
-            Number(v)  => LiteralValue::Number(v),
-            String(v)  => LiteralValue::String(v),
-            Nodeset(_) => panic!("Cannot convert a nodeset to a literal"),
+impl<'d> From<LiteralValue> for Value<'d> {
+    fn from(other: LiteralValue) -> Value<'d> {
+        match other {
+            LiteralValue::Boolean(v) => Value::Boolean(v),
+            LiteralValue::Number(v)  => Value::Number(v),
+            LiteralValue::String(v)  => Value::String(v),
         }
     }
 }
