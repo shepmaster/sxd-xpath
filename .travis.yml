@@ -9,8 +9,6 @@ env:
   matrix:
   - FEATURES=""
   - FEATURES="unstable"
-  global:
-    secure: LEEX3WBWWdmI9b0gEtmsQw4cma/A3QLHQRFobDw9NY5ZtDA0aMQBJfB2Aq6UxNcBxGU/b5/nCTSFV1vwDG/lDv9rRyzR2cCbvJEnLDI5ToWvJCC+zDMZB8ffge60tI/W++mxHMPLzVra49UyhI5Ei6B1ow1haJv/7hGxnjuYkaU=
 matrix:
   exclude:
   - rust: beta
@@ -20,4 +18,3 @@ matrix:
 script: |
   cargo build --verbose --features "${FEATURES}"
   cargo test --verbose --features "${FEATURES}"
-after_success: "./deploy_gh_pages.sh"
