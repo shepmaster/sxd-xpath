@@ -372,7 +372,7 @@ impl<'d> IntoIterator for Nodeset<'d> {
 
 impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
     fn from_iter<T>(iterator: T) -> Nodeset<'d>
-        where T: IntoIterator<Item=EvaluationContext<'a, 'd>>
+        where T: IntoIterator<Item = EvaluationContext<'a, 'd>>
     {
         let mut ns = Nodeset::new();
         for n in iterator { ns.add(n.node) };
