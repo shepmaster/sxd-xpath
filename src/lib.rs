@@ -221,9 +221,13 @@ impl<'d> Value<'d> {
     }
 }
 
+
 pub type BoxFunc = Box<function::Function + 'static>;
+/// A mapping of names to XPath functions.
 pub type Functions = HashMap<string::String, BoxFunc>;
+/// A mapping of names to XPath variables.
 pub type Variables<'d> = HashMap<string::String, Value<'d>>;
+/// A mapping of namespace prefixes to namespace URIs.
 pub type Namespaces = HashMap<string::String, string::String>;
 
 #[derive(Copy,Clone)]
