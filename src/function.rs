@@ -39,7 +39,8 @@ impl<'a> From<&'a Value<'a>> for ArgumentType {
 }
 
 quick_error! {
-    #[derive(Debug, Copy, Clone, PartialEq, Hash)]
+    /// The errors that may occur while evaluating a function
+    #[derive(Debug, Clone, PartialEq, Hash)]
     pub enum Error {
         TooManyArguments { expected: usize, actual: usize } {
             description("too many arguments")
@@ -52,6 +53,10 @@ quick_error! {
         WrongType { expected: ArgumentType, actual: ArgumentType } {
             description("argument of wrong type")
             display("argument was the wrong type, expected {:?} but had {:?}", expected, actual)
+        }
+        Other(what: String) {
+            description("an error occurred while evaluating a function")
+            display("could not evaluate function: {}", what)
         }
     }
 }
