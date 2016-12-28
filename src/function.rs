@@ -1,3 +1,5 @@
+//! Support for registering and creating XPath functions.
+
 use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
