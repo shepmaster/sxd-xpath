@@ -47,9 +47,8 @@ mod parser;
 mod token;
 mod tokenizer;
 
-// TODO - this doesn't need to be public, figure out how to make it so
-#[derive(PartialEq,Debug,Clone)]
-pub enum LiteralValue {
+#[derive(Debug, Clone, PartialEq)]
+enum LiteralValue {
     Boolean(bool),
     Number(f64),
     String(string::String),

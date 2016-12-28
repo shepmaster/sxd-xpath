@@ -178,7 +178,13 @@ impl Expression for Function {
 
 #[derive(Debug)]
 pub struct Literal {
-    pub value: LiteralValue,
+    value: LiteralValue,
+}
+
+impl From<LiteralValue> for Literal {
+    fn from(other: LiteralValue) -> Literal {
+        Literal { value: other }
+    }
 }
 
 impl Expression for Literal {

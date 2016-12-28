@@ -281,7 +281,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(Box::new(expression::Literal { value: LiteralValue::String(value) })))
+            Ok(Some(Box::new(expression::Literal::from(LiteralValue::String(value)))))
         } else {
             Ok(None)
         }
@@ -292,7 +292,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(Box::new(expression::Literal { value: LiteralValue::Number(value) })))
+            Ok(Some(Box::new(expression::Literal::from(LiteralValue::Number(value)))))
         } else {
             Ok(None)
         }
