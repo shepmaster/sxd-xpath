@@ -54,7 +54,8 @@ impl<'d> Namespace<'d> {
     pub fn expanded_name(&self) -> QName<'d> { QName::new(self.prefix) }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,Hash,Debug)]
+/// Any of the various types of nodes found in an XML document.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Node<'d> {
     Root(dom::Root<'d>),
     Element(dom::Element<'d>),
@@ -66,6 +67,7 @@ pub enum Node<'d> {
 }
 
 impl<'d> Node<'d> {
+    /// The document to which this node belongs.
     pub fn document(&self) -> dom::Document<'d> {
         use self::Node::*;
         match *self {
@@ -79,6 +81,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// The name of the node, including a prefix that corresponds to the namespace, if any.
     pub fn prefixed_name(&self) -> Option<String> {
         use self::Node::*;
 
@@ -110,6 +113,9 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the [expanded name][] of the node, if any.
+    ///
+    /// [expanded name]: https://www.w3.org/TR/xpath/#dt-expanded-name
     pub fn expanded_name(&self) -> Option<QName<'d>> {
         use self::Node::*;
         match *self {
@@ -123,6 +129,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the parent of the node, if any.
     pub fn parent(&self) -> Option<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -136,6 +143,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the children of the node, if any.
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -149,6 +157,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the nodes with the same parent that occur before this node.
     pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -162,6 +171,7 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the nodes with the same parent that occur after this node.
     pub fn following_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
@@ -175,6 +185,9 @@ impl<'d> Node<'d> {
         }
     }
 
+    /// Returns the [string value] of this node.
+    ///
+    /// [string value]: https://www.w3.org/TR/xpath/#dt-string-value
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
