@@ -9,15 +9,17 @@ use sxd_document::dom;
 use super::EvaluationContext;
 
 macro_rules! unpack(
-    ($enum_name:ident, $name:ident, $wrapper:ident, dom::$inner:ident) => (
-        impl<'d> $enum_name<'d> {
+    ($enum_name:ident, {
+        $($name:ident, $wrapper:ident, dom::$inner:ident),*
+    }) => (
+        $(
             pub fn $name(self) -> Option<dom::$inner<'d>> {
                 match self {
                     $enum_name::$wrapper(n) => Some(n),
                     _ => None,
                 }
             }
-        }
+        )*
     )
 );
 
@@ -58,13 +60,6 @@ pub enum Node<'d> {
     Namespace(Namespace<'d>),
     ProcessingInstruction(dom::ProcessingInstruction<'d>),
 }
-
-unpack!(Node, root, Root, dom::Root);
-unpack!(Node, element, Element, dom::Element);
-unpack!(Node, attribute, Attribute, dom::Attribute);
-unpack!(Node, text, Text, dom::Text);
-unpack!(Node, comment, Comment, dom::Comment);
-unpack!(Node, processing_instruction, ProcessingInstruction, dom::ProcessingInstruction);
 
 impl<'d> Node<'d> {
     pub fn document(&self) -> dom::Document<'d> {
@@ -203,6 +198,22 @@ impl<'d> Node<'d> {
             Comment(n)               => n.text().to_owned(),
             Text(n)                  => n.text().to_owned(),
             Namespace(n)             => n.uri().to_owned(),
+        }
+    }
+
+    unpack!(Node, {
+        root, Root, dom::Root,
+        element, Element, dom::Element,
+        attribute, Attribute, dom::Attribute,
+        text, Text, dom::Text,
+        comment, Comment, dom::Comment,
+        processing_instruction, ProcessingInstruction, dom::ProcessingInstruction
+    });
+
+    pub fn namespace(self) -> Option<Namespace<'d>> {
+        match self {
+            Node::Namespace(n) => Some(n),
+            _ => None,
         }
     }
 }
