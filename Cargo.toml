@@ -11,7 +11,7 @@ homepage = "https://github.com/shepmaster/sxd-xpath"
 repository = "https://github.com/shepmaster/sxd-xpath"
 documentation = "https://shepmaster.github.io/sxd-xpath/"
 
-license = "MIT"
+license = "MIT/Apache-2.0"
 
 [features]
 unstable = []
