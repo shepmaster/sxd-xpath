@@ -20,3 +20,4 @@ unstable = []
 getopts = "0.2.4"
 peresil = "0.3.0"
 sxd-document = "0.2.0"
+quick-error = "1.1.0"

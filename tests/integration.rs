@@ -5,7 +5,7 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use sxd_document::dom::Document;
 use sxd_document::parser::parse;
-use sxd_xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext,Expression};
+use sxd_xpath::{Value,Functions,Variables,Namespaces,Factory,EvaluationContext};
 
 #[test]
 fn functions_accept_arguments() {
