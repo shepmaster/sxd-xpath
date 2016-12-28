@@ -277,8 +277,8 @@ impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
     }
 }
 
-/// A collection of nodes
-#[derive(PartialEq,Debug,Clone)]
+/// A collection of unique nodes
+#[derive(Debug, Clone, PartialEq)]
 pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
@@ -292,6 +292,7 @@ impl<'d> Nodeset<'d> {
         Nodeset { nodes: Vec::new() }
     }
 
+    /// Add the given node to the set
     pub fn add<N>(&mut self, node: N)
         where N: Into<Node<'d>>
     {
@@ -306,6 +307,7 @@ impl<'d> Nodeset<'d> {
         IntoIterator::into_iter(self)
     }
 
+    /// Add all the given nodes to the set
     pub fn add_nodeset(&mut self, other: &Nodeset<'d>) {
         self.nodes.extend(other);
     }
@@ -314,6 +316,9 @@ impl<'d> Nodeset<'d> {
         self.nodes.len()
     }
 
+    /// Returns the node that occurs first in [document order]
+    ///
+    /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order_first(&self) -> Option<Node<'d>> {
         let doc = match self.nodes.first() {
             Some(n) => n.document(),
