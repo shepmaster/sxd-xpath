@@ -6,7 +6,7 @@ use ::EvaluationContext;
 use ::node_test::NodeTest;
 use ::nodeset::{self, Nodeset, Node};
 
-#[allow(missing_copy_implementations)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PrincipalNodeType {
     Attribute,
     Element,
@@ -14,7 +14,7 @@ pub enum PrincipalNodeType {
 }
 
 /// A directed traversal of Nodes.
-pub trait Axis: fmt::Debug {
+pub trait AxisLike: fmt::Debug {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
     fn select_nodes<'a, 'd>(&self,
@@ -28,161 +28,116 @@ pub trait Axis: fmt::Debug {
     }
 }
 
-pub type SubAxis = Box<Axis + 'static>;
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Ancestor;
-
-impl Axis for Ancestor {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        let mut node = context.node;
-        while let Some(parent) = node.parent() {
-            let child_context = context.new_context_for(parent);
-            node_test.test(&child_context, result);
-            node = parent;
-        }
-    }
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Axis {
+    Ancestor,
+    AncestorOrSelf,
+    Attribute,
+    Namespace,
+    Child,
+    Descendant,
+    DescendantOrSelf,
+    Parent,
+    PrecedingSibling,
+    FollowingSibling,
+    Preceding,
+    Following,
+    SelfAxis,
 }
 
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct AncestorOrSelf;
-
-impl Axis for AncestorOrSelf {
+impl AxisLike for Axis {
     fn select_nodes<'a, 'd>(&self,
                             context:   &EvaluationContext<'a, 'd>,
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
-        node_test.test(context, result);
-        Ancestor.select_nodes(context, node_test, result)
-    }
-}
+        use self::Axis::*;
+        match *self {
+            Ancestor => {
+                let mut node = context.node;
+                while let Some(parent) = node.parent() {
+                    let child_context = context.new_context_for(parent);
+                    node_test.test(&child_context, result);
+                    node = parent;
+                }
+            }
+            AncestorOrSelf => {
+                node_test.test(context, result);
+                Ancestor.select_nodes(context, node_test, result)
+            }
+            Attribute => {
+                if let Node::Element(ref e) = context.node {
+                    for attr in e.attributes().iter() {
+                        let attr_context = context.new_context_for(*attr);
+                        node_test.test(&attr_context, result);
+                    }
+                }
+            }
+            Namespace => {
+                if let Node::Element(ref e) = context.node {
+                    for ns in e.namespaces_in_scope().iter() {
+                        let ns = Node::Namespace(nodeset::Namespace {
+                            parent: *e,
+                            prefix: ns.prefix(),
+                            uri: ns.uri(),
+                        });
 
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Attribute;
+                        let attr_context = context.new_context_for(ns);
+                        node_test.test(&attr_context, result);
+                    }
+                }
+            }
+            Child => {
+                let n = context.node;
 
-impl Axis for Attribute {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        if let Node::Element(ref e) = context.node {
-            for attr in e.attributes().iter() {
-                let attr_context = context.new_context_for(*attr);
-                node_test.test(&attr_context, result);
+                for child in n.children().iter() {
+                    let child_context = context.new_context_for(*child);
+                    node_test.test(&child_context, result);
+                }
+            }
+            Descendant => {
+                let n = context.node;
+
+                for child in n.children().iter() {
+                    let child_context = context.new_context_for(*child);
+                    node_test.test(&child_context, result);
+                    self.select_nodes(&child_context, node_test, result);
+                }
+            }
+            DescendantOrSelf => {
+                node_test.test(context, result);
+                Descendant.select_nodes(context, node_test, result);
+            }
+            Parent => {
+                if let Some(p) = context.node.parent() {
+                    let parent_context = context.new_context_for(p);
+                    node_test.test(&parent_context, result);
+                }
+            }
+            PrecedingSibling => {
+                preceding_following_sibling(context, node_test, result, Node::preceding_siblings)
+            }
+            FollowingSibling => {
+                preceding_following_sibling(context, node_test, result, Node::following_siblings)
+            }
+            Preceding => {
+                preceding_following(context, node_test, result, Node::preceding_siblings)
+            }
+            Following => {
+                preceding_following(context, node_test, result, Node::following_siblings)
+            }
+            SelfAxis => {
+                node_test.test(context, result);
             }
         }
     }
 
     fn principal_node_type(&self) -> PrincipalNodeType {
-        PrincipalNodeType::Attribute
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Namespace;
-
-impl Axis for Namespace {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        if let Node::Element(ref e) = context.node {
-            for ns in e.namespaces_in_scope().iter() {
-                let ns = Node::Namespace(nodeset::Namespace {
-                    parent: *e,
-                    prefix: ns.prefix(),
-                    uri: ns.uri(),
-                });
-
-                let attr_context = context.new_context_for(ns);
-                node_test.test(&attr_context, result);
-            }
-        }
-    }
-
-    fn principal_node_type(&self) -> PrincipalNodeType {
-        PrincipalNodeType::Namespace
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Child;
-
-impl Axis for Child {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        let n = context.node;
-
-        for child in n.children().iter() {
-            let child_context = context.new_context_for(*child);
-            node_test.test(&child_context, result);
-        }
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Descendant;
-
-impl Axis for Descendant {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        let n = context.node;
-
-        for child in n.children().iter() {
-            let child_context = context.new_context_for(*child);
-            node_test.test(&child_context, result);
-            self.select_nodes(&child_context, node_test, result);
-        }
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct DescendantOrSelf;
-
-impl Axis for DescendantOrSelf {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        node_test.test(context, result);
-        Descendant.select_nodes(context, node_test, result);
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Parent;
-
-impl Axis for Parent {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        if let Some(p) = context.node.parent() {
-            let parent_context = context.new_context_for(p);
-            node_test.test(&parent_context, result);
+        use self::Axis::*;
+        match *self {
+            Attribute => PrincipalNodeType::Attribute,
+            Namespace => PrincipalNodeType::Namespace,
+            _ => PrincipalNodeType::Element,
         }
     }
 }
@@ -196,34 +151,6 @@ fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
     for sibling in sibs.iter() {
         let child_context = context.new_context_for(*sibling);
         node_test.test(&child_context, result);
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct PrecedingSibling;
-
-impl Axis for PrecedingSibling {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        preceding_following_sibling(context, node_test, result, Node::preceding_siblings)
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct FollowingSibling;
-
-impl Axis for FollowingSibling {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        preceding_following_sibling(context, node_test, result, Node::following_siblings)
     }
 }
 
@@ -248,48 +175,6 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
     }
 }
 
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Preceding;
-
-impl Axis for Preceding {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        preceding_following(context, node_test, result, Node::preceding_siblings)
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct Following;
-
-impl Axis for Following {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        preceding_following(context, node_test, result, Node::following_siblings)
-    }
-}
-
-#[allow(missing_copy_implementations)]
-#[derive(Debug)]
-pub struct SelfAxis;
-
-impl Axis for SelfAxis {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
-    {
-        node_test.test(context, result);
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
@@ -302,6 +187,7 @@ mod test {
     use ::nodeset::{Nodeset, Node};
 
     use super::*;
+    use super::Axis::*;
 
     #[derive(Debug)]
     struct DummyNodeTest;
@@ -311,10 +197,8 @@ mod test {
         }
     }
 
-    fn execute<'n, A, N>(axis: A, node: N)
-        -> Nodeset<'n>
-        where A: Axis,
-              N: Into<Node<'n>>,
+    fn execute<'n, N>(axis: Axis, node: N) -> Nodeset<'n>
+        where N: Into<Node<'n>>,
     {
         let functions = &HashMap::new();
         let variables = &HashMap::new();

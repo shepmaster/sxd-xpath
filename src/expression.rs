@@ -3,7 +3,7 @@ use std::fmt;
 
 use ::{EvaluationContext, LiteralValue, Value};
 use ::Value::{Boolean, Number};
-use ::axis::Axis;
+use ::axis::{Axis, AxisLike};
 use ::function;
 use ::node_test::NodeTest;
 use ::nodeset::Nodeset;
@@ -404,20 +404,22 @@ impl Predicate {
     }
 }
 
-pub type StepAxis = Box<Axis + 'static>;
+pub type Step = ParameterizedStep<Axis>;
 pub type StepTest = Box<NodeTest + 'static>;
 
 #[derive(Debug)]
-pub struct Step {
-    axis: StepAxis,
+pub struct ParameterizedStep<A> {
+    axis: A,
     node_test: StepTest,
     predicates: Vec<Predicate>,
 }
 
-impl Step {
-    pub fn new(axis: StepAxis, node_test: StepTest, predicates: Vec<SubExpression>) -> Step {
+impl<A> ParameterizedStep<A>
+    where A: AxisLike,
+{
+    pub fn new(axis: A, node_test: StepTest, predicates: Vec<SubExpression>) -> ParameterizedStep<A> {
         let preds = predicates.into_iter().map(|p| Predicate { expression: p }).collect();
-        Step { axis: axis, node_test: node_test, predicates: preds }
+        ParameterizedStep { axis: axis, node_test: node_test, predicates: preds }
     }
 
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
@@ -503,7 +505,7 @@ mod test {
 
     use ::{LiteralValue, Value, Functions, Variables, Namespaces, EvaluationContext};
     use ::Value::{Boolean, Number, String};
-    use ::axis::Axis;
+    use ::axis::AxisLike;
     use ::function;
     use ::node_test::NodeTest;
     use ::nodeset::Nodeset;
@@ -842,7 +844,7 @@ mod test {
         }
     }
 
-    impl Axis for MockAxis {
+    impl AxisLike for MockAxis {
         fn select_nodes(&self,
                         _context:   &EvaluationContext,
                         _node_test: &NodeTest,
@@ -867,7 +869,7 @@ mod test {
         let axis = MockAxis::new();
         let node_test = DummyNodeTest;
 
-        let expr = Step::new(Box::new(axis.clone()), Box::new(node_test), vec![]);
+        let expr = ParameterizedStep::new(axis.clone(), Box::new(node_test), vec![]);
 
         let context = setup.context();
         expr.evaluate(&context, nodeset![context.node]).ok().unwrap();
