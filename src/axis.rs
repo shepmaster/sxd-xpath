@@ -202,7 +202,7 @@ mod test {
         let node_test = &DummyNodeTest;
         let mut result = Nodeset::new();
 
-        axis.select_nodes(&context.evaluation_context(), node_test, &mut result);
+        axis.select_nodes(&(&context).into(), node_test, &mut result);
 
         result
     }

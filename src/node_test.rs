@@ -199,7 +199,7 @@ mod test {
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
-            let c = self.context.borrow_with_context_node(a).evaluation_context();
+            let c = self.context.borrow_with_context_node(a).into();
             (a, c)
         }
 
@@ -215,7 +215,7 @@ mod test {
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
-            let c = self.context.borrow_with_context_node(e).evaluation_context();
+            let c = self.context.borrow_with_context_node(e).into();
             (e, c)
         }
 

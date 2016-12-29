@@ -536,7 +536,7 @@ mod test {
 
         fn context(&'d self) -> context::Evaluation<'d, 'd> {
             let node = self.doc.create_element("test");
-            self.context.borrow_with_context_node(node).evaluation_context()
+            self.context.borrow_with_context_node(node).into()
         }
     }
 

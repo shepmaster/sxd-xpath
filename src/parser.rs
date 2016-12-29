@@ -793,7 +793,7 @@ mod test {
         fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
             where N: Into<Node<'d>>
         {
-            expr.evaluate(&self.context.borrow_with_context_node(node).evaluation_context()).ok().unwrap()
+            expr.evaluate(&self.context.borrow_with_context_node(node).into()).ok().unwrap()
         }
     }
 

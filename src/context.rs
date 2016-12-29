@@ -168,10 +168,6 @@ impl<'d> Context<'d> {
     pub fn set_namespace(&mut self, prefix: &str, uri: &str) {
         self.core.set_namespace(prefix, uri);
     }
-
-    pub fn evaluation_context<'a>(&'a self) -> Evaluation<'a, 'd> {
-        self.into()
-    }
 }
 
 #[derive(Copy, Clone)]
@@ -188,10 +184,6 @@ impl<'a, 'd> Borrowed<'a, 'd> {
             node: context_node.into(),
             ..self
         }
-    }
-
-    pub fn evaluation_context(&self) -> Evaluation<'a, 'd> {
-        (*self).into()
     }
 }
 

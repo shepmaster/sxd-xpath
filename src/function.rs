@@ -669,7 +669,7 @@ mod test {
             where N: Into<Node<'d>>,
                   F: Function
         {
-            f.evaluate(&self.context.borrow_with_context_node(node).evaluation_context(), args)
+            f.evaluate(&self.context.borrow_with_context_node(node).into(), args)
         }
     }
 
