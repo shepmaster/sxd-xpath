@@ -567,7 +567,7 @@ mod test {
         let expr = And{left: left, right: right};
 
         let context = setup.context();
-        expr.evaluate(&context).ok().unwrap();
+        expr.evaluate(&context).unwrap();
     }
 
     #[test]
@@ -868,7 +868,7 @@ mod test {
         let expr = ParameterizedStep::new(axis.clone(), Box::new(node_test), vec![]);
 
         let context = setup.context();
-        expr.evaluate(&context, nodeset![context.node]).ok().unwrap();
+        expr.evaluate(&context, nodeset![context.node]).unwrap();
 
         assert_eq!(1, axis.calls());
     }
