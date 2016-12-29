@@ -408,6 +408,12 @@ impl Factory {
     }
 }
 
+impl Default for Factory {
+    fn default() -> Self {
+        Factory::new()
+    }
+}
+
 quick_error! {
     /// The failure modes of executing an XPath.
     #[derive(Debug, Clone, PartialEq)]

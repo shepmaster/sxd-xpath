@@ -67,15 +67,15 @@ impl AxisLike for Axis {
             }
             Attribute => {
                 if let Node::Element(ref e) = context.node {
-                    for attr in e.attributes().iter() {
-                        let attr_context = context.new_context_for(*attr);
+                    for attr in e.attributes() {
+                        let attr_context = context.new_context_for(attr);
                         node_test.test(&attr_context, result);
                     }
                 }
             }
             Namespace => {
                 if let Node::Element(ref e) = context.node {
-                    for ns in e.namespaces_in_scope().iter() {
+                    for ns in e.namespaces_in_scope() {
                         let ns = Node::Namespace(nodeset::Namespace {
                             parent: *e,
                             prefix: ns.prefix(),
@@ -90,16 +90,16 @@ impl AxisLike for Axis {
             Child => {
                 let n = context.node;
 
-                for child in n.children().iter() {
-                    let child_context = context.new_context_for(*child);
+                for child in n.children() {
+                    let child_context = context.new_context_for(child);
                     node_test.test(&child_context, result);
                 }
             }
             Descendant => {
                 let n = context.node;
 
-                for child in n.children().iter() {
-                    let child_context = context.new_context_for(*child);
+                for child in n.children() {
+                    let child_context = context.new_context_for(child);
                     node_test.test(&child_context, result);
                     self.select_nodes(&child_context, node_test, result);
                 }
@@ -148,8 +148,8 @@ fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
                                        f: fn(&Node<'d>) -> Vec<Node<'d>>)
 {
     let sibs = f(&context.node);
-    for sibling in sibs.iter() {
-        let child_context = context.new_context_for(*sibling);
+    for sibling in sibs {
+        let child_context = context.new_context_for(sibling);
         node_test.test(&child_context, result);
     }
 }
@@ -163,8 +163,8 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 
     loop {
         let sibs = f(&node);
-        for sibling in sibs.iter() {
-            let child_context = context.new_context_for(*sibling);
+        for sibling in sibs {
+            let child_context = context.new_context_for(sibling);
             node_test.test(&child_context, result);
         }
 

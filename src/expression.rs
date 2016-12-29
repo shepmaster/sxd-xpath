@@ -31,7 +31,7 @@ quick_error! {
     }
 }
 
-fn nodeset<'d>(v: Value<'d>) -> Result<Nodeset<'d>, Error> {
+fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
     match v {
         Value::Nodeset(ns) => Ok(ns),
         _ => Err(Error::NotANodeset),
@@ -136,7 +136,7 @@ impl Equal {
 
 impl Expression for Equal {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        self.boolean_evaluate(context).map(|v| Boolean(v))
+        self.boolean_evaluate(context).map(Boolean)
     }
 }
 
@@ -284,9 +284,9 @@ impl Path {
 impl Expression for Path {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
         let result = try!(self.start_point.evaluate(context));
-        let mut result = try!(nodeset(result));
+        let mut result = try!(value_into_nodeset(result));
 
-        for step in self.steps.iter() {
+        for step in &self.steps {
             result = try!(step.evaluate(context, result));
         }
 
@@ -310,7 +310,7 @@ impl Filter {
 impl Expression for Filter {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
         self.node_selector.evaluate(context)
-            .and_then(|value| nodeset(value))
+            .and_then(value_into_nodeset)
             .and_then(|nodes| self.predicate.select(context, nodes))
             .and_then(|nodes| Ok(Value::Nodeset(nodes)))
     }
@@ -452,7 +452,7 @@ impl<A> ParameterizedStep<A>
     {
         let mut nodes = nodes;
 
-        for predicate in self.predicates.iter() {
+        for predicate in &self.predicates {
             nodes = try!(predicate.select(context, nodes));
         }
 
@@ -470,7 +470,7 @@ binary_constructor!(Union);
 
 impl Expression for Union {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
-        let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(|v| nodeset(v));
+        let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(value_into_nodeset);
 
         let mut left_nodes = try!(as_nodes(&self.left));
         let right_nodes = try!(as_nodes(&self.right));
@@ -488,8 +488,8 @@ pub struct Variable {
 impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
         context.value_of(&self.name)
+            .cloned()
             .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
-            .map(Clone::clone)
     }
 }
 

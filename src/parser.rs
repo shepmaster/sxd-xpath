@@ -147,7 +147,7 @@ impl LeftAssociativeBinaryParser {
         while source.has_more_tokens() {
             let mut found = false;
 
-            for rule in self.rules.iter() {
+            for rule in &self.rules {
                 if source.next_token_is(&rule.token) {
                     try!(source.consume(&rule.token));
 

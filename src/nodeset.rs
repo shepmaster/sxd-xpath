@@ -280,14 +280,14 @@ impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
 }
 
 /// A collection of unique nodes
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Nodeset<'d> {
     nodes: Vec<Node<'d>>,
 }
 
 impl<'d> Nodeset<'d> {
     pub fn new() -> Nodeset<'d> {
-        Nodeset { nodes: Vec::new() }
+        Default::default()
     }
 
     /// Add the given node to the set
@@ -298,10 +298,6 @@ impl<'d> Nodeset<'d> {
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
-        IntoIterator::into_iter(self)
-    }
-
-    pub fn into_iter(self) -> IntoIter<'d> {
         IntoIterator::into_iter(self)
     }
 
@@ -332,7 +328,7 @@ impl<'d> Nodeset<'d> {
     }
 }
 
-fn build_ordering_of_document<'d>(doc: dom::Document<'d>) -> HashMap<Node<'d>, usize> {
+fn build_ordering_of_document(doc: dom::Document) -> HashMap<Node, usize> {
     let mut idx = 0;
     let mut stack: Vec<Node> = vec![doc.root().into()];
     let mut order = HashMap::new();
