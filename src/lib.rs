@@ -344,11 +344,11 @@ impl<'a, 'd> EvaluationContext<'a, 'd> {
     }
 
     fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
-        self.functions.get(&name.to_owned()).map(AsRef::as_ref)
+        self.functions.get(name).map(AsRef::as_ref)
     }
 
     fn value_of(&self, name: &str) -> Option<&Value<'d>> {
-        self.variables.get(&name.to_owned())
+        self.variables.get(name)
     }
 
     fn namespace_for(&self, prefix: &str) -> Option<&str> {
