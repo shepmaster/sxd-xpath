@@ -645,8 +645,9 @@ mod test {
     use sxd_document::Package;
     use sxd_document::dom::{self, Document, Root, Element, Text};
 
-    use ::{Value, ContextCore};
+    use ::Value;
     use ::Value::{Boolean, Number, String};
+    use ::context;
     use ::expression::{Expression, SubExpression};
     use ::node_test;
     use ::nodeset::Node;
@@ -760,7 +761,7 @@ mod test {
 
     struct Exercise<'d> {
         doc: &'d TestDoc<'d>,
-        context: ContextCore<'d>,
+        context: context::Core<'d>,
         parser: Parser,
     }
 
@@ -768,7 +769,7 @@ mod test {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
             Exercise {
                 doc: doc,
-                context: ContextCore::new(),
+                context: context::Core::new(),
                 parser: Parser::new(),
             }
         }

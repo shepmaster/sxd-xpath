@@ -4,7 +4,8 @@ extern crate sxd_xpath;
 use std::borrow::ToOwned;
 use sxd_document::dom::Document;
 use sxd_document::parser::parse;
-use sxd_xpath::{Value, Factory, ContextCore};
+use sxd_xpath::{Value, Factory};
+use sxd_xpath::context;
 
 #[test]
 fn functions_accept_arguments() {
@@ -43,7 +44,7 @@ fn evaluate<'d>(package: &'d Document<'d>, xpath: &str) -> Value<'d> {
 
 #[derive(Default)]
 struct Setup<'d> {
-    context: ContextCore<'d>,
+    context: context::Core<'d>,
     factory: Factory,
 }
 

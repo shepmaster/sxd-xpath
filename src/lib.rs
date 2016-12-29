@@ -73,7 +73,7 @@
 //! [evaluate_xpath]: fn.evaluate_xpath.html
 //! [`Value`]: enum.Value.html
 //! [`Factory`]: struct.Factory.html
-//! [`Context`]: struct.Context.html
+//! [`Context`]: context/struct.Context.html
 //!
 //! ### Namespaces
 //!
@@ -98,20 +98,20 @@ extern crate sxd_document;
 extern crate quick_error;
 
 use std::borrow::ToOwned;
-use std::collections::HashMap;
-use std::{iter, string};
+use std::string;
 
 use sxd_document::dom::Document;
 
-use nodeset::{Nodeset, Node};
 use parser::Parser;
 use tokenizer::{Tokenizer, TokenDeabbreviator};
 
 pub use expression::Expression;
+pub use context::Context;
 
 #[macro_use]
 pub mod macros;
 pub mod nodeset;
+pub mod context;
 mod axis;
 mod expression;
 pub mod function;
@@ -150,7 +150,7 @@ pub enum Value<'d> {
     /// A string
     String(string::String),
     /// A collection of unique nodes
-    Nodeset(Nodeset<'d>),
+    Nodeset(nodeset::Nodeset<'d>),
 }
 
 fn str_to_num(s: &str) -> f64 {
@@ -209,290 +209,6 @@ impl<'d> From<LiteralValue> for Value<'d> {
             LiteralValue::Number(v)  => Value::Number(v),
             LiteralValue::String(v)  => Value::String(v),
         }
-    }
-}
-
-/// A mapping of names to XPath functions.
-type Functions = HashMap<string::String, Box<function::Function + 'static>>;
-/// A mapping of names to XPath variables.
-type Variables<'d> = HashMap<string::String, Value<'d>>;
-/// A mapping of namespace prefixes to namespace URIs.
-type Namespaces = HashMap<string::String, string::String>;
-
-pub struct ContextCore<'d> {
-    functions: Functions,
-    variables: Variables<'d>,
-    namespaces: Namespaces,
-}
-
-impl<'d> ContextCore<'d> {
-    pub fn new() -> Self {
-        let mut context = Self::without_core_functions();
-        function::register_core_functions(&mut context);
-        context
-    }
-
-    pub fn without_core_functions() -> Self {
-        ContextCore {
-            functions: Default::default(),
-            variables: Default::default(),
-            namespaces: Default::default(),
-        }
-    }
-
-    pub fn set_function<F>(&mut self, name: &str, function: F)
-        where F: function::Function + 'static,
-    {
-        self.functions.insert(name.into(), Box::new(function));
-    }
-
-    pub fn set_variable(&mut self, name: &str, value: Value<'d>) {
-        self.variables.insert(name.into(), value);
-    }
-
-    pub fn set_namespace(&mut self, prefix: &str, uri: &str) {
-        self.namespaces.insert(prefix.into(), uri.into());
-    }
-
-    pub fn with_context_node<N>(self, context_node: N) -> Context<'d>
-        where N: Into<Node<'d>>,
-    {
-        Context {
-            node: context_node.into(),
-            core: self,
-        }
-    }
-
-    pub fn borrow_with_context_node<'a, N>(&'a self, context_node: N) -> BorrowedContext<'a, 'd>
-        where N: Into<Node<'d>>,
-    {
-        BorrowedContext {
-            node: context_node.into(),
-            core: self,
-        }
-    }
-}
-
-impl<'d> Default for ContextCore<'d> {
-    fn default() -> Self {
-        ContextCore::new()
-    }
-}
-
-/// Contains the context in which XPath expressions are executed. The
-/// context contains functions, variables, namespaces and the context
-/// node.
-///
-/// ### Examples
-///
-/// A complete example showing all optional settings.
-///
-/// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
-/// use std::collections::HashMap;
-/// use sxd_document::parser;
-/// use sxd_xpath::{Factory, Context, EvaluationContext, Value};
-/// use sxd_xpath::function::{self, Function};
-///
-/// struct Sigmoid;
-/// impl Function for Sigmoid {
-///     fn evaluate<'a, 'd>(&self,
-///                         _context: &EvaluationContext<'a, 'd>,
-///                         args: Vec<Value<'d>>)
-///                         -> Result<Value<'d>, function::Error>
-///     {
-///         let mut args = function::Args(args);
-///         args.exactly(1)?;
-///         let val = args.pop_number()?;
-///
-///         let computed = (1.0 + (-val).exp()).recip();
-///
-///         Ok(Value::Number(computed))
-///     }
-/// }
-///
-/// fn main() {
-///     let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
-///         .expect("failed to parse XML");
-///     let document = package.as_document();
-///     let node = document.root().children()[0];
-///
-///     let mut context = Context::new(node);
-///     context.set_function("sigmoid", Sigmoid);
-///     context.set_variable("t", Value::Number(2.0));
-///     context.set_namespace("neural", "net:brain");
-///
-///     let xpath = "sigmoid(@neural:bonus + $t)";
-///
-///     let factory = Factory::new();
-///     let xpath = factory.build(xpath).expect("Could not compile XPath");
-///     let xpath = xpath.expect("No XPath was compiled");
-///
-///     let value = xpath.evaluate(&context.evaluation_context()).expect("XPath evaluation failed");
-///
-///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
-/// }
-/// ```
-///
-/// Note that we are using a custom function (`sigmoid`), a variable
-/// (`$t`), a namespace (`neural:`), and the current node is not the
-/// root of the tree but the top-most element.
-///
-pub struct Context<'d> {
-    node: Node<'d>,
-    core: ContextCore<'d>,
-}
-
-impl<'d> Context<'d> {
-    pub fn new<N>(context_node: N) -> Self
-        where N: Into<Node<'d>>,
-    {
-        ContextCore::new().with_context_node(context_node)
-    }
-
-    pub fn with_context_node<N>(self, context_node: N) -> Self
-        where N: Into<Node<'d>>,
-    {
-        Context {
-            node: context_node.into(),
-            ..self
-        }
-    }
-
-    pub fn set_function<F>(&mut self, name: &str, function: F)
-        where F: function::Function + 'static,
-    {
-        self.core.set_function(name, function);
-    }
-
-    pub fn set_variable(&mut self, name: &str, value: Value<'d>) {
-        self.core.set_variable(name, value);
-    }
-
-    pub fn set_namespace(&mut self, prefix: &str, uri: &str) {
-        self.core.set_namespace(prefix, uri);
-    }
-
-    pub fn evaluation_context<'a>(&'a self) -> EvaluationContext<'a, 'd> {
-        EvaluationContext::new(self.node,
-                               &self.core.functions,
-                               &self.core.variables,
-                               &self.core.namespaces)
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct BorrowedContext<'a, 'd: 'a> {
-    node: Node<'d>,
-    core: &'a ContextCore<'d>,
-}
-
-impl<'a, 'd> BorrowedContext<'a, 'd> {
-    pub fn with_context_node<N>(self, context_node: N) -> Self
-        where N: Into<Node<'d>>,
-    {
-        BorrowedContext {
-            node: context_node.into(),
-            ..self
-        }
-    }
-
-    pub fn evaluation_context(&self) -> EvaluationContext<'a, 'd> {
-        EvaluationContext::new(self.node,
-                               &self.core.functions,
-                               &self.core.variables,
-                               &self.core.namespaces)
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct EvaluationContext<'a, 'd : 'a> {
-    node: Node<'d>,
-    functions: &'a Functions,
-    variables: &'a Variables<'d>,
-    namespaces: &'a Namespaces,
-    position: usize,
-    size: usize,
-}
-
-impl<'a, 'd> EvaluationContext<'a, 'd> {
-    pub fn new(node: Node<'d>,
-               functions: &'a Functions,
-               variables: &'a Variables<'d>,
-               namespaces: &'a Namespaces)
-               -> EvaluationContext<'a, 'd>
-    {
-        EvaluationContext {
-            node: node,
-            functions: functions,
-            variables: variables,
-            namespaces: namespaces,
-            position: 1,
-            size: 1,
-        }
-    }
-
-    fn new_context_for<N>(&self, node: N) -> EvaluationContext<'a, 'd>
-        where N: Into<Node<'d>>
-    {
-        EvaluationContext {
-            node: node.into(),
-            .. *self
-        }
-    }
-
-    fn position(&self) -> usize {
-        self.position
-    }
-
-    fn size(&self) -> usize {
-        self.size
-    }
-
-    fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
-        self.functions.get(name).map(AsRef::as_ref)
-    }
-
-    fn value_of(&self, name: &str) -> Option<&Value<'d>> {
-        self.variables.get(name)
-    }
-
-    fn namespace_for(&self, prefix: &str) -> Option<&str> {
-        self.namespaces.get(prefix).map(|ns| &ns[..])
-    }
-
-    fn predicate_iter<'p>(&'p self, nodes: Nodeset<'d>)
-                          -> EvaluationContextPredicateIter<'a, 'd, 'p>
-    {
-        let sz = nodes.size();
-        EvaluationContextPredicateIter {
-            parent: self,
-            nodes: nodes.into_iter().enumerate(),
-            size: sz,
-        }
-    }
-}
-
-struct EvaluationContextPredicateIter<'a : 'p, 'd : 'a + 'p, 'p> {
-    parent: &'p EvaluationContext<'a, 'd>,
-    nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
-    size: usize,
-}
-
-impl<'a, 'd, 'p> Iterator for EvaluationContextPredicateIter<'a, 'd, 'p> {
-    type Item = EvaluationContext<'a, 'd>;
-
-    fn next(&mut self) -> Option<EvaluationContext<'a, 'd>> {
-        self.nodes.next().map(|(idx, node)| {
-            EvaluationContext {
-                node: node,
-                position: idx + 1,
-                size: self.size,
-                .. *self.parent
-            }
-        })
     }
 }
 
@@ -577,7 +293,7 @@ pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Val
     let expression = factory.build(xpath)?;
     let expression = expression.ok_or(Error::NoXPath)?;
 
-    let context = Context::new(document.root());
+    let context = context::Context::new(document.root());
 
     expression.evaluate(&context.evaluation_context()).map_err(Into::into)
 }

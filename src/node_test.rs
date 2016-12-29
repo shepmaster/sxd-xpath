@@ -2,11 +2,11 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use ::EvaluationContext;
+use ::context;
 use ::nodeset::{self, Nodeset};
 
 pub trait NodeTest: fmt::Debug {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>);
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
 pub type SubNodeTest = Box<NodeTest + 'static>;
@@ -18,7 +18,7 @@ pub struct NameTest {
 }
 
 impl NameTest {
-    fn matches(&self, context: &EvaluationContext, node_name: QName) -> bool {
+    fn matches(&self, context: &context::Evaluation, node_name: QName) -> bool {
         let is_wildcard = self.local_part == "*";
 
         let test_uri = self.prefix.as_ref().map(|p| {
@@ -52,7 +52,7 @@ impl Attribute {
 }
 
 impl NodeTest for Attribute {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::Attribute(ref a) = context.node {
             if self.name_test.matches(context, a.name()) {
                 result.add(context.node);
@@ -75,7 +75,7 @@ impl Namespace {
 }
 
 impl NodeTest for Namespace {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::Namespace(ref ns) = context.node {
             if self.name_test.matches(context, QName::new(ns.prefix())) {
                 result.add(context.node);
@@ -98,7 +98,7 @@ impl Element {
 }
 
 impl NodeTest for Element {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::Element(ref e) = context.node {
             if self.name_test.matches(context, e.name()) {
                 result.add(context.node);
@@ -112,7 +112,7 @@ impl NodeTest for Element {
 pub struct Node;
 
 impl NodeTest for Node {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         result.add(context.node);
     }
 }
@@ -122,7 +122,7 @@ impl NodeTest for Node {
 pub struct Text;
 
 impl NodeTest for Text {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::Text(_) = context.node {
             result.add(context.node);
         }
@@ -134,7 +134,7 @@ impl NodeTest for Text {
 pub struct Comment;
 
 impl NodeTest for Comment {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::Comment(_) = context.node {
             result.add(context.node);
         }
@@ -153,7 +153,7 @@ impl ProcessingInstruction {
 }
 
 impl NodeTest for ProcessingInstruction {
-    fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
             match self.target {
                 Some(ref name) if name == &pi.target() => result.add(context.node),
@@ -171,21 +171,21 @@ mod test {
     use sxd_document::{Package, QName};
     use sxd_document::dom::{self, Document};
 
-    use ::{ContextCore, EvaluationContext};
+    use ::context;
     use ::nodeset::Nodeset;
 
     use super::*;
 
     struct Setup<'d> {
         doc: Document<'d>,
-        context: ContextCore<'d>,
+        context: context::Core<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup {
             Setup {
                 doc: package.as_document(),
-                context: ContextCore::without_core_functions(),
+                context: context::Core::without_core_functions(),
             }
         }
 
@@ -194,7 +194,7 @@ mod test {
         }
 
         fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
-                                        -> (dom::Attribute<'d>, EvaluationContext<'d, 'd>)
+                                        -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element("element");
@@ -204,14 +204,14 @@ mod test {
         }
 
         fn context_for_ns_attribute(&'d mut self, prefix: &str, nsuri: &str, local: &str, value: &str)
-                                    -> (dom::Attribute<'d>, EvaluationContext<'d, 'd>)
+                                    -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
             self.context_for_attribute((nsuri, local), value)
         }
 
         fn context_for_element<'n, N>(&'d self, name: N)
-                                  -> (dom::Element<'d>, EvaluationContext<'d, 'd>)
+                                  -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
@@ -220,14 +220,14 @@ mod test {
         }
 
         fn context_for_ns_element(&'d mut self, prefix: &str, nsuri: &str, local: &str)
-                                  -> (dom::Element<'d>, EvaluationContext<'d, 'd>)
+                                  -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
         {
             self.register_prefix(prefix, nsuri);
             self.context_for_element((nsuri, local))
         }
     }
 
-    fn run_attribute<'d>(context: &EvaluationContext<'d, 'd>, prefix: Option<&str>, local: &str)
+    fn run_attribute<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
                        -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
@@ -321,7 +321,7 @@ mod test {
         assert_eq!(nodeset![], result);
     }
 
-    fn run_element<'d>(context: &EvaluationContext<'d, 'd>, prefix: Option<&str>, local: &str)
+    fn run_element<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
                        -> Nodeset<'d>
     {
         let mut result = Nodeset::new();

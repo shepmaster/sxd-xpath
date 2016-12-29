@@ -9,7 +9,7 @@ use std::io::{self, Read};
 
 use sxd_document::parser::parse;
 
-use sxd_xpath::{ContextCore, Factory, Expression, Value};
+use sxd_xpath::{Factory, Context, Expression, Value};
 
 use getopts::Options;
 
@@ -58,7 +58,7 @@ fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
     }
 }
 
-fn build_variables(arguments: &getopts::Matches, context: &mut ContextCore) {
+fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
     for boolean in arguments.opt_strs("boolean") {
         match argument_name_value(&boolean, '=') {
             Some((name, "true")) => context.set_variable(name, Value::Boolean(true)),
@@ -88,7 +88,7 @@ fn build_variables(arguments: &getopts::Matches, context: &mut ContextCore) {
     }
 }
 
-fn build_namespaces(arguments: &getopts::Matches, context: &mut ContextCore) {
+fn build_namespaces(arguments: &getopts::Matches, context: &mut Context) {
     for ns_defn in arguments.opt_strs("namespace") {
         match argument_name_value(&ns_defn, ':') {
             Some((prefix, uri)) => context.set_namespace(prefix, uri),
@@ -132,11 +132,9 @@ fn main() {
 
         let doc = package.as_document();
 
-        let mut context = ContextCore::new();
+        let mut context = Context::new(doc.root());
         build_variables(&arguments, &mut context);
         build_namespaces(&arguments, &mut context);
-
-        let context = context.with_context_node(doc.root());
 
         let res = xpath.evaluate(&context.evaluation_context());
 
