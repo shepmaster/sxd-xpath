@@ -228,7 +228,7 @@ pub struct ContextCore<'d> {
 impl<'d> ContextCore<'d> {
     pub fn new() -> Self {
         let mut context = Self::without_core_functions();
-        function::register_core_functions(&mut context.functions);
+        function::register_core_functions(&mut context);
         context
     }
 

@@ -8,7 +8,7 @@ use std::iter;
 
 use sxd_document::XmlChar;
 
-use ::{EvaluationContext, Functions, Value, str_to_num};
+use ::{ContextCore, EvaluationContext, Value, str_to_num};
 use ::nodeset::Nodeset;
 
 /// Types that can be used as XPath functions.
@@ -587,32 +587,32 @@ fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
 /// [corelib]: https://www.w3.org/TR/xpath/#corelib
-pub fn register_core_functions(functions: &mut Functions) {
-    functions.insert("last".to_owned(), Box::new(Last));
-    functions.insert("position".to_owned(), Box::new(Position));
-    functions.insert("count".to_owned(), Box::new(Count));
-    functions.insert("local-name".to_owned(), Box::new(LocalName));
-    functions.insert("namespace-uri".to_owned(), Box::new(NamespaceUri));
-    functions.insert("name".to_owned(), Box::new(Name));
-    functions.insert("string".to_owned(), Box::new(StringFn));
-    functions.insert("concat".to_owned(), Box::new(Concat));
-    functions.insert("starts-with".to_owned(), Box::new(starts_with()));
-    functions.insert("contains".to_owned(), Box::new(contains()));
-    functions.insert("substring-before".to_owned(), Box::new(substring_before()));
-    functions.insert("substring-after".to_owned(), Box::new(substring_after()));
-    functions.insert("substring".to_owned(), Box::new(Substring));
-    functions.insert("string-length".to_owned(), Box::new(StringLength));
-    functions.insert("normalize-space".to_owned(), Box::new(NormalizeSpace));
-    functions.insert("translate".to_owned(), Box::new(Translate));
-    functions.insert("boolean".to_owned(), Box::new(BooleanFn));
-    functions.insert("not".to_owned(), Box::new(Not));
-    functions.insert("true".to_owned(), Box::new(true_fn()));
-    functions.insert("false".to_owned(), Box::new(false_fn()));
-    functions.insert("number".to_owned(), Box::new(NumberFn));
-    functions.insert("sum".to_owned(), Box::new(Sum));
-    functions.insert("floor".to_owned(), Box::new(floor()));
-    functions.insert("ceiling".to_owned(), Box::new(ceiling()));
-    functions.insert("round".to_owned(), Box::new(round()));
+pub fn register_core_functions(context: &mut ContextCore) {
+    context.set_function("last", Last);
+    context.set_function("position", Position);
+    context.set_function("count", Count);
+    context.set_function("local-name", LocalName);
+    context.set_function("namespace-uri", NamespaceUri);
+    context.set_function("name", Name);
+    context.set_function("string", StringFn);
+    context.set_function("concat", Concat);
+    context.set_function("starts-with", starts_with());
+    context.set_function("contains", contains());
+    context.set_function("substring-before", substring_before());
+    context.set_function("substring-after", substring_after());
+    context.set_function("substring", Substring);
+    context.set_function("string-length", StringLength);
+    context.set_function("normalize-space", NormalizeSpace);
+    context.set_function("translate", Translate);
+    context.set_function("boolean", BooleanFn);
+    context.set_function("not", Not);
+    context.set_function("true", true_fn());
+    context.set_function("false", false_fn());
+    context.set_function("number", NumberFn);
+    context.set_function("sum", Sum);
+    context.set_function("floor", floor());
+    context.set_function("ceiling", ceiling());
+    context.set_function("round", round());
 }
 
 #[cfg(test)]
