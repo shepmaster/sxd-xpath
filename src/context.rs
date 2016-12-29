@@ -253,9 +253,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
         self.namespaces.get(prefix).map(|ns| &ns[..])
     }
 
-    pub fn predicate_iter<'p>(&'p self, nodes: Nodeset<'d>)
-                          -> EvaluationPredicateIter<'a, 'd, 'p>
-    {
+    pub fn predicate_iter(self, nodes: Nodeset<'d>) -> EvaluationPredicateIter<'a, 'd> {
         let sz = nodes.size();
         EvaluationPredicateIter {
             parent: self,
@@ -283,13 +281,13 @@ impl<'a, 'd> From<Borrowed<'a, 'd>> for Evaluation<'a, 'd> {
     }
 }
 
-pub struct EvaluationPredicateIter<'a : 'p, 'd : 'a + 'p, 'p> {
-    parent: &'p Evaluation<'a, 'd>,
+pub struct EvaluationPredicateIter<'a, 'd: 'a> {
+    parent: Evaluation<'a, 'd>,
     nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
     size: usize,
 }
 
-impl<'a, 'd, 'p> Iterator for EvaluationPredicateIter<'a, 'd, 'p> {
+impl<'a, 'd> Iterator for EvaluationPredicateIter<'a, 'd> {
     type Item = Evaluation<'a, 'd>;
 
     fn next(&mut self) -> Option<Evaluation<'a, 'd>> {
@@ -298,7 +296,7 @@ impl<'a, 'd, 'p> Iterator for EvaluationPredicateIter<'a, 'd, 'p> {
                 node: node,
                 position: idx + 1,
                 size: self.size,
-                .. *self.parent
+                .. self.parent
             }
         })
     }
