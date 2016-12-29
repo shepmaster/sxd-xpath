@@ -641,15 +641,13 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::collections::HashMap;
 
     use sxd_document::Package;
     use sxd_document::dom::{self, Document, Root, Element, Text};
 
-    use ::{Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::{Value, ContextCore};
     use ::Value::{Boolean, Number, String};
     use ::expression::{Expression, SubExpression};
-    use ::function::register_core_functions;
     use ::node_test;
     use ::nodeset::Node;
     use ::token::{Token, AxisName, NodeTestName};
@@ -762,28 +760,21 @@ mod test {
 
     struct Exercise<'d> {
         doc: &'d TestDoc<'d>,
-        functions: Functions,
-        variables: Variables<'d>,
-        namespaces: Namespaces,
+        context: ContextCore<'d>,
         parser: Parser,
     }
 
     impl<'d> Exercise<'d> {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
-            let mut functions = HashMap::new();
-            register_core_functions(&mut functions);
-
             Exercise {
                 doc: doc,
-                functions: functions,
-                variables: HashMap::new(),
-                namespaces: HashMap::new(),
+                context: ContextCore::new(),
                 parser: Parser::new(),
             }
         }
 
         fn add_var(&mut self, name: &str, value: Value<'d>) {
-            self.variables.insert(name.to_owned(), value);
+            self.context.set_variable(name, value);
         }
 
         fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
@@ -801,14 +792,7 @@ mod test {
         fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
             where N: Into<Node<'d>>
         {
-            let node = node.into();
-            let context = EvaluationContext::new(
-                node,
-                &self.functions,
-                &self.variables,
-                &self.namespaces,
-            );
-            expr.evaluate(&context).ok().unwrap()
+            expr.evaluate(&self.context.borrow_with_context_node(node).evaluation_context()).ok().unwrap()
         }
     }
 

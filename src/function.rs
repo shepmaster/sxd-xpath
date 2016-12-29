@@ -618,11 +618,10 @@ pub fn register_core_functions(functions: &mut Functions) {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::collections::HashMap;
 
     use sxd_document::Package;
 
-    use ::{EvaluationContext, LiteralValue, Value, Functions, Variables, Namespaces};
+    use ::{ContextCore, LiteralValue, Value};
     use ::nodeset::Node;
 
     use super::{
@@ -653,17 +652,13 @@ mod test {
     };
 
     struct Setup<'d> {
-        functions: Functions,
-        variables: Variables<'d>,
-        namespaces: Namespaces,
+        context: ContextCore<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new() -> Setup<'d> {
             Setup {
-                functions: HashMap::new(),
-                variables: HashMap::new(),
-                namespaces: HashMap::new(),
+                context: ContextCore::without_core_functions(),
             }
         }
 
@@ -672,10 +667,7 @@ mod test {
             where N: Into<Node<'d>>,
                   F: Function
         {
-            let context = EvaluationContext::new(
-                node, &self.functions, &self.variables, &self.namespaces
-            );
-            f.evaluate(&context, args)
+            f.evaluate(&self.context.borrow_with_context_node(node).evaluation_context(), args)
         }
     }
 

@@ -177,12 +177,10 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
     use sxd_document::Package;
     use sxd_document::dom;
 
-    use ::EvaluationContext;
+    use ::{ContextCore, EvaluationContext};
     use ::node_test::NodeTest;
     use ::nodeset::{Nodeset, Node};
 
@@ -200,15 +198,11 @@ mod test {
     fn execute<'n, N>(axis: Axis, node: N) -> Nodeset<'n>
         where N: Into<Node<'n>>,
     {
-        let functions = &HashMap::new();
-        let variables = &HashMap::new();
-        let namespaces = &HashMap::new();
-
-        let context = &EvaluationContext::new(node, functions, variables, namespaces);
+        let context = ContextCore::without_core_functions().with_context_node(node);
         let node_test = &DummyNodeTest;
         let mut result = Nodeset::new();
 
-        axis.select_nodes(context, node_test, &mut result);
+        axis.select_nodes(&context.evaluation_context(), node_test, &mut result);
 
         result
     }

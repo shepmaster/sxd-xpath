@@ -497,13 +497,12 @@ impl Expression for Variable {
 mod test {
     use std::borrow::ToOwned;
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::rc::Rc;
 
     use sxd_document::Package;
     use sxd_document::dom::Document;
 
-    use ::{LiteralValue, Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::{LiteralValue, Value, ContextCore, EvaluationContext};
     use ::Value::{Boolean, Number, String};
     use ::axis::AxisLike;
     use ::function;
@@ -522,24 +521,20 @@ mod test {
 
     struct Setup<'d> {
         doc: Document<'d>,
-        funs: Functions,
-        vars: Variables<'d>,
-        nses: Namespaces,
+        context: ContextCore<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup<'d> {
             Setup {
                 doc: package.as_document(),
-                funs: HashMap::new(),
-                vars: HashMap::new(),
-                nses: HashMap::new(),
+                context: ContextCore::without_core_functions(),
             }
         }
 
         fn context(&'d self) -> EvaluationContext<'d, 'd> {
             let node = self.doc.create_element("test");
-            EvaluationContext::new(node, &self.funs, &self.vars, &self.nses)
+            self.context.borrow_with_context_node(node).evaluation_context()
         }
     }
 
@@ -581,8 +576,8 @@ mod test {
         let string_value_1 = setup.doc.create_text("same");
         let string_value_2 = setup.doc.create_text("same");
 
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1]));
-        setup.vars.insert("right".to_owned(), Value::Nodeset(nodeset![string_value_2]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1]));
+        setup.context.set_variable("right", Value::Nodeset(nodeset![string_value_2]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Variable{name: "right".to_owned()});
@@ -601,7 +596,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let string_value = setup.doc.create_text("3.14");
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Literal{value: LiteralValue::Number(6.28)});
@@ -621,7 +616,7 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Literal{value: LiteralValue::String("boat".to_owned())});
@@ -717,8 +712,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let arg_expr: Box<Expression> = Box::new(Literal{value: LiteralValue::Boolean(true)});
-        let fun = Box::new(StubFunction{value: "the function ran"});
-        setup.funs.insert("test-fn".to_owned(), fun);
+        setup.context.set_function("test-fn", StubFunction { value: "the function ran" });
 
         let expr = Function { name: "test-fn".to_owned(), arguments: vec![arg_expr] };
 
@@ -766,7 +760,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
         let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
         let predicate = Box::new(Literal{value: LiteralValue::Number(1.0)});
@@ -788,7 +782,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
         let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
         let predicate = Box::new(Literal{value: LiteralValue::Boolean(false)});
@@ -884,12 +878,12 @@ mod test {
 
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodes));
+        setup.context.set_variable("left", Value::Nodeset(nodes));
         let left = Box::new(Variable{name: "left".to_owned()});
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
-        setup.vars.insert("right".to_owned(), Value::Nodeset(nodes));
+        setup.context.set_variable("right", Value::Nodeset(nodes));
         let right = Box::new(Variable{name: "right".to_owned()});
 
         let expr = Union{left: left, right: right};
@@ -904,7 +898,7 @@ mod test {
     fn expression_variable_looks_up_the_variable() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
-        setup.vars.insert("foo".to_owned(), Boolean(true));
+        setup.context.set_variable("foo", Boolean(true));
 
         let expr = Variable{name: "foo".to_owned()};
 

@@ -167,35 +167,30 @@ impl NodeTest for ProcessingInstruction {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::collections::HashMap;
 
     use sxd_document::{Package, QName};
     use sxd_document::dom::{self, Document};
 
-    use ::{EvaluationContext, Functions, Variables, Namespaces};
+    use ::{ContextCore, EvaluationContext};
     use ::nodeset::Nodeset;
 
     use super::*;
 
     struct Setup<'d> {
         doc: Document<'d>,
-        functions: Functions,
-        variables: Variables<'d>,
-        namespaces: Namespaces,
+        context: ContextCore<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup {
             Setup {
                 doc: package.as_document(),
-                functions: HashMap::new(),
-                variables: HashMap::new(),
-                namespaces: HashMap::new(),
+                context: ContextCore::without_core_functions(),
             }
         }
 
         fn register_prefix(&mut self, prefix: &str, namespace_uri: &str) {
-            self.namespaces.insert(prefix.to_owned(), namespace_uri.to_owned());
+            self.context.set_namespace(prefix, namespace_uri);
         }
 
         fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
@@ -204,7 +199,7 @@ mod test {
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
-            let c = EvaluationContext::new(a, &self.functions, &self.variables, &self.namespaces);
+            let c = self.context.borrow_with_context_node(a).evaluation_context();
             (a, c)
         }
 
@@ -220,7 +215,7 @@ mod test {
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
-            let c = EvaluationContext::new(e, &self.functions, &self.variables, &self.namespaces);
+            let c = self.context.borrow_with_context_node(e).evaluation_context();
             (e, c)
         }
 
