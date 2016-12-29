@@ -75,6 +75,7 @@ pub struct Args<'d>(pub Vec<Value<'d>>);
 
 impl<'d> Args<'d> {
     pub fn len(&self) -> usize { self.0.len() }
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
     /// Ensures that there are at least the requested number of arguments.
     pub fn at_least(&self, minimum: usize) -> Result<(), Error> {
@@ -466,7 +467,7 @@ impl Function for Translate {
         let s = try!(args.pop_string());
 
         let mut replacements = HashMap::new();
-        let pairs = from.chars().zip(to.chars().map(|c| Some(c)).chain(iter::repeat(None)));
+        let pairs = from.chars().zip(to.chars().map(Some).chain(iter::repeat(None)));
         for (from, to) in pairs {
             if let Entry::Vacant(entry) = replacements.entry(from) {
                 entry.insert(to);
@@ -474,7 +475,7 @@ impl Function for Translate {
         }
 
         let s = s.chars().filter_map(|c| {
-            replacements.get(&c).map(|&s| s).unwrap_or(Some(c))
+            replacements.get(&c).cloned().unwrap_or_else(|| Some(c))
         }).collect();
 
         Ok(Value::String(s))
