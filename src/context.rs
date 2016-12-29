@@ -250,7 +250,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     pub fn namespace_for(&self, prefix: &str) -> Option<&str> {
-        self.namespaces.get(prefix).map(|ns| &ns[..])
+        self.namespaces.get(prefix).map(String::as_str)
     }
 
     pub fn predicate_iter(self, nodes: Nodeset<'d>) -> EvaluationPredicateIter<'a, 'd> {
