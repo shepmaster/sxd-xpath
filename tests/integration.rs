@@ -55,6 +55,7 @@ impl<'d> Setup<'d> {
 
     fn evaluate(&self, doc: &'d Document<'d>, xpath: &str) -> Value<'d> {
         let xpath = self.factory.build(xpath).unwrap().unwrap();
-        xpath.evaluate(&self.context.borrow_with_context_node(doc.root()).evaluation_context()).ok().unwrap()
+        let context = self.context.borrow_with_context_node(doc.root());
+        xpath.evaluate(context).ok().unwrap()
     }
 }

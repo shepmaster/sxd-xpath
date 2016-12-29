@@ -124,7 +124,7 @@ impl<'d> Default for Core<'d> {
 ///     let xpath = factory.build(xpath).expect("Could not compile XPath");
 ///     let xpath = xpath.expect("No XPath was compiled");
 ///
-///     let value = xpath.evaluate(&context.evaluation_context()).expect("XPath evaluation failed");
+///     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
 ///
 ///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
 /// }

@@ -9,7 +9,7 @@ use std::io::{self, Read};
 
 use sxd_document::parser::parse;
 
-use sxd_xpath::{Factory, Context, Expression, Value};
+use sxd_xpath::{Factory, Context, XPath, Value};
 
 use getopts::Options;
 
@@ -23,7 +23,7 @@ fn pretty_error(xml: &str, position: usize) -> String {
     s.chars().take(15).collect()
 }
 
-fn build_xpath(xpath_str: &str) -> Box<Expression> {
+fn build_xpath(xpath_str: &str) -> XPath {
     let factory = Factory::new();
 
     match factory.build(xpath_str) {
@@ -136,7 +136,7 @@ fn main() {
         build_variables(&arguments, &mut context);
         build_namespaces(&arguments, &mut context);
 
-        let res = xpath.evaluate(&context.evaluation_context());
+        let res = xpath.evaluate(&context);
 
         println!("{:?}", res);
     }

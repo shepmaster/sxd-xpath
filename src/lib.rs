@@ -61,7 +61,7 @@
 //!
 //!     let context = Context::new(document.root());
 //!
-//!     let value = xpath.evaluate(&context.evaluation_context()).expect("XPath evaluation failed");
+//!     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
 //!
 //!     assert_eq!("hello", value.string());
 //! }
@@ -105,7 +105,6 @@ use sxd_document::dom::Document;
 use parser::Parser;
 use tokenizer::{Tokenizer, TokenDeabbreviator};
 
-pub use expression::Expression;
 pub use context::Context;
 
 #[macro_use]
@@ -212,6 +211,17 @@ impl<'d> From<LiteralValue> for Value<'d> {
     }
 }
 
+pub struct XPath(Box<expression::Expression + 'static>);
+
+impl XPath {
+    pub fn evaluate<'a, 'd: 'a, C>(&self, context: C) -> Result<Value<'d>, expression::Error>
+        where C: Into<context::Evaluation<'a, 'd>>,
+    {
+        let context = context.into();
+        self.0.evaluate(&context)
+    }
+}
+
 /// The primary entrypoint to convert an XPath represented as a string
 /// to a structure that can be evaluated.
 pub struct Factory {
@@ -224,11 +234,11 @@ impl Factory {
     }
 
     /// Compiles the given string into an XPath structure.
-    pub fn build(&self, xpath: &str) -> parser::ParseResult {
+    pub fn build(&self, xpath: &str) -> Result<Option<XPath>, parser::Error> {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
-        self.parser.parse(deabbreviator)
+        self.parser.parse(deabbreviator).map(|x| x.map(XPath))
     }
 }
 
@@ -295,7 +305,7 @@ pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Val
 
     let context = context::Context::new(document.root());
 
-    expression.evaluate(&context.evaluation_context()).map_err(Into::into)
+    expression.evaluate(&context).map_err(Into::into)
 }
 
 #[cfg(test)]
