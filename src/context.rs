@@ -12,6 +12,7 @@ type Variables<'d> = HashMap<String, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
 type Namespaces = HashMap<String, String>;
 
+/// Reusable parts of the context which are distinct from the context node.
 pub struct Core<'d> {
     functions: Functions,
     variables: Variables<'d>,
@@ -19,12 +20,14 @@ pub struct Core<'d> {
 }
 
 impl<'d> Core<'d> {
+    /// Registers the core XPath 1.0 functions.
     pub fn new() -> Self {
         let mut context = Self::without_core_functions();
         function::register_core_functions(&mut context);
         context
     }
 
+    /// No functions, variables or namespaces will be defined.
     pub fn without_core_functions() -> Self {
         Core {
             functions: Default::default(),
@@ -33,20 +36,24 @@ impl<'d> Core<'d> {
         }
     }
 
+    /// Register a function within the context
     pub fn set_function<F>(&mut self, name: &str, function: F)
         where F: function::Function + 'static,
     {
         self.functions.insert(name.into(), Box::new(function));
     }
 
+    /// Register a variable within the context
     pub fn set_variable(&mut self, name: &str, value: Value<'d>) {
         self.variables.insert(name.into(), value);
     }
 
+    /// Register a namespace prefix within the context
     pub fn set_namespace(&mut self, prefix: &str, uri: &str) {
         self.namespaces.insert(prefix.into(), uri.into());
     }
 
+    /// Convert into a complete `Context`
     pub fn with_context_node<N>(self, context_node: N) -> Context<'d>
         where N: Into<Node<'d>>,
     {
@@ -56,6 +63,7 @@ impl<'d> Core<'d> {
         }
     }
 
+    /// Enhance this context with a context node
     pub fn borrow_with_context_node<'a, N>(&'a self, context_node: N) -> Borrowed<'a, 'd>
         where N: Into<Node<'d>>,
     {
@@ -140,36 +148,40 @@ pub struct Context<'d> {
 }
 
 impl<'d> Context<'d> {
+    /// Registers the core XPath 1.0 function but no variables or namespaces.
     pub fn new<N>(context_node: N) -> Self
         where N: Into<Node<'d>>,
     {
         Core::new().with_context_node(context_node)
     }
 
-    pub fn with_context_node<N>(self, context_node: N) -> Self
+    /// Updates the context node.
+    pub fn with_context_node<N>(&mut self, context_node: N)
         where N: Into<Node<'d>>,
     {
-        Context {
-            node: context_node.into(),
-            ..self
-        }
+        self.node = context_node.into();
     }
 
+    /// Register a function within the context
     pub fn set_function<F>(&mut self, name: &str, function: F)
         where F: function::Function + 'static,
     {
         self.core.set_function(name, function);
     }
 
+    /// Register a variable within the context
     pub fn set_variable(&mut self, name: &str, value: Value<'d>) {
         self.core.set_variable(name, value);
     }
 
+    /// Register a namespace prefix within the context
     pub fn set_namespace(&mut self, prefix: &str, uri: &str) {
         self.core.set_namespace(prefix, uri);
     }
 }
 
+/// Augments a `Core` context with a context node. Useful when the
+/// context outlives the document.
 #[derive(Copy, Clone)]
 pub struct Borrowed<'a, 'd: 'a> {
     node: Node<'d>,
@@ -177,13 +189,11 @@ pub struct Borrowed<'a, 'd: 'a> {
 }
 
 impl<'a, 'd> Borrowed<'a, 'd> {
-    pub fn with_context_node<N>(self, context_node: N) -> Self
+    /// Updates the context node.
+    pub fn with_context_node<N>(&mut self, context_node: N)
         where N: Into<Node<'d>>,
     {
-        Borrowed {
-            node: context_node.into(),
-            ..self
-        }
+        self.node = context_node.into();
     }
 }
 
