@@ -199,12 +199,15 @@ impl<'a, 'd> Borrowed<'a, 'd> {
 
 #[derive(Copy, Clone)]
 pub struct Evaluation<'a, 'd : 'a> {
+    /// The context node
     pub node: Node<'d>,
+    /// The context position
+    pub position: usize,
+    /// The context size
+    pub size: usize,
     functions: &'a Functions,
     variables: &'a Variables<'d>,
     namespaces: &'a Namespaces,
-    position: usize,
-    size: usize,
 }
 
 impl<'a, 'd> Evaluation<'a, 'd> {
@@ -231,14 +234,6 @@ impl<'a, 'd> Evaluation<'a, 'd> {
             node: node.into(),
             .. *self
         }
-    }
-
-    pub fn position(&self) -> usize {
-        self.position
-    }
-
-    pub fn size(&self) -> usize {
-        self.size
     }
 
     pub fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {

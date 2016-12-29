@@ -397,7 +397,7 @@ impl Predicate {
         let value = try!(self.expression.evaluate(context));
 
         let v = match value {
-            Number(v) => context.position() == v as usize,
+            Number(v) => context.position == v as usize,
             _ => value.boolean()
         };
 

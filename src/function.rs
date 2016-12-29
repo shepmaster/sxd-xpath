@@ -212,7 +212,7 @@ impl Function for Last {
     {
         let args = Args(args);
         try!(args.exactly(0));
-        Ok(Value::Number(context.size() as f64))
+        Ok(Value::Number(context.size as f64))
     }
 }
 
@@ -225,7 +225,7 @@ impl Function for Position {
     {
         let args = Args(args);
         try!(args.exactly(0));
-        Ok(Value::Number(context.position() as f64))
+        Ok(Value::Number(context.position as f64))
     }
 }
 
