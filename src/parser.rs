@@ -1556,7 +1556,7 @@ mod test {
 
     #[test]
     fn variable_reference() {
-        let tokens = tokens![Token::Variable("variable-name".to_owned())];
+        let tokens = tokens![Token::Variable("variable-name".into())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1569,9 +1569,24 @@ mod test {
     }
 
     #[test]
+    fn variable_reference_prefixed_name() {
+        let tokens = tokens![Token::Variable(("ns", "variable-name").into())];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+
+        let mut ex = Exercise::new(&doc);
+        ex.context.set_namespace("ns", "uri:vars");
+        ex.context.set_variable(("uri:vars", "variable-name"), Number(12.3));
+        let expr = ex.parse(tokens);
+
+        assert_approx_eq!(Number(12.3), ex.evaluate(&*expr));
+    }
+
+    #[test]
     fn filter_expression() {
         let tokens = tokens![
-            Token::Variable("variable".to_owned()),
+            Token::Variable("variable".into()),
             Token::LeftBracket,
             Token::Number(0.0),
             Token::RightBracket,
@@ -1595,7 +1610,7 @@ mod test {
     #[test]
     fn filter_expression_and_relative_path() {
         let tokens = tokens![
-            Token::Variable("variable".to_owned()),
+            Token::Variable("variable".into()),
             Token::Slash,
             name_test("child"),
         ];
@@ -1618,9 +1633,9 @@ mod test {
     #[test]
     fn union_expression() {
         let tokens = tokens![
-            Token::Variable("variable1".to_owned()),
+            Token::Variable("variable1".into()),
             Token::Pipe,
-            Token::Variable("variable2".to_owned()),
+            Token::Variable("variable2".into()),
         ];
 
         let package = Package::new();
@@ -1750,7 +1765,7 @@ mod test {
     #[test]
     fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::Variable("variable".to_owned()),
+            Token::Variable("variable".into()),
             Token::Slash,
         ];
 

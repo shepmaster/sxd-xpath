@@ -1,17 +1,19 @@
 //! Support for the various types of contexts before and during XPath
 //! evaluation.
 
+use sxd_document::QName;
+
 use std::collections::HashMap;
 use std::iter;
 
-use ::Value;
+use ::{Value, OwnedQName};
 use ::nodeset::{self, Node, Nodeset};
 use ::function;
 
 /// A mapping of names to XPath functions.
 type Functions = HashMap<String, Box<function::Function + 'static>>;
 /// A mapping of names to XPath variables.
-type Variables<'d> = HashMap<String, Value<'d>>;
+type Variables<'d> = HashMap<OwnedQName, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
 type Namespaces = HashMap<String, String>;
 
@@ -107,7 +109,9 @@ impl<'d> Context<'d> {
     }
 
     /// Register a variable within the context
-    pub fn set_variable(&mut self, name: &str, value: Value<'d>) {
+    pub fn set_variable<N>(&mut self, name: N, value: Value<'d>)
+        where N: Into<OwnedQName>
+    {
         self.variables.insert(name.into(), value);
     }
 
@@ -169,8 +173,10 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     /// Looks up the value of the variable
-    pub fn value_of(&self, name: &str) -> Option<&Value<'d>> {
-        self.variables.get(name)
+    pub fn value_of(&self, name: QName) -> Option<&Value<'d>> {
+        // FIXME: remove allocation
+        let name = name.into();
+        self.variables.get(&name)
     }
 
     /// Looks up the namespace URI for the given prefix

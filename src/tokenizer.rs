@@ -308,9 +308,7 @@ fn parse_variable_reference(p: StringPoint) -> XPathProgress<Token, Error> {
     let (p, _) = try_parse!(p.consume_literal("$").map_err(|_| ExpectedVariableReference));
     let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
 
-    // TODO: We should be using the prefix here!
-    let name = name.local_part().to_owned();
-    peresil::Progress::success(p, Token::Variable(name))
+    peresil::Progress::success(p, Token::Variable(name.into()))
 }
 
 impl Tokenizer {
@@ -690,7 +688,14 @@ mod test {
     fn tokenizes_variable_reference() {
         let tokenizer = Tokenizer::new("$yo");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Variable("yo".to_owned())]);
+        assert_eq!(all_tokens(tokenizer), vec![Token::Variable("yo".into())]);
+    }
+
+    #[test]
+    fn tokenizes_variable_reference_prefixed_name() {
+        let tokenizer = Tokenizer::new("$yo:dawg");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::Variable(("yo", "dawg").into())]);
     }
 
     #[test]

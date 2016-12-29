@@ -1,5 +1,6 @@
 use std::string;
 
+use ::OwnedPrefixedName;
 use ::node_test;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -61,7 +62,7 @@ pub enum Token {
     Function(string::String),
     NameTest(node_test::NameTest),
     NodeTest(NodeTestName),
-    Variable(string::String),
+    Variable(OwnedPrefixedName),
 }
 
 impl Token {

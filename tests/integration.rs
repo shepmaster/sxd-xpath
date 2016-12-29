@@ -32,6 +32,19 @@ fn position_function_in_predicate() {
     });
 }
 
+#[test]
+fn variables_with_qualified_names() {
+    with_document("<a/>", |doc| {
+        let mut setup = Setup::new();
+        setup.context.set_variable(("uri:namespace", "name"), Value::Number(42.0));
+        setup.context.set_namespace("prefix", "uri:namespace");
+
+        let result = setup.evaluate(&doc, "$prefix:name");
+
+        assert_eq!(Value::Number(42.0), result);
+    });
+}
+
 fn with_document<F>(xml: &str, f: F)
     where F: FnOnce(dom::Document),
 {

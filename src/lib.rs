@@ -102,6 +102,7 @@ extern crate quick_error;
 use std::borrow::ToOwned;
 use std::string;
 
+use sxd_document::{PrefixedName, QName};
 use sxd_document::dom::Document;
 
 use parser::Parser;
@@ -136,6 +137,74 @@ impl<'d> From<Value<'d>> for LiteralValue {
             Value::Number(v)  => LiteralValue::Number(v),
             Value::String(v)  => LiteralValue::String(v),
             Value::Nodeset(_) => panic!("Cannot convert a nodeset to a literal"),
+        }
+    }
+}
+
+// These belong in the the document
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OwnedPrefixedName {
+    prefix: Option<String>,
+    local_part: String,
+}
+
+impl<'a> From<&'a str> for OwnedPrefixedName {
+    fn from(local_part: &'a str) -> Self {
+        OwnedPrefixedName {
+            prefix: None,
+            local_part: local_part.into(),
+        }
+    }
+}
+
+impl<'a> From<(&'a str, &'a str)> for OwnedPrefixedName {
+    fn from((prefix, local_part): (&'a str, &'a str)) -> Self {
+        OwnedPrefixedName {
+            prefix: Some(prefix.into()),
+            local_part: local_part.into(),
+        }
+    }
+}
+
+impl<'a> From<PrefixedName<'a>> for OwnedPrefixedName {
+    fn from(name: PrefixedName<'a>) -> Self {
+        OwnedPrefixedName {
+            prefix: name.prefix().map(Into::into),
+            local_part: name.local_part().into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OwnedQName {
+    namespace_uri: Option<String>,
+    local_part: String,
+}
+
+impl<'a> From<&'a str> for OwnedQName {
+    fn from(local_part: &'a str) -> Self {
+        OwnedQName {
+            namespace_uri: None,
+            local_part: local_part.into(),
+        }
+    }
+}
+
+impl<'a> From<(&'a str, &'a str)> for OwnedQName {
+    fn from((namespace_uri, local_part): (&'a str, &'a str)) -> Self {
+        OwnedQName {
+            namespace_uri: Some(namespace_uri.into()),
+            local_part: local_part.into(),
+        }
+    }
+}
+
+impl<'a> From<QName<'a>> for OwnedQName {
+    fn from(name: QName<'a>) -> Self {
+        OwnedQName {
+            namespace_uri: name.namespace_uri().map(Into::into),
+            local_part: name.local_part().into(),
         }
     }
 }
@@ -499,7 +568,7 @@ mod test {
 
             let result = evaluate_xpath(&doc, "$foo");
 
-            assert_eq!(Err(Executing(UnknownVariable("foo".to_owned()))), result);
+            assert_eq!(Err(Executing(UnknownVariable("foo".into()))), result);
         });
     }
 
