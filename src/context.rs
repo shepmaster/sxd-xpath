@@ -170,10 +170,7 @@ impl<'d> Context<'d> {
     }
 
     pub fn evaluation_context<'a>(&'a self) -> Evaluation<'a, 'd> {
-        Evaluation::new(self.node,
-                        &self.core.functions,
-                        &self.core.variables,
-                        &self.core.namespaces)
+        self.into()
     }
 }
 
@@ -194,10 +191,7 @@ impl<'a, 'd> Borrowed<'a, 'd> {
     }
 
     pub fn evaluation_context(&self) -> Evaluation<'a, 'd> {
-        Evaluation::new(self.node,
-                        &self.core.functions,
-                        &self.core.variables,
-                        &self.core.namespaces)
+        (*self).into()
     }
 }
 
@@ -266,6 +260,24 @@ impl<'a, 'd> Evaluation<'a, 'd> {
             nodes: nodes.into_iter().enumerate(),
             size: sz,
         }
+    }
+}
+
+impl<'a, 'd> From<&'a Context<'d>> for Evaluation<'a, 'd> {
+    fn from(other: &'a Context<'d>) -> Self {
+        Evaluation::new(other.node,
+                        &other.core.functions,
+                        &other.core.variables,
+                        &other.core.namespaces)
+    }
+}
+
+impl<'a, 'd> From<Borrowed<'a, 'd>> for Evaluation<'a, 'd> {
+    fn from(other: Borrowed<'a, 'd>) -> Self {
+        Evaluation::new(other.node,
+                        &other.core.functions,
+                        &other.core.variables,
+                        &other.core.namespaces)
     }
 }
 
