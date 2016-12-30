@@ -9,3 +9,16 @@ macro_rules! nodeset(
     });
     ($($e:expr),+,) => (nodeset!($($e),+))
 );
+
+
+/// Convenience constructor for an OrderedNodes
+macro_rules! ordered_nodes {
+    ( $($val:expr,)* ) => {
+        $crate::nodeset::OrderedNodes::from(vec![
+            $( $crate::nodeset::Node::from($val), )*
+        ])
+    };
+    ( $($val:expr),* ) => {
+        ordered_nodes![$($val, )*]
+    };
+}

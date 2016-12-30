@@ -1,4 +1,5 @@
 extern crate sxd_document;
+#[macro_use]
 extern crate sxd_xpath;
 
 use std::borrow::ToOwned;
@@ -56,6 +57,15 @@ fn functions_with_qualified_names() {
         let result = setup.evaluate(&doc, "prefix:constant()");
 
         assert_eq!(42.0, result);
+    });
+}
+
+#[test]
+fn nodesets_are_unique() {
+    with_document("<a/>", |doc| {
+        let result = evaluate_xpath(&doc, "/ | /");
+
+        assert_eq!(Ok(Value::Nodeset(nodeset![doc.root()])), result);
     });
 }
 

@@ -77,12 +77,14 @@
 //! [`Factory`]: struct.Factory.html
 //! [`Context`]: context/struct.Context.html
 //!
-//! ### Namespaces
+//! ### Programmatically-created XML
 //!
-//! The XPath specification assumes that the XML being processed has a
-//! prefix defined for every namespace present in the document. If you
-//! are processing XML that was parsed from text, this will be true by
-//! construction.
+//! The XPath specification assumes certain properties about the XML
+//! being processed. If you are processing XML that was parsed from
+//! text, this will be true by construction. If you have
+//! programmatically created XML, please note the following cases.
+//!
+//! #### Namespaces
 //!
 //! If you have programmatically created XML with namespaces but not
 //! defined prefixes, some XPath behavior may be confusing:
@@ -92,6 +94,17 @@
 //! 2. The `namespace` axis will not include namespaces without
 //! prefixes.
 //!
+//! #### Document order
+//!
+//! If you have programmatically created XML but not attached the
+//! nodes to the document, some XPath behavior may be confusing:
+//!
+//! 1. These nodes have no [*document order*]. If you create a
+//! variable containing these nodes and apply a predicate to them,
+//! these nodes will appear after any nodes that are present in the
+//! document, but the relative order of the nodes is undefined.
+//!
+//! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
 
 #[macro_use]
 extern crate peresil;

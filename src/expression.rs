@@ -9,7 +9,7 @@ use ::axis::{Axis, AxisLike};
 use ::context;
 use ::function;
 use ::node_test::NodeTest;
-use ::nodeset::Nodeset;
+use ::nodeset::{Nodeset, OrderedNodes};
 
 quick_error! {
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -41,6 +41,19 @@ quick_error! {
 fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
     match v {
         Value::Nodeset(ns) => Ok(ns),
+        _ => Err(Error::NotANodeset),
+    }
+}
+
+// In these cases, we use document order. From the spec:
+//
+// > `(preceding::foo)[1]` returns the first `foo` element in document
+// > order, because the axis that applies to the `[1]` predicate is
+// > the child axis
+//
+fn value_into_ordered_nodes(v: Value) -> Result<OrderedNodes, Error> {
+    match v {
+        Value::Nodeset(ns) => Ok(ns.document_order().into()),
         _ => Err(Error::NotANodeset),
     }
 }
@@ -324,9 +337,9 @@ impl Filter {
 impl Expression for Filter {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.node_selector.evaluate(context)
-            .and_then(value_into_nodeset)
+            .and_then(value_into_ordered_nodes)
             .and_then(|nodes| self.predicate.select(context, nodes))
-            .and_then(|nodes| Ok(Value::Nodeset(nodes)))
+            .map(|nodes| Value::Nodeset(nodes.into()))
     }
 }
 
@@ -394,12 +407,12 @@ struct Predicate {
 }
 
 impl Predicate {
-    fn select<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, nodes: Nodeset<'d>)
-                      -> Result<Nodeset<'d>, Error>
+    fn select<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, nodes: OrderedNodes<'d>)
+                      -> Result<OrderedNodes<'d>, Error>
     {
         context.new_contexts_for(nodes).filter_map(|ctx| {
             match self.matches(&ctx) {
-                Ok(true) => Some(Ok(ctx)),
+                Ok(true) => Some(Ok(ctx.node)),
                 Ok(false) => None,
                 Err(e) => Some(Err(e)),
             }
@@ -443,13 +456,16 @@ impl<A> ParameterizedStep<A>
         // axis and node-test. We evaluate the predicates on the total
         // set of new nodes.
 
+        // This seems like a likely place where we could differ from
+        // the spec, so thorough testing would be ideal.
+
         self.apply_predicates(context, self.apply_axis(context, starting_nodes))
     }
 
     fn apply_axis<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, starting_nodes: Nodeset<'d>)
-                        -> Nodeset<'d>
+                        -> OrderedNodes<'d>
     {
-        let mut result = Nodeset::new();
+        let mut result = OrderedNodes::new();
 
         for node in starting_nodes.iter() {
             let child_context = context.new_context_for(node);
@@ -461,7 +477,7 @@ impl<A> ParameterizedStep<A>
 
     fn apply_predicates<'c, 'd>(&self,
                                 context: &context::Evaluation<'c, 'd>,
-                                nodes: Nodeset<'d>)
+                                nodes: OrderedNodes<'d>)
                                 -> Result<Nodeset<'d>, Error>
     {
         let mut nodes = nodes;
@@ -470,7 +486,7 @@ impl<A> ParameterizedStep<A>
             nodes = try!(predicate.select(context, nodes));
         }
 
-        Ok(nodes)
+        Ok(nodes.into())
     }
 }
 
@@ -540,7 +556,7 @@ mod test {
     use ::context::{self, Context};
     use ::function;
     use ::node_test::NodeTest;
-    use ::nodeset::Nodeset;
+    use ::nodeset::OrderedNodes;
 
     use super::*;
 
@@ -795,6 +811,12 @@ mod test {
 
         setup.context.set_variable("nodes", input_nodeset);
 
+        // We need to give these elements some kind of document order
+        let parent = setup.doc.create_element("parent");
+        setup.doc.root().append_child(parent);
+        parent.append_child(input_node_1);
+        parent.append_child(input_node_2);
+
         let selected_nodes = Box::new(Variable { name: "nodes".into() });
         let predicate = Box::new(Literal{value: Value::Number(1.0)});
 
@@ -875,7 +897,7 @@ mod test {
         fn select_nodes(&self,
                         _context:   &context::Evaluation,
                         _node_test: &NodeTest,
-                        _result:    &mut Nodeset)
+                        _result:    &mut OrderedNodes)
         {
             *self.calls.borrow_mut() += 1;
         }
@@ -884,8 +906,7 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test(&self, _context: &context::Evaluation, _result: &mut Nodeset) {
-        }
+        fn test(&self, _context: &context::Evaluation, _result: &mut OrderedNodes) {}
     }
 
     #[test]
