@@ -282,6 +282,26 @@ impl<'d> From<LiteralValue> for Value<'d> {
     }
 }
 
+macro_rules! from_impl {
+    ($raw:ty, $variant:expr) => {
+        impl<'d> From<$raw> for Value<'d> {
+            fn from(other: $raw) -> Value<'d> {
+                $variant(other)
+            }
+        }
+    }
+}
+
+from_impl!(bool, Value::Boolean);
+from_impl!(f64, Value::Number);
+from_impl!(String, Value::String);
+impl<'a, 'd> From<&'a str> for Value<'d> {
+    fn from(other: &'a str) -> Value<'d> {
+        Value::String(other.into())
+    }
+}
+from_impl!(nodeset::Nodeset<'d>, Value::Nodeset);
+
 /// A compiled XPath. Construct via [`Factory`][].
 ///
 /// [`Factory`]: struct.Factory.html

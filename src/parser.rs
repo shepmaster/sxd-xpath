@@ -774,10 +774,6 @@ mod test {
             }
         }
 
-        fn add_var(&mut self, name: &str, value: Value<'d>) {
-            self.context.set_variable(name, value);
-        }
-
         fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
             self.parser.parse(tokens.into_iter())
         }
@@ -1562,7 +1558,7 @@ mod test {
         let doc = TestDoc(package.as_document());
 
         let mut ex = Exercise::new(&doc);
-        ex.add_var("variable-name", Number(12.3));
+        ex.context.set_variable("variable-name", 12.3);
         let expr = ex.parse(tokens);
 
         assert_approx_eq!(Number(12.3), ex.evaluate(&*expr));
@@ -1577,7 +1573,7 @@ mod test {
 
         let mut ex = Exercise::new(&doc);
         ex.context.set_namespace("ns", "uri:vars");
-        ex.context.set_variable(("uri:vars", "variable-name"), Number(12.3));
+        ex.context.set_variable(("uri:vars", "variable-name"), 12.3);
         let expr = ex.parse(tokens);
 
         assert_approx_eq!(Number(12.3), ex.evaluate(&*expr));
@@ -1600,7 +1596,7 @@ mod test {
         ];
 
         let mut ex = Exercise::new(&doc);
-        ex.add_var("variable", Value::Nodeset(value));
+        ex.context.set_variable("variable", value);
 
         let expr = ex.parse(tokens);
 
@@ -1623,7 +1619,7 @@ mod test {
         let value = nodeset![parent];
 
         let mut ex = Exercise::new(&doc);
-        ex.add_var("variable", Value::Nodeset(value));
+        ex.context.set_variable("variable", value);
 
         let expr = ex.parse(tokens);
 
@@ -1644,8 +1640,8 @@ mod test {
         let node2 = doc.add_top_child("second-node");
 
         let mut ex = Exercise::new(&doc);
-        ex.add_var("variable1", Value::Nodeset(nodeset![node1]));
-        ex.add_var("variable2", Value::Nodeset(nodeset![node2]));
+        ex.context.set_variable("variable1", nodeset![node1]);
+        ex.context.set_variable("variable2", nodeset![node2]);
 
         let expr = ex.parse(tokens);
 

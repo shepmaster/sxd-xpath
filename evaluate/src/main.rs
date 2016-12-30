@@ -61,8 +61,8 @@ fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
 fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
     for boolean in arguments.opt_strs("boolean") {
         match argument_name_value(&boolean, '=') {
-            Some((name, "true")) => context.set_variable(name, Value::Boolean(true)),
-            Some((name, "false")) => context.set_variable(name, Value::Boolean(false)),
+            Some((name, "true")) => context.set_variable(name, true),
+            Some((name, "false")) => context.set_variable(name, false),
             Some((_, val)) => panic!("Unknown boolean value '{}'", val),
             None => panic!("boolean argument '{}' is malformed", boolean),
         }
@@ -82,7 +82,7 @@ fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
 
     for string in arguments.opt_strs("string") {
         match argument_name_value(&string, '=') {
-            Some((name, val)) => context.set_variable(name, Value::String(val.to_owned())),
+            Some((name, val)) => context.set_variable(name, val),
             None => panic!("string argument '{}' is malformed", string),
         }
     }
