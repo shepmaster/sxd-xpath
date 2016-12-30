@@ -42,7 +42,7 @@ fn variables_with_qualified_names() {
 
         let result = setup.evaluate(&doc, "$prefix:name");
 
-        assert_eq!(Value::Number(42.0), result);
+        assert_eq!(42.0, result);
     });
 }
 
@@ -55,7 +55,7 @@ fn functions_with_qualified_names() {
 
         let result = setup.evaluate(&doc, "prefix:constant()");
 
-        assert_eq!(Value::Number(42.0), result);
+        assert_eq!(42.0, result);
     });
 }
 
