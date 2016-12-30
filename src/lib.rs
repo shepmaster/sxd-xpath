@@ -332,8 +332,8 @@ impl XPath {
     /// ```
     ///
     /// [`Context`]: context/struct.Context.html
-    pub fn evaluate<'a, 'd: 'a, N>(&self, context: &'a Context<'d>, node: N)
-                                   -> Result<Value<'d>, expression::Error>
+    pub fn evaluate<'d, N>(&self, context: &Context<'d>, node: N)
+                           -> Result<Value<'d>, expression::Error>
         where N: Into<nodeset::Node<'d>>,
     {
         let context = context::Evaluation::new(context, node.into());

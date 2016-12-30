@@ -35,8 +35,8 @@ type Namespaces = HashMap<String, String>;
 ///
 /// struct Sigmoid;
 /// impl function::Function for Sigmoid {
-///     fn evaluate<'a, 'd>(&self,
-///                         _context: &context::Evaluation<'a, 'd>,
+///     fn evaluate<'c, 'd>(&self,
+///                         _context: &context::Evaluation<'c, 'd>,
 ///                         args: Vec<Value<'d>>)
 ///                         -> Result<Value<'d>, function::Error>
 ///     {
@@ -133,22 +133,28 @@ impl<'d> Default for Context<'d> {
 ///
 /// Clients of this library will use this when implementing custom
 /// functions.
+///
+/// # Lifetimes
+///
+/// We track two separate lifetimes: that of the user-provided context
+/// (`'c`) and that of the document (`'d`). This allows the
+/// user-provided context to live shorter than the document.
 #[derive(Copy, Clone)]
-pub struct Evaluation<'a, 'd : 'a> {
+pub struct Evaluation<'c, 'd: 'c> {
     /// The context node
     pub node: Node<'d>,
     /// The context position
     pub position: usize,
     /// The context size
     pub size: usize,
-    functions: &'a Functions,
-    variables: &'a Variables<'d>,
-    namespaces: &'a Namespaces,
+    functions: &'c Functions,
+    variables: &'c Variables<'d>,
+    namespaces: &'c Namespaces,
 }
 
-impl<'a, 'd> Evaluation<'a, 'd> {
+impl<'c, 'd> Evaluation<'c, 'd> {
     /// Prepares the context used while evaluating the XPath expression
-    pub fn new(context: &'a Context<'d>, node: Node<'d>) -> Evaluation<'a, 'd> {
+    pub fn new(context: &'c Context<'d>, node: Node<'d>) -> Evaluation<'c, 'd> {
         Evaluation {
             node: node,
             functions: &context.functions,
@@ -160,7 +166,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     /// Creates a new context node using the provided node
-    pub fn new_context_for<N>(&self, node: N) -> Evaluation<'a, 'd>
+    pub fn new_context_for<N>(&self, node: N) -> Evaluation<'c, 'd>
         where N: Into<Node<'d>>
     {
         Evaluation {
@@ -170,7 +176,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     /// Looks up the function with the given name
-    pub fn function_for_name(&self, name: QName) -> Option<&'a function::Function> {
+    pub fn function_for_name(&self, name: QName) -> Option<&'c function::Function> {
         // FIXME: remove allocation
         let name = name.into();
         self.functions.get(&name).map(AsRef::as_ref)
@@ -189,7 +195,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     /// Yields a new `Evaluation` context for each node in the nodeset.
-    pub fn new_contexts_for(self, nodes: Nodeset<'d>) -> EvaluationNodesetIter<'a, 'd> {
+    pub fn new_contexts_for(self, nodes: Nodeset<'d>) -> EvaluationNodesetIter<'c, 'd> {
         let sz = nodes.size();
         EvaluationNodesetIter {
             parent: self,
@@ -200,16 +206,16 @@ impl<'a, 'd> Evaluation<'a, 'd> {
 }
 
 /// An iterator for the contexts of each node in a nodeset
-pub struct EvaluationNodesetIter<'a, 'd: 'a> {
-    parent: Evaluation<'a, 'd>,
+pub struct EvaluationNodesetIter<'c, 'd: 'c> {
+    parent: Evaluation<'c, 'd>,
     nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
     size: usize,
 }
 
-impl<'a, 'd> Iterator for EvaluationNodesetIter<'a, 'd> {
-    type Item = Evaluation<'a, 'd>;
+impl<'c, 'd> Iterator for EvaluationNodesetIter<'c, 'd> {
+    type Item = Evaluation<'c, 'd>;
 
-    fn next(&mut self) -> Option<Evaluation<'a, 'd>> {
+    fn next(&mut self) -> Option<Evaluation<'c, 'd>> {
         self.nodes.next().map(|(idx, node)| {
             Evaluation {
                 node: node,

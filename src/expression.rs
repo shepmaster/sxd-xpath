@@ -46,13 +46,13 @@ fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
 }
 
 pub trait Expression: fmt::Debug {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error>;
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error>;
 }
 
 impl<T: ?Sized> Expression for Box<T>
     where T: Expression
 {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         (**self).evaluate(context)
     }
 }
@@ -78,7 +78,7 @@ pub struct And {
 binary_constructor!(And);
 
 impl Expression for And {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context)).boolean();
         let v = left && try!(self.right.evaluate(context)).boolean();
         Ok(Boolean(v))
@@ -90,7 +90,7 @@ impl Expression for And {
 pub struct ContextNode;
 
 impl Expression for ContextNode {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         Ok(Value::Nodeset(nodeset![context.node]))
     }
 }
@@ -104,7 +104,7 @@ pub struct Equal {
 binary_constructor!(Equal);
 
 impl Equal {
-    fn boolean_evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<bool, Error> {
+    fn boolean_evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<bool, Error> {
         let left_val = try!(self.left.evaluate(context));
         let right_val = try!(self.right.evaluate(context));
 
@@ -148,7 +148,7 @@ impl Equal {
 }
 
 impl Expression for Equal {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.boolean_evaluate(context).map(Boolean)
     }
 }
@@ -167,7 +167,7 @@ impl NotEqual {
 }
 
 impl Expression for NotEqual {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.equal.boolean_evaluate(context).map(|v| Boolean(!v))
     }
 }
@@ -179,7 +179,7 @@ pub struct Function {
 }
 
 impl Expression for Function {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let name = resolve_prefixed_name(context, &self.name)?;
         context.function_for_name(name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
@@ -202,7 +202,7 @@ impl From<LiteralValue> for Literal {
 }
 
 impl Expression for Literal {
-    fn evaluate<'a, 'd>(&self, _: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, _: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         Ok(self.value.clone())
     }
 }
@@ -242,7 +242,7 @@ impl Math {
 }
 
 impl Expression for Math {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context));
         let right = try!(self.right.evaluate(context));
         let op = self.operation;
@@ -262,7 +262,7 @@ pub struct Negation {
 }
 
 impl Expression for Negation {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.expression.evaluate(context).map(|r| Number(-r.number()))
     }
 }
@@ -276,7 +276,7 @@ pub struct Or {
 binary_constructor!(Or);
 
 impl Expression for Or {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context)).boolean();
         let v = left || try!(self.right.evaluate(context)).boolean();
         Ok(Boolean(v))
@@ -296,7 +296,7 @@ impl Path {
 }
 
 impl Expression for Path {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let result = try!(self.start_point.evaluate(context));
         let mut result = try!(value_into_nodeset(result));
 
@@ -322,7 +322,7 @@ impl Filter {
 }
 
 impl Expression for Filter {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.node_selector.evaluate(context)
             .and_then(value_into_nodeset)
             .and_then(|nodes| self.predicate.select(context, nodes))
@@ -364,7 +364,7 @@ impl Relational {
 }
 
 impl Expression for Relational {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left_val = try!(self.left.evaluate(context));
         let right_val = try!(self.right.evaluate(context));
         let op = self.operation;
@@ -383,7 +383,7 @@ impl fmt::Debug for Relational {
 pub struct RootNode;
 
 impl Expression for RootNode {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         Ok(Value::Nodeset(nodeset![context.node.document().root()]))
     }
 }
@@ -394,7 +394,7 @@ struct Predicate {
 }
 
 impl Predicate {
-    fn select<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, nodes: Nodeset<'d>)
+    fn select<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, nodes: Nodeset<'d>)
                       -> Result<Nodeset<'d>, Error>
     {
         context.new_contexts_for(nodes).filter_map(|ctx| {
@@ -436,7 +436,7 @@ impl<A> ParameterizedStep<A>
         ParameterizedStep { axis: axis, node_test: node_test, predicates: preds }
     }
 
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, starting_nodes: Nodeset<'d>)
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, starting_nodes: Nodeset<'d>)
                         -> Result<Nodeset<'d>, Error>
     {
         // For every starting node, we collect new nodes based on the
@@ -446,7 +446,7 @@ impl<A> ParameterizedStep<A>
         self.apply_predicates(context, self.apply_axis(context, starting_nodes))
     }
 
-    fn apply_axis<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, starting_nodes: Nodeset<'d>)
+    fn apply_axis<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, starting_nodes: Nodeset<'d>)
                         -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
@@ -459,8 +459,8 @@ impl<A> ParameterizedStep<A>
         result
     }
 
-    fn apply_predicates<'a, 'd>(&self,
-                                context: &context::Evaluation<'a, 'd>,
+    fn apply_predicates<'c, 'd>(&self,
+                                context: &context::Evaluation<'c, 'd>,
                                 nodes: Nodeset<'d>)
                                 -> Result<Nodeset<'d>, Error>
     {
@@ -483,7 +483,7 @@ pub struct Union {
 binary_constructor!(Union);
 
 impl Expression for Union {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(value_into_nodeset);
 
         let mut left_nodes = try!(as_nodes(&self.left));
@@ -517,7 +517,7 @@ pub struct Variable {
 }
 
 impl Expression for Variable {
-    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let name = resolve_prefixed_name(context, &self.name)?;
 
         context.value_of(name)
@@ -547,7 +547,7 @@ mod test {
     #[derive(Debug)]
     struct FailExpression;
     impl Expression for FailExpression {
-        fn evaluate<'a, 'd>(&self, _: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+        fn evaluate<'c, 'd>(&self, _: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
             panic!("Should never be called");
         }
     }
@@ -731,8 +731,8 @@ mod test {
     }
 
     impl function::Function for StubFunction {
-        fn evaluate<'a, 'd>(&self,
-                            _: &context::Evaluation<'a, 'd>,
+        fn evaluate<'c, 'd>(&self,
+                            _: &context::Evaluation<'c, 'd>,
                             _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
         {
             Ok(String(self.value.to_owned()))
