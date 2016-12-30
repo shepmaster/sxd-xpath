@@ -282,6 +282,54 @@ impl<'d> From<LiteralValue> for Value<'d> {
     }
 }
 
+macro_rules! from_impl {
+    ($raw:ty, $variant:expr) => {
+        impl<'d> From<$raw> for Value<'d> {
+            fn from(other: $raw) -> Value<'d> {
+                $variant(other)
+            }
+        }
+    }
+}
+
+from_impl!(bool, Value::Boolean);
+from_impl!(f64, Value::Number);
+from_impl!(String, Value::String);
+impl<'a, 'd> From<&'a str> for Value<'d> {
+    fn from(other: &'a str) -> Value<'d> {
+        Value::String(other.into())
+    }
+}
+from_impl!(nodeset::Nodeset<'d>, Value::Nodeset);
+
+macro_rules! partial_eq_impl {
+    ($raw:ty, $variant:pat => $b:expr) => {
+        impl<'d> PartialEq<$raw> for Value<'d> {
+            fn eq(&self, other: &$raw) -> bool {
+                match *self {
+                    $variant => $b == other,
+                    _ => false,
+                }
+            }
+        }
+
+        impl<'d> PartialEq<Value<'d>> for $raw  {
+            fn eq(&self, other: &Value<'d>) -> bool {
+                match *other {
+                    $variant => $b == self,
+                    _ => false,
+                }
+            }
+        }
+    }
+}
+
+partial_eq_impl!(bool, Value::Boolean(ref v) => v);
+partial_eq_impl!(f64, Value::Number(ref v) => v);
+partial_eq_impl!(String, Value::String(ref v) => v);
+partial_eq_impl!(&'d str, Value::String(ref v) => v);
+partial_eq_impl!(nodeset::Nodeset<'d>, Value::Nodeset(ref v) => v);
+
 /// A compiled XPath. Construct via [`Factory`][].
 ///
 /// [`Factory`]: struct.Factory.html

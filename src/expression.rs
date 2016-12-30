@@ -602,8 +602,8 @@ mod test {
         let string_value_1 = setup.doc.create_text("same");
         let string_value_2 = setup.doc.create_text("same");
 
-        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1]));
-        setup.context.set_variable("right", Value::Nodeset(nodeset![string_value_2]));
+        setup.context.set_variable("left", nodeset![string_value_1]);
+        setup.context.set_variable("right", nodeset![string_value_2]);
 
         let left  = Box::new(Variable { name: "left".into() });
         let right = Box::new(Variable { name: "right".into() });
@@ -622,7 +622,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let string_value = setup.doc.create_text("3.14");
-        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value]));
+        setup.context.set_variable("left", nodeset![string_value]);
 
         let left  = Box::new(Variable { name: "left".into() });
         let right = Box::new(Literal{value: LiteralValue::Number(6.28)});
@@ -642,7 +642,7 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1, string_value_2]));
+        setup.context.set_variable("left", nodeset![string_value_1, string_value_2]);
 
         let left  = Box::new(Variable { name: "left".into() });
         let right = Box::new(Literal{value: LiteralValue::String("boat".to_owned())});
@@ -786,7 +786,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", input_nodeset);
 
         let selected_nodes = Box::new(Variable { name: "nodes".into() });
         let predicate = Box::new(Literal{value: LiteralValue::Number(1.0)});
@@ -808,7 +808,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", input_nodeset);
 
         let selected_nodes = Box::new(Variable { name: "nodes".into() });
         let predicate = Box::new(Literal{value: LiteralValue::Boolean(false)});
@@ -904,12 +904,12 @@ mod test {
 
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
-        setup.context.set_variable("left", Value::Nodeset(nodes));
+        setup.context.set_variable("left", nodes);
         let left = Box::new(Variable { name: "left".into() });
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
-        setup.context.set_variable("right", Value::Nodeset(nodes));
+        setup.context.set_variable("right", nodes);
         let right = Box::new(Variable { name: "right".into() });
 
         let expr = Union{left: left, right: right};
@@ -924,7 +924,7 @@ mod test {
     fn expression_variable_looks_up_the_variable() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
-        setup.context.set_variable("foo", Boolean(true));
+        setup.context.set_variable("foo", true);
 
         let expr = Variable { name: "foo".into() };
 

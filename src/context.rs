@@ -58,7 +58,7 @@ type Namespaces = HashMap<String, String>;
 ///
 ///     let mut context = Context::new();
 ///     context.set_function("sigmoid", Sigmoid);
-///     context.set_variable("t", Value::Number(2.0));
+///     context.set_variable("t", 2.0);
 ///     context.set_namespace("neural", "net:brain");
 ///
 ///     let xpath = "sigmoid(@neural:bonus + $t)";
@@ -110,10 +110,11 @@ impl<'d> Context<'d> {
     }
 
     /// Register a variable within the context
-    pub fn set_variable<N>(&mut self, name: N, value: Value<'d>)
-        where N: Into<OwnedQName>
+    pub fn set_variable<N, V>(&mut self, name: N, value: V)
+        where N: Into<OwnedQName>,
+              V: Into<Value<'d>>,
     {
-        self.variables.insert(name.into(), value);
+        self.variables.insert(name.into(), value.into());
     }
 
     /// Register a namespace prefix within the context
