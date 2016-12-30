@@ -641,15 +641,14 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::collections::HashMap;
 
     use sxd_document::Package;
     use sxd_document::dom::{self, Document, Root, Element, Text};
 
-    use ::{Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::Value;
     use ::Value::{Boolean, Number, String};
+    use ::context::{self, Context};
     use ::expression::{Expression, SubExpression};
-    use ::function::register_core_functions;
     use ::node_test;
     use ::nodeset::Node;
     use ::token::{Token, AxisName, NodeTestName};
@@ -762,28 +761,21 @@ mod test {
 
     struct Exercise<'d> {
         doc: &'d TestDoc<'d>,
-        functions: Functions,
-        variables: Variables<'d>,
-        namespaces: Namespaces,
+        context: Context<'d>,
         parser: Parser,
     }
 
     impl<'d> Exercise<'d> {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
-            let mut functions = HashMap::new();
-            register_core_functions(&mut functions);
-
             Exercise {
                 doc: doc,
-                functions: functions,
-                variables: HashMap::new(),
-                namespaces: HashMap::new(),
+                context: Context::new(),
                 parser: Parser::new(),
             }
         }
 
         fn add_var(&mut self, name: &str, value: Value<'d>) {
-            self.variables.insert(name.to_owned(), value);
+            self.context.set_variable(name, value);
         }
 
         fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
@@ -801,14 +793,8 @@ mod test {
         fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
             where N: Into<Node<'d>>
         {
-            let node = node.into();
-            let context = EvaluationContext::new(
-                node,
-                &self.functions,
-                &self.variables,
-                &self.namespaces,
-            );
-            expr.evaluate(&context).ok().unwrap()
+            let context = context::Evaluation::new(&self.context, node.into());
+            expr.evaluate(&context).unwrap()
         }
     }
 

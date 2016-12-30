@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use ::{EvaluationContext, LiteralValue, Value};
+use ::{LiteralValue, Value};
 use ::Value::{Boolean, Number};
 use ::axis::{Axis, AxisLike};
+use ::context;
 use ::function;
 use ::node_test::NodeTest;
 use ::nodeset::Nodeset;
@@ -38,10 +39,8 @@ fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
     }
 }
 
-/// The interface of a compiled XPath.
 pub trait Expression: fmt::Debug {
-    /// Evaluate this expression in the given context.
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error>;
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
 pub type SubExpression = Box<Expression + 'static>;
@@ -65,7 +64,7 @@ pub struct And {
 binary_constructor!(And);
 
 impl Expression for And {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context)).boolean();
         let v = left && try!(self.right.evaluate(context)).boolean();
         Ok(Boolean(v))
@@ -77,7 +76,7 @@ impl Expression for And {
 pub struct ContextNode;
 
 impl Expression for ContextNode {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         Ok(Value::Nodeset(nodeset![context.node]))
     }
 }
@@ -91,7 +90,7 @@ pub struct Equal {
 binary_constructor!(Equal);
 
 impl Equal {
-    fn boolean_evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<bool, Error> {
+    fn boolean_evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<bool, Error> {
         let left_val = try!(self.left.evaluate(context));
         let right_val = try!(self.right.evaluate(context));
 
@@ -135,7 +134,7 @@ impl Equal {
 }
 
 impl Expression for Equal {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         self.boolean_evaluate(context).map(Boolean)
     }
 }
@@ -154,7 +153,7 @@ impl NotEqual {
 }
 
 impl Expression for NotEqual {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         self.equal.boolean_evaluate(context).map(|v| Boolean(!v))
     }
 }
@@ -166,7 +165,7 @@ pub struct Function {
 }
 
 impl Expression for Function {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         context.function_for_name(&self.name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
             .and_then(|fun| {
@@ -188,7 +187,7 @@ impl From<LiteralValue> for Literal {
 }
 
 impl Expression for Literal {
-    fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, _: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         Ok(self.value.clone().into())
     }
 }
@@ -228,7 +227,7 @@ impl Math {
 }
 
 impl Expression for Math {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context));
         let right = try!(self.right.evaluate(context));
         let op = self.operation;
@@ -248,7 +247,7 @@ pub struct Negation {
 }
 
 impl Expression for Negation {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         self.expression.evaluate(context).map(|r| Number(-r.number()))
     }
 }
@@ -262,7 +261,7 @@ pub struct Or {
 binary_constructor!(Or);
 
 impl Expression for Or {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let left = try!(self.left.evaluate(context)).boolean();
         let v = left || try!(self.right.evaluate(context)).boolean();
         Ok(Boolean(v))
@@ -282,7 +281,7 @@ impl Path {
 }
 
 impl Expression for Path {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let result = try!(self.start_point.evaluate(context));
         let mut result = try!(value_into_nodeset(result));
 
@@ -308,7 +307,7 @@ impl Filter {
 }
 
 impl Expression for Filter {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         self.node_selector.evaluate(context)
             .and_then(value_into_nodeset)
             .and_then(|nodes| self.predicate.select(context, nodes))
@@ -350,7 +349,7 @@ impl Relational {
 }
 
 impl Expression for Relational {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let left_val = try!(self.left.evaluate(context));
         let right_val = try!(self.right.evaluate(context));
         let op = self.operation;
@@ -369,7 +368,7 @@ impl fmt::Debug for Relational {
 pub struct RootNode;
 
 impl Expression for RootNode {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         Ok(Value::Nodeset(nodeset![context.node.document().root()]))
     }
 }
@@ -380,10 +379,10 @@ struct Predicate {
 }
 
 impl Predicate {
-    fn select<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, nodes: Nodeset<'d>)
+    fn select<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, nodes: Nodeset<'d>)
                       -> Result<Nodeset<'d>, Error>
     {
-        context.predicate_iter(nodes).filter_map(|ctx| {
+        context.new_contexts_for(nodes).filter_map(|ctx| {
             match self.matches(&ctx) {
                 Ok(true) => Some(Ok(ctx)),
                 Ok(false) => None,
@@ -392,11 +391,11 @@ impl Predicate {
         }).collect()
     }
 
-    fn matches(&self, context: &EvaluationContext) -> Result<bool, Error> {
+    fn matches(&self, context: &context::Evaluation) -> Result<bool, Error> {
         let value = try!(self.expression.evaluate(context));
 
         let v = match value {
-            Number(v) => context.position() == v as usize,
+            Number(v) => context.position == v as usize,
             _ => value.boolean()
         };
 
@@ -422,7 +421,7 @@ impl<A> ParameterizedStep<A>
         ParameterizedStep { axis: axis, node_test: node_test, predicates: preds }
     }
 
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, starting_nodes: Nodeset<'d>)
                         -> Result<Nodeset<'d>, Error>
     {
         // For every starting node, we collect new nodes based on the
@@ -432,7 +431,7 @@ impl<A> ParameterizedStep<A>
         self.apply_predicates(context, self.apply_axis(context, starting_nodes))
     }
 
-    fn apply_axis<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, starting_nodes: Nodeset<'d>)
+    fn apply_axis<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, starting_nodes: Nodeset<'d>)
                         -> Nodeset<'d>
     {
         let mut result = Nodeset::new();
@@ -446,7 +445,7 @@ impl<A> ParameterizedStep<A>
     }
 
     fn apply_predicates<'a, 'd>(&self,
-                                context: &EvaluationContext<'a, 'd>,
+                                context: &context::Evaluation<'a, 'd>,
                                 nodes: Nodeset<'d>)
                                 -> Result<Nodeset<'d>, Error>
     {
@@ -469,7 +468,7 @@ pub struct Union {
 binary_constructor!(Union);
 
 impl Expression for Union {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(value_into_nodeset);
 
         let mut left_nodes = try!(as_nodes(&self.left));
@@ -486,7 +485,7 @@ pub struct Variable {
 }
 
 impl Expression for Variable {
-    fn evaluate<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
         context.value_of(&self.name)
             .cloned()
             .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
@@ -497,15 +496,15 @@ impl Expression for Variable {
 mod test {
     use std::borrow::ToOwned;
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::rc::Rc;
 
     use sxd_document::Package;
     use sxd_document::dom::Document;
 
-    use ::{LiteralValue, Value, Functions, Variables, Namespaces, EvaluationContext};
+    use ::{LiteralValue, Value};
     use ::Value::{Boolean, Number, String};
     use ::axis::AxisLike;
+    use ::context::{self, Context};
     use ::function;
     use ::node_test::NodeTest;
     use ::nodeset::Nodeset;
@@ -515,31 +514,27 @@ mod test {
     #[derive(Debug)]
     struct FailExpression;
     impl Expression for FailExpression {
-        fn evaluate<'a, 'd>(&self, _: &EvaluationContext<'a, 'd>) -> Result<Value<'d>, Error> {
+        fn evaluate<'a, 'd>(&self, _: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
             panic!("Should never be called");
         }
     }
 
     struct Setup<'d> {
         doc: Document<'d>,
-        funs: Functions,
-        vars: Variables<'d>,
-        nses: Namespaces,
+        context: Context<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup<'d> {
             Setup {
                 doc: package.as_document(),
-                funs: HashMap::new(),
-                vars: HashMap::new(),
-                nses: HashMap::new(),
+                context: Context::without_core_functions(),
             }
         }
 
-        fn context(&'d self) -> EvaluationContext<'d, 'd> {
+        fn context(&'d self) -> context::Evaluation<'d, 'd> {
             let node = self.doc.create_element("test");
-            EvaluationContext::new(node, &self.funs, &self.vars, &self.nses)
+            context::Evaluation::new(&self.context, node.into())
         }
     }
 
@@ -570,7 +565,7 @@ mod test {
         let expr = And{left: left, right: right};
 
         let context = setup.context();
-        expr.evaluate(&context).ok().unwrap();
+        expr.evaluate(&context).unwrap();
     }
 
     #[test]
@@ -581,8 +576,8 @@ mod test {
         let string_value_1 = setup.doc.create_text("same");
         let string_value_2 = setup.doc.create_text("same");
 
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1]));
-        setup.vars.insert("right".to_owned(), Value::Nodeset(nodeset![string_value_2]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1]));
+        setup.context.set_variable("right", Value::Nodeset(nodeset![string_value_2]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Variable{name: "right".to_owned()});
@@ -601,7 +596,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let string_value = setup.doc.create_text("3.14");
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Literal{value: LiteralValue::Number(6.28)});
@@ -621,7 +616,7 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodeset![string_value_1, string_value_2]));
+        setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
         let left  = Box::new(Variable{name: "left".to_owned()});
         let right = Box::new(Literal{value: LiteralValue::String("boat".to_owned())});
@@ -704,7 +699,7 @@ mod test {
 
     impl function::Function for StubFunction {
         fn evaluate<'a, 'd>(&self,
-                            _: &EvaluationContext<'a, 'd>,
+                            _: &context::Evaluation<'a, 'd>,
                             _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
         {
             Ok(String(self.value.to_owned()))
@@ -717,8 +712,7 @@ mod test {
         let mut setup = Setup::new(&package);
 
         let arg_expr: Box<Expression> = Box::new(Literal{value: LiteralValue::Boolean(true)});
-        let fun = Box::new(StubFunction{value: "the function ran"});
-        setup.funs.insert("test-fn".to_owned(), fun);
+        setup.context.set_function("test-fn", StubFunction { value: "the function ran" });
 
         let expr = Function { name: "test-fn".to_owned(), arguments: vec![arg_expr] };
 
@@ -766,7 +760,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
         let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
         let predicate = Box::new(Literal{value: LiteralValue::Number(1.0)});
@@ -788,7 +782,7 @@ mod test {
         let input_node_2 = setup.doc.create_element("two");
         let input_nodeset = nodeset![input_node_1, input_node_2];
 
-        setup.vars.insert("nodes".to_owned(), Value::Nodeset(input_nodeset));
+        setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
         let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
         let predicate = Box::new(Literal{value: LiteralValue::Boolean(false)});
@@ -846,7 +840,7 @@ mod test {
 
     impl AxisLike for MockAxis {
         fn select_nodes(&self,
-                        _context:   &EvaluationContext,
+                        _context:   &context::Evaluation,
                         _node_test: &NodeTest,
                         _result:    &mut Nodeset)
         {
@@ -857,7 +851,7 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test(&self, _context: &EvaluationContext, _result: &mut Nodeset) {
+        fn test(&self, _context: &context::Evaluation, _result: &mut Nodeset) {
         }
     }
 
@@ -872,7 +866,7 @@ mod test {
         let expr = ParameterizedStep::new(axis.clone(), Box::new(node_test), vec![]);
 
         let context = setup.context();
-        expr.evaluate(&context, nodeset![context.node]).ok().unwrap();
+        expr.evaluate(&context, nodeset![context.node]).unwrap();
 
         assert_eq!(1, axis.calls());
     }
@@ -884,12 +878,12 @@ mod test {
 
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
-        setup.vars.insert("left".to_owned(), Value::Nodeset(nodes));
+        setup.context.set_variable("left", Value::Nodeset(nodes));
         let left = Box::new(Variable{name: "left".to_owned()});
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
-        setup.vars.insert("right".to_owned(), Value::Nodeset(nodes));
+        setup.context.set_variable("right", Value::Nodeset(nodes));
         let right = Box::new(Variable{name: "right".to_owned()});
 
         let expr = Union{left: left, right: right};
@@ -904,7 +898,7 @@ mod test {
     fn expression_variable_looks_up_the_variable() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
-        setup.vars.insert("foo".to_owned(), Boolean(true));
+        setup.context.set_variable("foo", Boolean(true));
 
         let expr = Variable{name: "foo".to_owned()};
 

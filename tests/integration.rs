@@ -2,10 +2,9 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 
 use std::borrow::ToOwned;
-use std::collections::HashMap;
 use sxd_document::dom::Document;
 use sxd_document::parser::parse;
-use sxd_xpath::{Value, Functions, Variables, Namespaces, Factory, EvaluationContext};
+use sxd_xpath::{Value, Factory, Context};
 
 #[test]
 fn functions_accept_arguments() {
@@ -42,35 +41,19 @@ fn evaluate<'d>(package: &'d Document<'d>, xpath: &str) -> Value<'d> {
     setup.evaluate(package, xpath)
 }
 
+#[derive(Default)]
 struct Setup<'d> {
-    functions: Functions,
-    variables: Variables<'d>,
-    namespaces: Namespaces,
+    context: Context<'d>,
     factory: Factory,
 }
 
 impl<'d> Setup<'d> {
     fn new() -> Setup<'d> {
-        let mut fns = HashMap::new();
-        sxd_xpath::function::register_core_functions(&mut fns);
-        Setup {
-            functions: fns,
-            variables: HashMap::new(),
-            namespaces: HashMap::new(),
-            factory: Factory::new(),
-        }
+        Default::default()
     }
 
     fn evaluate(&self, doc: &'d Document<'d>, xpath: &str) -> Value<'d> {
-        let root = doc.root();
-        let context = EvaluationContext::new(
-            root,
-            &self.functions,
-            &self.variables,
-            &self.namespaces,
-        );
-
         let xpath = self.factory.build(xpath).unwrap().unwrap();
-        xpath.evaluate(&context).ok().unwrap()
+        xpath.evaluate(&self.context, doc.root()).unwrap()
     }
 }

@@ -41,47 +41,41 @@
 //! may also compile an XPath once and reuse it multiple times.
 //!
 //! Parsing is handled with the [`Factory`][] and evaluation relies on
-//! the [`EvaluationContext`][]. Similar functionality to above can be
+//! the [`Context`][]. Similar functionality to above can be
 //! accomplished:
 //!
 //! ```
 //! extern crate sxd_document;
 //! extern crate sxd_xpath;
 //!
-//! use std::collections::HashMap;
 //! use sxd_document::parser;
-//! use sxd_xpath::{Factory, EvaluationContext, Value};
+//! use sxd_xpath::{Factory, Context, Value};
 //!
 //! fn main() {
-//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let package = parser::parse("<root>hello</root>")
+//!         .expect("failed to parse XML");
 //!     let document = package.as_document();
 //!
 //!     let factory = Factory::new();
 //!     let xpath = factory.build("/root").expect("Could not compile XPath");
 //!     let xpath = xpath.expect("No XPath was compiled");
 //!
-//!     let functions = HashMap::new();
-//!     let variables = HashMap::new();
-//!     let namespaces = HashMap::new();
+//!     let context = Context::new();
 //!
-//!     let context = EvaluationContext::new(document.root(),
-//!                                          &functions,
-//!                                          &variables,
-//!                                          &namespaces);
-//!
-//!     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+//!     let value = xpath.evaluate(&context, document.root())
+//!         .expect("XPath evaluation failed");
 //!
 //!     assert_eq!("hello", value.string());
 //! }
 //! ```
 //!
-//! See [`EvaluationContext`][] for details on how to customize the
+//! See [`Context`][] for details on how to customize the
 //! evaluation of the XPath.
 //!
 //! [evaluate_xpath]: fn.evaluate_xpath.html
 //! [`Value`]: enum.Value.html
 //! [`Factory`]: struct.Factory.html
-//! [`EvaluationContext`]: struct.EvaluationContext.html
+//! [`Context`]: context/struct.Context.html
 //!
 //! ### Namespaces
 //!
@@ -106,20 +100,19 @@ extern crate sxd_document;
 extern crate quick_error;
 
 use std::borrow::ToOwned;
-use std::collections::HashMap;
-use std::{iter, string};
+use std::string;
 
 use sxd_document::dom::Document;
 
-use nodeset::{Nodeset, Node};
 use parser::Parser;
 use tokenizer::{Tokenizer, TokenDeabbreviator};
 
-pub use expression::Expression;
+pub use context::Context;
 
 #[macro_use]
 pub mod macros;
 pub mod nodeset;
+pub mod context;
 mod axis;
 mod expression;
 pub mod function;
@@ -158,7 +151,7 @@ pub enum Value<'d> {
     /// A string
     String(string::String),
     /// A collection of unique nodes
-    Nodeset(Nodeset<'d>),
+    Nodeset(nodeset::Nodeset<'d>),
 }
 
 fn str_to_num(s: &str) -> f64 {
@@ -220,171 +213,41 @@ impl<'d> From<LiteralValue> for Value<'d> {
     }
 }
 
-/// A mapping of names to XPath functions.
-pub type Functions = HashMap<string::String, Box<function::Function + 'static>>;
-/// A mapping of names to XPath variables.
-pub type Variables<'d> = HashMap<string::String, Value<'d>>;
-/// A mapping of namespace prefixes to namespace URIs.
-pub type Namespaces = HashMap<string::String, string::String>;
+/// A compiled XPath. Construct via [`Factory`][].
+///
+/// [`Factory`]: struct.Factory.html
+pub struct XPath(Box<expression::Expression + 'static>);
 
-/// Contains the context in which XPath expressions are executed. The
-/// context contains functions, variables, namespaces and the context
-/// node.
-///
-/// ### Examples
-///
-/// A complete example showing all optional settings.
-///
-/// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
-/// use std::collections::HashMap;
-/// use sxd_document::parser;
-/// use sxd_xpath::{Factory, EvaluationContext, Value};
-/// use sxd_xpath::function::{self, Function};
-///
-/// struct Sigmoid;
-/// impl Function for Sigmoid {
-///     fn evaluate<'a, 'd>(&self,
-///                         _context: &EvaluationContext<'a, 'd>,
-///                         args: Vec<Value<'d>>)
-///                         -> Result<Value<'d>, function::Error>
-///     {
-///         let mut args = function::Args(args);
-///         args.exactly(1)?;
-///         let val = args.pop_number()?;
-///
-///         let computed = (1.0 + (-val).exp()).recip();
-///
-///         Ok(Value::Number(computed))
-///     }
-/// }
-///
-/// fn main() {
-///     let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
-///         .expect("failed to parse XML");
-///     let document = package.as_document();
-///     let node = document.root().children()[0];
-///
-///     let mut functions = HashMap::new();
-///     function::register_core_functions(&mut functions);
-///     functions.insert("sigmoid".to_string(), Box::new(Sigmoid));
-///
-///     let mut variables = HashMap::new();
-///     variables.insert("t".to_string(), Value::Number(2.0));
-///
-///     let mut namespaces = HashMap::new();
-///     namespaces.insert("neural".to_string(), "net:brain".to_string());
-///
-///     let context = EvaluationContext::new(node,
-///                                          &functions,
-///                                          &variables,
-///                                          &namespaces);
-///
-///     let xpath = "sigmoid(@neural:bonus + $t)";
-///
-///     let factory = Factory::new();
-///     let xpath = factory.build(xpath).expect("Could not compile XPath");
-///     let xpath = xpath.expect("No XPath was compiled");
-///
-///     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
-///
-///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
-/// }
-/// ```
-///
-/// Note that we are using a custom function (`sigmoid`), a variable
-/// (`$t`), a namespace (`neural:`), and the current node is not the
-/// root of the tree but the top-most element.
-///
-#[derive(Copy, Clone)]
-pub struct EvaluationContext<'a, 'd : 'a> {
-    node: Node<'d>,
-    functions: &'a Functions,
-    variables: &'a Variables<'d>,
-    namespaces: &'a Namespaces,
-    position: usize,
-    size: usize,
-}
-
-impl<'a, 'd> EvaluationContext<'a, 'd> {
-    pub fn new<N>(node: N,
-                  functions: &'a Functions,
-                  variables: &'a Variables<'d>,
-                  namespaces: &'a Namespaces)
-                  -> EvaluationContext<'a, 'd>
-        where N: Into<Node<'d>>
+impl XPath {
+    /// Evaluate this expression in the given context.
+    ///
+    /// # Examples
+    ///
+    /// The most common case is to pass in a reference to a [`Context`][]:
+    ///
+    /// ```rust,no-run
+    /// extern crate sxd_document;
+    /// extern crate sxd_xpath;
+    ///
+    /// use sxd_document::dom::Document;
+    /// use sxd_xpath::{XPath, Context};
+    ///
+    /// fn my_evaluate(doc: Document, xpath: XPath) {
+    ///     let mut context = Context::new();
+    ///     let value = xpath.evaluate(&context, doc.root());
+    ///     println!("The result was: {:?}", value);
+    /// }
+    ///
+    /// # fn main() {}
+    /// ```
+    ///
+    /// [`Context`]: context/struct.Context.html
+    pub fn evaluate<'a, 'd: 'a, N>(&self, context: &'a Context<'d>, node: N)
+                                   -> Result<Value<'d>, expression::Error>
+        where N: Into<nodeset::Node<'d>>,
     {
-        EvaluationContext {
-            node: node.into(),
-            functions: functions,
-            variables: variables,
-            namespaces: namespaces,
-            position: 1,
-            size: 1,
-        }
-    }
-
-    fn new_context_for<N>(&self, node: N) -> EvaluationContext<'a, 'd>
-        where N: Into<Node<'d>>
-    {
-        EvaluationContext {
-            node: node.into(),
-            .. *self
-        }
-    }
-
-    fn position(&self) -> usize {
-        self.position
-    }
-
-    fn size(&self) -> usize {
-        self.size
-    }
-
-    fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
-        self.functions.get(name).map(AsRef::as_ref)
-    }
-
-    fn value_of(&self, name: &str) -> Option<&Value<'d>> {
-        self.variables.get(name)
-    }
-
-    fn namespace_for(&self, prefix: &str) -> Option<&str> {
-        self.namespaces.get(prefix).map(|ns| &ns[..])
-    }
-
-    fn predicate_iter<'p>(&'p self, nodes: Nodeset<'d>)
-                          -> EvaluationContextPredicateIter<'a, 'd, 'p>
-    {
-        let sz = nodes.size();
-        EvaluationContextPredicateIter {
-            parent: self,
-            nodes: nodes.into_iter().enumerate(),
-            size: sz,
-        }
-    }
-}
-
-struct EvaluationContextPredicateIter<'a : 'p, 'd : 'a + 'p, 'p> {
-    parent: &'p EvaluationContext<'a, 'd>,
-    nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
-    size: usize,
-}
-
-impl<'a, 'd, 'p> Iterator for EvaluationContextPredicateIter<'a, 'd, 'p> {
-    type Item = EvaluationContext<'a, 'd>;
-
-    fn next(&mut self) -> Option<EvaluationContext<'a, 'd>> {
-        self.nodes.next().map(|(idx, node)| {
-            EvaluationContext {
-                node: node,
-                position: idx + 1,
-                size: self.size,
-                .. *self.parent
-            }
-        })
+        let context = context::Evaluation::new(context, node.into());
+        self.0.evaluate(&context)
     }
 }
 
@@ -400,11 +263,11 @@ impl Factory {
     }
 
     /// Compiles the given string into an XPath structure.
-    pub fn build(&self, xpath: &str) -> parser::ParseResult {
+    pub fn build(&self, xpath: &str) -> Result<Option<XPath>, parser::Error> {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
-        self.parser.parse(deabbreviator)
+        self.parser.parse(deabbreviator).map(|x| x.map(XPath))
     }
 }
 
@@ -469,19 +332,9 @@ pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Val
     let expression = factory.build(xpath)?;
     let expression = expression.ok_or(Error::NoXPath)?;
 
-    let mut functions = HashMap::new();
-    function::register_core_functions(&mut functions);
-    let variables = HashMap::new();
-    let namespaces = HashMap::new();
+    let context = Context::new();
 
-    let context = EvaluationContext::new(
-        document.root(),
-        &functions,
-        &variables,
-        &namespaces,
-    );
-
-    expression.evaluate(&context).map_err(Into::into)
+    expression.evaluate(&context, document.root()).map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -8,7 +8,7 @@ use std::{slice, vec};
 use sxd_document::QName;
 use sxd_document::dom;
 
-use ::EvaluationContext;
+use ::context;
 
 macro_rules! unpack(
     ($enum_name:ident, {
@@ -366,9 +366,9 @@ impl<'d> IntoIterator for Nodeset<'d> {
     }
 }
 
-impl<'a, 'd : 'a> FromIterator<EvaluationContext<'a, 'd>> for Nodeset<'d> {
+impl<'a, 'd : 'a> FromIterator<context::Evaluation<'a, 'd>> for Nodeset<'d> {
     fn from_iter<T>(iterator: T) -> Nodeset<'d>
-        where T: IntoIterator<Item = EvaluationContext<'a, 'd>>
+        where T: IntoIterator<Item = context::Evaluation<'a, 'd>>
     {
         let mut ns = Nodeset::new();
         for n in iterator { ns.add(n.node) };

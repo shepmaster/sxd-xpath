@@ -8,7 +8,8 @@ use std::iter;
 
 use sxd_document::XmlChar;
 
-use ::{EvaluationContext, Functions, Value, str_to_num};
+use ::{Value, str_to_num};
+use ::context;
 use ::nodeset::Nodeset;
 
 /// Types that can be used as XPath functions.
@@ -16,7 +17,7 @@ pub trait Function {
     /// Evaluate this function in a specific context with a specific
     /// set of arguments.
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
 }
 
@@ -164,7 +165,7 @@ impl<'d> Args<'d> {
 
     /// Removes the **last** argument. If no argument is present, the
     /// context node is returned as a nodeset.
-    fn pop_value_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>) -> Value<'d> {
+    fn pop_value_or_context_node<'a>(&mut self, context: &context::Evaluation<'a, 'd>) -> Value<'d> {
         self.0.pop()
             .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
@@ -173,7 +174,7 @@ impl<'d> Args<'d> {
     /// argument is present, the context node is converted to a string
     /// and returned. If there is an argument but it is not a string,
     /// a type mismatch error is returned.
-    fn pop_string_value_or_context_node(&mut self, context: &EvaluationContext) -> Result<String, Error> {
+    fn pop_string_value_or_context_node(&mut self, context: &context::Evaluation) -> Result<String, Error> {
         match self.0.pop() {
             Some(Value::String(s)) => Ok(s),
             Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::String)),
@@ -185,7 +186,7 @@ impl<'d> Args<'d> {
     /// argument is present, the context node is added to a nodeset
     /// and returned. If there is an argument but it is not a nodeset,
     /// a type mismatch error is returned.
-    fn pop_nodeset_or_context_node<'a>(&mut self, context: &EvaluationContext<'a, 'd>)
+    fn pop_nodeset_or_context_node<'a>(&mut self, context: &context::Evaluation<'a, 'd>)
                                        -> Result<Nodeset<'d>, Error>
     {
         match self.0.pop() {
@@ -206,12 +207,12 @@ struct Last;
 
 impl Function for Last {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
         try!(args.exactly(0));
-        Ok(Value::Number(context.size() as f64))
+        Ok(Value::Number(context.size as f64))
     }
 }
 
@@ -219,12 +220,12 @@ struct Position;
 
 impl Function for Position {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
         try!(args.exactly(0));
-        Ok(Value::Number(context.position() as f64))
+        Ok(Value::Number(context.position as f64))
     }
 }
 
@@ -232,7 +233,7 @@ struct Count;
 
 impl Function for Count {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -246,7 +247,7 @@ struct LocalName;
 
 impl Function for LocalName {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -265,7 +266,7 @@ struct NamespaceUri;
 
 impl Function for NamespaceUri {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -284,7 +285,7 @@ struct Name;
 
 impl Function for Name {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -302,7 +303,7 @@ struct StringFn;
 
 impl Function for StringFn {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -316,7 +317,7 @@ struct Concat;
 
 impl Function for Concat {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
@@ -330,7 +331,7 @@ struct TwoStringPredicate(fn(&str, &str) -> bool);
 
 impl Function for TwoStringPredicate {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
@@ -354,7 +355,7 @@ struct SubstringCommon(for<'s> fn(&'s str, &'s str) -> &'s str);
 
 impl Function for SubstringCommon {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
@@ -389,7 +390,7 @@ struct Substring;
 
 impl Function for Substring {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -425,7 +426,7 @@ struct StringLength;
 
 impl Function for StringLength {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -439,7 +440,7 @@ struct NormalizeSpace;
 
 impl Function for NormalizeSpace {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -456,7 +457,7 @@ struct Translate;
 
 impl Function for Translate {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -486,7 +487,7 @@ struct BooleanFn;
 
 impl Function for BooleanFn {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
@@ -499,7 +500,7 @@ struct Not;
 
 impl Function for Not {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -513,7 +514,7 @@ struct BooleanLiteral(bool);
 
 impl Function for BooleanLiteral {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let args = Args(args);
@@ -529,7 +530,7 @@ struct NumberFn;
 
 impl Function for NumberFn {
     fn evaluate<'a, 'd>(&self,
-                        context: &EvaluationContext<'a, 'd>,
+                        context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -543,7 +544,7 @@ struct Sum;
 
 impl Function for Sum {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -558,7 +559,7 @@ struct NumberConvert(fn(f64) -> f64);
 
 impl Function for NumberConvert {
     fn evaluate<'a, 'd>(&self,
-                        _context: &EvaluationContext<'a, 'd>,
+                        _context: &context::Evaluation<'a, 'd>,
                         args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
     {
         let mut args = Args(args);
@@ -587,42 +588,42 @@ fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
 /// [corelib]: https://www.w3.org/TR/xpath/#corelib
-pub fn register_core_functions(functions: &mut Functions) {
-    functions.insert("last".to_owned(), Box::new(Last));
-    functions.insert("position".to_owned(), Box::new(Position));
-    functions.insert("count".to_owned(), Box::new(Count));
-    functions.insert("local-name".to_owned(), Box::new(LocalName));
-    functions.insert("namespace-uri".to_owned(), Box::new(NamespaceUri));
-    functions.insert("name".to_owned(), Box::new(Name));
-    functions.insert("string".to_owned(), Box::new(StringFn));
-    functions.insert("concat".to_owned(), Box::new(Concat));
-    functions.insert("starts-with".to_owned(), Box::new(starts_with()));
-    functions.insert("contains".to_owned(), Box::new(contains()));
-    functions.insert("substring-before".to_owned(), Box::new(substring_before()));
-    functions.insert("substring-after".to_owned(), Box::new(substring_after()));
-    functions.insert("substring".to_owned(), Box::new(Substring));
-    functions.insert("string-length".to_owned(), Box::new(StringLength));
-    functions.insert("normalize-space".to_owned(), Box::new(NormalizeSpace));
-    functions.insert("translate".to_owned(), Box::new(Translate));
-    functions.insert("boolean".to_owned(), Box::new(BooleanFn));
-    functions.insert("not".to_owned(), Box::new(Not));
-    functions.insert("true".to_owned(), Box::new(true_fn()));
-    functions.insert("false".to_owned(), Box::new(false_fn()));
-    functions.insert("number".to_owned(), Box::new(NumberFn));
-    functions.insert("sum".to_owned(), Box::new(Sum));
-    functions.insert("floor".to_owned(), Box::new(floor()));
-    functions.insert("ceiling".to_owned(), Box::new(ceiling()));
-    functions.insert("round".to_owned(), Box::new(round()));
+pub fn register_core_functions(context: &mut context::Context) {
+    context.set_function("last", Last);
+    context.set_function("position", Position);
+    context.set_function("count", Count);
+    context.set_function("local-name", LocalName);
+    context.set_function("namespace-uri", NamespaceUri);
+    context.set_function("name", Name);
+    context.set_function("string", StringFn);
+    context.set_function("concat", Concat);
+    context.set_function("starts-with", starts_with());
+    context.set_function("contains", contains());
+    context.set_function("substring-before", substring_before());
+    context.set_function("substring-after", substring_after());
+    context.set_function("substring", Substring);
+    context.set_function("string-length", StringLength);
+    context.set_function("normalize-space", NormalizeSpace);
+    context.set_function("translate", Translate);
+    context.set_function("boolean", BooleanFn);
+    context.set_function("not", Not);
+    context.set_function("true", true_fn());
+    context.set_function("false", false_fn());
+    context.set_function("number", NumberFn);
+    context.set_function("sum", Sum);
+    context.set_function("floor", floor());
+    context.set_function("ceiling", ceiling());
+    context.set_function("round", round());
 }
 
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::collections::HashMap;
 
     use sxd_document::Package;
 
-    use ::{EvaluationContext, LiteralValue, Value, Functions, Variables, Namespaces};
+    use ::{LiteralValue, Value};
+    use ::context;
     use ::nodeset::Node;
 
     use super::{
@@ -653,17 +654,13 @@ mod test {
     };
 
     struct Setup<'d> {
-        functions: Functions,
-        variables: Variables<'d>,
-        namespaces: Namespaces,
+        context: context::Context<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new() -> Setup<'d> {
             Setup {
-                functions: HashMap::new(),
-                variables: HashMap::new(),
-                namespaces: HashMap::new(),
+                context: context::Context::without_core_functions(),
             }
         }
 
@@ -672,9 +669,7 @@ mod test {
             where N: Into<Node<'d>>,
                   F: Function
         {
-            let context = EvaluationContext::new(
-                node, &self.functions, &self.variables, &self.namespaces
-            );
+            let context = context::Evaluation::new(&self.context, node.into());
             f.evaluate(&context, args)
         }
     }

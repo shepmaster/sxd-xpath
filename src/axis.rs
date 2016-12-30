@@ -2,7 +2,7 @@ extern crate sxd_document;
 
 use std::fmt;
 
-use ::EvaluationContext;
+use ::context;
 use ::node_test::NodeTest;
 use ::nodeset::{self, Nodeset, Node};
 
@@ -18,7 +18,7 @@ pub trait AxisLike: fmt::Debug {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
     fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
+                            context:   &context::Evaluation<'a, 'd>,
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>);
 
@@ -47,7 +47,7 @@ pub enum Axis {
 
 impl AxisLike for Axis {
     fn select_nodes<'a, 'd>(&self,
-                            context:   &EvaluationContext<'a, 'd>,
+                            context:   &context::Evaluation<'a, 'd>,
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
@@ -142,7 +142,7 @@ impl AxisLike for Axis {
     }
 }
 
-fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
+fn preceding_following_sibling<'a, 'd>(context:   &context::Evaluation<'a, 'd>,
                                        node_test: &NodeTest,
                                        result:    &mut Nodeset<'d>,
                                        f: fn(&Node<'d>) -> Vec<Node<'d>>)
@@ -154,10 +154,10 @@ fn preceding_following_sibling<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
     }
 }
 
-fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
-             node_test: &NodeTest,
-             result:    &mut Nodeset<'d>,
-             f: fn(&Node<'d>) -> Vec<Node<'d>>)
+fn preceding_following<'a, 'd>(context:   &context::Evaluation<'a, 'd>,
+                               node_test: &NodeTest,
+                               result:    &mut Nodeset<'d>,
+                               f: fn(&Node<'d>) -> Vec<Node<'d>>)
 {
     let mut node = context.node;
 
@@ -177,12 +177,10 @@ fn preceding_following<'a, 'd>(context:   &EvaluationContext<'a, 'd>,
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
     use sxd_document::Package;
     use sxd_document::dom;
 
-    use ::EvaluationContext;
+    use ::context::{self, Context};
     use ::node_test::NodeTest;
     use ::nodeset::{Nodeset, Node};
 
@@ -192,7 +190,7 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test<'a, 'd>(&self, context: &EvaluationContext<'a, 'd>, result: &mut Nodeset<'d>) {
+        fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
             result.add(context.node)
         }
     }
@@ -200,15 +198,12 @@ mod test {
     fn execute<'n, N>(axis: Axis, node: N) -> Nodeset<'n>
         where N: Into<Node<'n>>,
     {
-        let functions = &HashMap::new();
-        let variables = &HashMap::new();
-        let namespaces = &HashMap::new();
-
-        let context = &EvaluationContext::new(node, functions, variables, namespaces);
+        let context = Context::without_core_functions();
+        let context = context::Evaluation::new(&context, node.into());
         let node_test = &DummyNodeTest;
         let mut result = Nodeset::new();
 
-        axis.select_nodes(context, node_test, &mut result);
+        axis.select_nodes(&context, node_test, &mut result);
 
         result
     }
