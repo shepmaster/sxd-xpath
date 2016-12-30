@@ -361,7 +361,7 @@ impl Function for SubstringCommon {
         let args = Args(args);
         try!(args.exactly(2));
         let args = try!(args.into_strings());
-        let s = self.0(&*args[0], &*args[1]);
+        let s = self.0(&args[0], &args[1]);
         Ok(Value::String(s.to_owned()))
     }
 }

@@ -49,6 +49,14 @@ pub trait Expression: fmt::Debug {
     fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error>;
 }
 
+impl<T: ?Sized> Expression for Box<T>
+    where T: Expression
+{
+    fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
+        (**self).evaluate(context)
+    }
+}
+
 pub type SubExpression = Box<Expression + 'static>;
 
 macro_rules! binary_constructor(
@@ -445,7 +453,7 @@ impl<A> ParameterizedStep<A>
 
         for node in starting_nodes.iter() {
             let child_context = context.new_context_for(node);
-            self.axis.select_nodes(&child_context, &*self.node_test, &mut result);
+            self.axis.select_nodes(&child_context, &self.node_test, &mut result);
         }
 
         result
