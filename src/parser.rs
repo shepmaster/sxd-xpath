@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use self::Error::*;
 
-use ::LiteralValue;
+use ::Value;
 use ::token::{Token, AxisName, NodeTestName};
 use ::tokenizer::{self, TokenResult};
 use ::axis::{Axis, AxisLike, PrincipalNodeType};
@@ -280,7 +280,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(Box::new(expression::Literal::from(LiteralValue::String(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::String(value)))))
         } else {
             Ok(None)
         }
@@ -291,7 +291,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(Box::new(expression::Literal::from(LiteralValue::Number(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::Number(value)))))
         } else {
             Ok(None)
         }
