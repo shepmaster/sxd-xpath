@@ -384,7 +384,7 @@ impl Predicate {
     fn select<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, nodes: Nodeset<'d>)
                       -> Result<Nodeset<'d>, Error>
     {
-        context.predicate_iter(nodes).filter_map(|ctx| {
+        context.new_contexts_for(nodes).filter_map(|ctx| {
             match self.matches(&ctx) {
                 Ok(true) => Some(Ok(ctx)),
                 Ok(false) => None,

@@ -197,6 +197,8 @@ impl<'a, 'd> Borrowed<'a, 'd> {
     }
 }
 
+/// The context during evaluation of an XPath expression. Used when
+/// implementing custom functions.
 #[derive(Copy, Clone)]
 pub struct Evaluation<'a, 'd : 'a> {
     /// The context node
@@ -211,11 +213,11 @@ pub struct Evaluation<'a, 'd : 'a> {
 }
 
 impl<'a, 'd> Evaluation<'a, 'd> {
-    pub fn new(node: Node<'d>,
-               functions: &'a Functions,
-               variables: &'a Variables<'d>,
-               namespaces: &'a Namespaces)
-               -> Evaluation<'a, 'd>
+    fn new(node: Node<'d>,
+           functions: &'a Functions,
+           variables: &'a Variables<'d>,
+           namespaces: &'a Namespaces)
+           -> Evaluation<'a, 'd>
     {
         Evaluation {
             node: node,
@@ -227,6 +229,7 @@ impl<'a, 'd> Evaluation<'a, 'd> {
         }
     }
 
+    /// Creates a new context node using the provided node
     pub fn new_context_for<N>(&self, node: N) -> Evaluation<'a, 'd>
         where N: Into<Node<'d>>
     {
@@ -236,21 +239,25 @@ impl<'a, 'd> Evaluation<'a, 'd> {
         }
     }
 
+    /// Looks up the function with the given name
     pub fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
         self.functions.get(name).map(AsRef::as_ref)
     }
 
+    /// Looks up the value of the variable
     pub fn value_of(&self, name: &str) -> Option<&Value<'d>> {
         self.variables.get(name)
     }
 
+    /// Looks up the namespace URI for the given prefix
     pub fn namespace_for(&self, prefix: &str) -> Option<&str> {
         self.namespaces.get(prefix).map(String::as_str)
     }
 
-    pub fn predicate_iter(self, nodes: Nodeset<'d>) -> EvaluationPredicateIter<'a, 'd> {
+    /// Yields a new `Evaluation` context for each node in the nodeset.
+    pub fn new_contexts_for(self, nodes: Nodeset<'d>) -> EvaluationNodesetIter<'a, 'd> {
         let sz = nodes.size();
-        EvaluationPredicateIter {
+        EvaluationNodesetIter {
             parent: self,
             nodes: nodes.into_iter().enumerate(),
             size: sz,
@@ -276,13 +283,14 @@ impl<'a, 'd> From<Borrowed<'a, 'd>> for Evaluation<'a, 'd> {
     }
 }
 
-pub struct EvaluationPredicateIter<'a, 'd: 'a> {
+/// An iterator for the contexts of each node in a nodeset
+pub struct EvaluationNodesetIter<'a, 'd: 'a> {
     parent: Evaluation<'a, 'd>,
     nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
     size: usize,
 }
 
-impl<'a, 'd> Iterator for EvaluationPredicateIter<'a, 'd> {
+impl<'a, 'd> Iterator for EvaluationNodesetIter<'a, 'd> {
     type Item = Evaluation<'a, 'd>;
 
     fn next(&mut self) -> Option<Evaluation<'a, 'd>> {
