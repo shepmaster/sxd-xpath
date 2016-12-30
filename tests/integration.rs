@@ -86,8 +86,8 @@ impl<'d> Setup<'d> {
 struct ConstantValueFunction(f64);
 
 impl function::Function for ConstantValueFunction {
-    fn evaluate<'a, 'd>(&self,
-                        _context: &context::Evaluation<'a, 'd>,
+    fn evaluate<'c, 'd>(&self,
+                        _context: &context::Evaluation<'c, 'd>,
                         _args: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
     {
         Ok(Value::Number(self.0))

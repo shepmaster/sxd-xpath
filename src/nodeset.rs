@@ -348,7 +348,7 @@ fn build_ordering_of_document(doc: dom::Document) -> HashMap<Node, usize> {
     order
 }
 
-impl<'a, 'd : 'a> IntoIterator for &'a Nodeset<'d> {
+impl<'a, 'd: 'a> IntoIterator for &'a Nodeset<'d> {
     type Item = Node<'d>;
     type IntoIter = Iter<'a, 'd>;
 
@@ -366,9 +366,9 @@ impl<'d> IntoIterator for Nodeset<'d> {
     }
 }
 
-impl<'a, 'd : 'a> FromIterator<context::Evaluation<'a, 'd>> for Nodeset<'d> {
+impl<'c, 'd: 'c> FromIterator<context::Evaluation<'c, 'd>> for Nodeset<'d> {
     fn from_iter<T>(iterator: T) -> Nodeset<'d>
-        where T: IntoIterator<Item = context::Evaluation<'a, 'd>>
+        where T: IntoIterator<Item = context::Evaluation<'c, 'd>>
     {
         let mut ns = Nodeset::new();
         for n in iterator { ns.add(n.node) };
@@ -376,11 +376,11 @@ impl<'a, 'd : 'a> FromIterator<context::Evaluation<'a, 'd>> for Nodeset<'d> {
     }
 }
 
-pub struct Iter<'a, 'd : 'a> {
+pub struct Iter<'a, 'd: 'a> {
     iter: slice::Iter<'a, Node<'d>>,
 }
 
-impl<'a, 'd : 'a> Iterator for Iter<'a, 'd> {
+impl<'a, 'd: 'a> Iterator for Iter<'a, 'd> {
     type Item = Node<'d>;
     fn next(&mut self) -> Option<Node<'d>> { self.iter.next().cloned() }
 }

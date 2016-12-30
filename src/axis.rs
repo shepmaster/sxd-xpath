@@ -17,8 +17,8 @@ pub enum PrincipalNodeType {
 pub trait AxisLike: fmt::Debug {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &context::Evaluation<'a, 'd>,
+    fn select_nodes<'c, 'd>(&self,
+                            context:   &context::Evaluation<'c, 'd>,
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>);
 
@@ -46,8 +46,8 @@ pub enum Axis {
 }
 
 impl AxisLike for Axis {
-    fn select_nodes<'a, 'd>(&self,
-                            context:   &context::Evaluation<'a, 'd>,
+    fn select_nodes<'c, 'd>(&self,
+                            context:   &context::Evaluation<'c, 'd>,
                             node_test: &NodeTest,
                             result:    &mut Nodeset<'d>)
     {
@@ -142,7 +142,7 @@ impl AxisLike for Axis {
     }
 }
 
-fn preceding_following_sibling<'a, 'd>(context:   &context::Evaluation<'a, 'd>,
+fn preceding_following_sibling<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
                                        node_test: &NodeTest,
                                        result:    &mut Nodeset<'d>,
                                        f: fn(&Node<'d>) -> Vec<Node<'d>>)
@@ -154,7 +154,7 @@ fn preceding_following_sibling<'a, 'd>(context:   &context::Evaluation<'a, 'd>,
     }
 }
 
-fn preceding_following<'a, 'd>(context:   &context::Evaluation<'a, 'd>,
+fn preceding_following<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
                                node_test: &NodeTest,
                                result:    &mut Nodeset<'d>,
                                f: fn(&Node<'d>) -> Vec<Node<'d>>)
@@ -190,7 +190,7 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
+        fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
             result.add(context.node)
         }
     }
