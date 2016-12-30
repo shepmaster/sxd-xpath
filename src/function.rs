@@ -739,13 +739,9 @@ mod test {
 
     #[test]
     fn local_name_is_empty_for_empty_nodeset() {
-        let package = Package::new();
-        let doc = package.as_document();
-        let setup = Setup::new();
-
-        let r = setup.evaluate(doc.root(), LocalName, args![nodeset![]]);
-
-        assert_eq!(Ok(Value::String("".to_owned())), r);
+        evaluate_literal(LocalName, args![nodeset![]], |r| {
+            assert_eq!(Ok(Value::String("".to_owned())), r);
+        });
     }
 
     #[test]

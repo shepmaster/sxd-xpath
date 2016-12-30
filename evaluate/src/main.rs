@@ -2,7 +2,6 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 extern crate getopts;
 
-use std::borrow::ToOwned;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
