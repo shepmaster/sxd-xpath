@@ -211,9 +211,35 @@ impl<'d> From<LiteralValue> for Value<'d> {
     }
 }
 
+/// A compiled XPath. Construct via [`Factory`][].
+///
+/// [`Factory`]: struct.Factory.html
 pub struct XPath(Box<expression::Expression + 'static>);
 
 impl XPath {
+    /// Evaluate this expression in the given context.
+    ///
+    /// # Examples
+    ///
+    /// The most common case is to pass in a reference to a [`Context`][]:
+    ///
+    /// ```rust,no-run
+    /// extern crate sxd_document;
+    /// extern crate sxd_xpath;
+    ///
+    /// use sxd_document::dom::Document;
+    /// use sxd_xpath::{XPath, Context};
+    ///
+    /// fn my_evaluate(doc: Document, xpath: XPath) {
+    ///     let mut context = Context::new(doc.root());
+    ///     let value = xpath.evaluate(&context);
+    ///     println!("The result was: {:?}", value);
+    /// }
+    ///
+    /// # fn main() {}
+    /// ```
+    ///
+    /// [`Context`]: context/struct.Context.html
     pub fn evaluate<'a, 'd: 'a, C>(&self, context: C) -> Result<Value<'d>, expression::Error>
         where C: Into<context::Evaluation<'a, 'd>>,
     {
