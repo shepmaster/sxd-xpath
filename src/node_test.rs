@@ -9,6 +9,14 @@ pub trait NodeTest: fmt::Debug {
     fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>);
 }
 
+impl<T: ?Sized> NodeTest for Box<T>
+    where T: NodeTest,
+{
+    fn test<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>, result: &mut Nodeset<'d>) {
+        (**self).test(context, result)
+    }
+}
+
 pub type SubNodeTest = Box<NodeTest + 'static>;
 
 #[derive(Debug, Clone, PartialEq)]

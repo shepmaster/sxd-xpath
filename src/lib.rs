@@ -122,25 +122,6 @@ mod parser;
 mod token;
 mod tokenizer;
 
-#[derive(Debug, Clone, PartialEq)]
-enum LiteralValue {
-    Boolean(bool),
-    Number(f64),
-    String(string::String),
-}
-
-#[cfg(test)]
-impl<'d> From<Value<'d>> for LiteralValue {
-    fn from(other: Value<'d>) -> LiteralValue {
-        match other {
-            Value::Boolean(v) => LiteralValue::Boolean(v),
-            Value::Number(v)  => LiteralValue::Number(v),
-            Value::String(v)  => LiteralValue::String(v),
-            Value::Nodeset(_) => panic!("Cannot convert a nodeset to a literal"),
-        }
-    }
-}
-
 // These belong in the the document
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -209,6 +190,8 @@ impl<'a> From<QName<'a>> for OwnedQName {
     }
 }
 
+type LiteralValue = Value<'static>;
+
 /// The primary types of values that an XPath expression accepts
 /// as an argument or returns as a result.
 #[derive(Debug, Clone, PartialEq)]
@@ -268,16 +251,6 @@ impl<'d> Value<'d> {
                 Some(n) => n.string_value(),
                 None => "".to_owned(),
             },
-        }
-    }
-}
-
-impl<'d> From<LiteralValue> for Value<'d> {
-    fn from(other: LiteralValue) -> Value<'d> {
-        match other {
-            LiteralValue::Boolean(v) => Value::Boolean(v),
-            LiteralValue::Number(v)  => Value::Number(v),
-            LiteralValue::String(v)  => Value::String(v),
         }
     }
 }

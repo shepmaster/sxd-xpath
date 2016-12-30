@@ -361,7 +361,7 @@ impl Function for SubstringCommon {
         let args = Args(args);
         try!(args.exactly(2));
         let args = try!(args.into_strings());
-        let s = self.0(&*args[0], &*args[1]);
+        let s = self.0(&args[0], &args[1]);
         Ok(Value::String(s.to_owned()))
     }
 }
@@ -653,6 +653,19 @@ mod test {
         round,
     };
 
+    /// Converts each argument into a `Value` and packs them into a
+    /// vector.
+    macro_rules! args {
+        ( $($val:expr,)* ) => {
+            vec![
+                $( Value::from($val), )*
+            ]
+        };
+        ( $($val:expr),* ) => {
+            args![$($val, )*]
+        };
+    }
+
     struct Setup<'d> {
         context: context::Context<'d>,
     }
@@ -674,31 +687,29 @@ mod test {
         }
     }
 
-    fn evaluate_literal<F>(f: F, args: Vec<LiteralValue>) -> Result<LiteralValue, Error>
-        where F: Function
+    fn evaluate_literal<F, F2, T>(f: F, args: Vec<LiteralValue>, rf: F2) -> T
+        where F: Function,
+              F2: FnOnce(Result<Value, Error>) -> T,
     {
         let package = Package::new();
         let doc = package.as_document();
         let setup = Setup::new();
 
-        let args = args.into_iter().map(Into::into).collect();
-
-        let r = setup.evaluate(doc.root(), f, args);
-
-        r.map(Into::into)
+        rf(setup.evaluate(doc.root(), f, args))
     }
 
     #[test]
     fn last_returns_context_size() {
-        let r = evaluate_literal(Last, vec![]);
-        assert_eq!(Ok(LiteralValue::Number(1.0)), r);
+        evaluate_literal(Last, args![], |r| {
+            assert_eq!(Ok(Value::Number(1.0)), r);
+        });
     }
 
     #[test]
     fn position_returns_context_position() {
-        let r = evaluate_literal(Position, vec![]);
-
-        assert_eq!(Ok(LiteralValue::Number(1.0)), r);
+        evaluate_literal(Position, args![], |r| {
+            assert_eq!(Ok(Value::Number(1.0)), r);
+        });
     }
 
     #[test]
@@ -707,8 +718,7 @@ mod test {
         let doc = package.as_document();
         let setup = Setup::new();
 
-        let nodeset = nodeset![doc.root()];
-        let r = setup.evaluate(doc.root(), Count, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), Count, args![nodeset![doc.root()]]);
 
         assert_eq!(Ok(Value::Number(1.0)), r);
     }
@@ -722,8 +732,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         doc.root().append_child(e);
 
-        let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), LocalName, args![nodeset![e]]);
 
         assert_eq!(Ok(Value::String("wow".to_owned())), r);
     }
@@ -734,8 +743,7 @@ mod test {
         let doc = package.as_document();
         let setup = Setup::new();
 
-        let nodeset = nodeset![];
-        let r = setup.evaluate(doc.root(), LocalName, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), LocalName, args![nodeset![]]);
 
         assert_eq!(Ok(Value::String("".to_owned())), r);
     }
@@ -749,8 +757,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         doc.root().append_child(e);
 
-        let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), NamespaceUri, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), NamespaceUri, args![nodeset![e]]);
 
         assert_eq!(Ok(Value::String("uri".to_owned())), r);
     }
@@ -765,94 +772,74 @@ mod test {
         e.register_prefix("prefix", "uri");
         doc.root().append_child(e);
 
-        let nodeset = nodeset![e];
-        let r = setup.evaluate(doc.root(), Name, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), Name, args![nodeset![e]]);
 
         assert_eq!(Ok(Value::String("prefix:wow".to_owned())), r);
     }
 
     #[test]
     fn string_converts_to_string() {
-        let args = vec![LiteralValue::Boolean(true)];
-        let r = evaluate_literal(StringFn, args);
-
-        assert_eq!(Ok(LiteralValue::String("true".to_owned())), r);
+        evaluate_literal(StringFn, args![true], |r| {
+            assert_eq!(Ok(Value::String("true".to_owned())), r);
+        });
     }
 
     #[test]
     fn concat_combines_strings() {
-        let args = vec![LiteralValue::String("hello".to_owned()),
-                        LiteralValue::String(" ".to_owned()),
-                        LiteralValue::String("world".to_owned())];
-        let r = evaluate_literal(Concat, args);
-
-        assert_eq!(Ok(LiteralValue::String("hello world".to_owned())), r);
+        evaluate_literal(Concat, args!["hello", " ", "world"], |r| {
+            assert_eq!(Ok(Value::String("hello world".to_owned())), r);
+        });
     }
 
     #[test]
     fn starts_with_checks_prefixes() {
-        let args = vec![LiteralValue::String("hello".to_owned()),
-                        LiteralValue::String("he".to_owned())];
-        let r = evaluate_literal(starts_with(), args);
-
-        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
+        evaluate_literal(starts_with(), args!["hello", "he"], |r| {
+            assert_eq!(Ok(Value::Boolean(true)), r);
+        });
     }
 
     #[test]
     fn contains_looks_for_a_needle() {
-        let args = vec![LiteralValue::String("astronomer".to_owned()),
-                        LiteralValue::String("ono".to_owned())];
-        let r = evaluate_literal(contains(), args);
-
-        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
+        evaluate_literal(contains(), args!["astronomer", "ono"], |r| {
+            assert_eq!(Ok(Value::Boolean(true)), r);
+        });
     }
 
     #[test]
     fn substring_before_slices_before() {
-        let args = vec![LiteralValue::String("1999/04/01".to_owned()),
-                        LiteralValue::String("/".to_owned())];
-        let r = evaluate_literal(substring_before(), args);
-
-        assert_eq!(Ok(LiteralValue::String("1999".to_owned())), r);
+        evaluate_literal(substring_before(), args!["1999/04/01", "/"], |r| {
+            assert_eq!(Ok(Value::String("1999".to_owned())), r);
+        });
     }
 
     #[test]
     fn substring_after_slices_after() {
-        let args = vec![LiteralValue::String("1999/04/01".to_owned()),
-                        LiteralValue::String("/".to_owned())];
-        let r = evaluate_literal(substring_after(), args);
-
-        assert_eq!(Ok(LiteralValue::String("04/01".to_owned())), r);
+        evaluate_literal(substring_after(), args!["1999/04/01", "/"], |r| {
+            assert_eq!(Ok(Value::String("04/01".to_owned())), r);
+        });
     }
 
     #[test]
     fn substring_is_one_indexed() {
-        let args = vec![LiteralValue::String("あいうえお".to_owned()),
-                        LiteralValue::Number(2.0)];
-        let r = evaluate_literal(Substring, args);
-
-        assert_eq!(Ok(LiteralValue::String("いうえお".to_owned())), r);
+        evaluate_literal(Substring, args!["あいうえお", 2.0], |r| {
+            assert_eq!(Ok(Value::String("いうえお".to_owned())), r);
+        });
     }
 
     #[test]
     fn substring_has_optional_length() {
-        let args = vec![LiteralValue::String("あいうえお".to_owned()),
-                        LiteralValue::Number(2.0),
-                        LiteralValue::Number(3.0)];
-        let r = evaluate_literal(Substring, args);
-
-        assert_eq!(Ok(LiteralValue::String("いうえ".to_owned())), r);
+        evaluate_literal(Substring, args!["あいうえお", 2.0, 3.0], |r| {
+            assert_eq!(Ok(Value::String("いうえ".to_owned())), r);
+        });
     }
 
     fn substring_test(s: &str, start: f64, len: f64) -> String {
-        let args = vec![LiteralValue::String(s.to_owned()),
-                        LiteralValue::Number(start),
-                        LiteralValue::Number(len)];
-
-        match evaluate_literal(Substring, args) {
-            Ok(LiteralValue::String(s)) => s,
-            r => panic!("substring failed: {:?}", r),
-        }
+        evaluate_literal(Substring, args![s, start, len], |r| {
+            match r {
+                Ok(Value::String(s)) => s,
+                r => panic!("substring failed: {:?}", r),
+            }
+        })
     }
 
     #[test]
@@ -887,45 +874,39 @@ mod test {
 
     #[test]
     fn string_length_counts_characters() {
-        let args = vec![LiteralValue::String("日本語".to_owned())];
-        let r = evaluate_literal(StringLength, args);
-
-        assert_eq!(Ok(LiteralValue::Number(3.0)), r);
+        evaluate_literal(StringLength, args!["日本語"], |r| {
+            assert_eq!(Ok(Value::Number(3.0)), r);
+        });
     }
 
     #[test]
     fn normalize_space_removes_leading_space() {
-        let args = vec![LiteralValue::String("\t hello".to_owned())];
-        let r = evaluate_literal(NormalizeSpace, args);
-
-        assert_eq!(Ok(LiteralValue::String("hello".to_owned())), r);
+        evaluate_literal(NormalizeSpace, args!["\t hello"], |r| {
+            assert_eq!(Ok(Value::String("hello".to_owned())), r);
+        });
     }
 
     #[test]
     fn normalize_space_removes_trailing_space() {
-        let args = vec![LiteralValue::String("hello\r\n".to_owned())];
-        let r = evaluate_literal(NormalizeSpace, args);
-
-        assert_eq!(Ok(LiteralValue::String("hello".to_owned())), r);
+        evaluate_literal(NormalizeSpace, args!["hello\r\n"], |r| {
+            assert_eq!(Ok(Value::String("hello".to_owned())), r);
+        });
     }
 
     #[test]
     fn normalize_space_squashes_intermediate_space() {
-        let args = vec![LiteralValue::String("hello\t\r\n world".to_owned())];
-        let r = evaluate_literal(NormalizeSpace, args);
-
-        assert_eq!(Ok(LiteralValue::String("hello world".to_owned())), r);
+        evaluate_literal(NormalizeSpace, args!["hello\t\r\n world"], |r| {
+            assert_eq!(Ok(Value::String("hello world".to_owned())), r);
+        });
     }
 
     fn translate_test(s: &str, from: &str, to: &str) -> String {
-        let args = vec![LiteralValue::String(s.to_owned()),
-                        LiteralValue::String(from.to_owned()),
-                        LiteralValue::String(to.to_owned())];
-
-        match evaluate_literal(Translate, args) {
-            Ok(LiteralValue::String(s)) => s,
-            r => panic!("translate failed: {:?}", r)
-        }
+        evaluate_literal(Translate, args![s, from, to], |r| {
+            match r {
+                Ok(Value::String(s)) => s,
+                r => panic!("translate failed: {:?}", r)
+            }
+        })
     }
 
     #[test]
@@ -955,18 +936,16 @@ mod test {
 
     #[test]
     fn boolean_converts_to_boolean() {
-        let args = vec![LiteralValue::String("false".to_owned())];
-        let r = evaluate_literal(BooleanFn, args);
-
-        assert_eq!(Ok(LiteralValue::Boolean(true)), r);
+        evaluate_literal(BooleanFn, args!["false"], |r| {
+            assert_eq!(Ok(Value::Boolean(true)), r);
+        });
     }
 
     #[test]
     fn number_converts_to_number() {
-        let args = vec![LiteralValue::String(" -1.2 ".to_owned())];
-        let r = evaluate_literal(NumberFn, args);
-
-        assert_eq!(Ok(LiteralValue::Number(-1.2)), r);
+        evaluate_literal(NumberFn, args![" -1.2 "], |r| {
+            assert_eq!(Ok(Value::Number(-1.2)), r);
+        });
     }
 
     #[test]
@@ -978,8 +957,7 @@ mod test {
         let c = doc.create_comment("-32.0");
         let t = doc.create_text("98.7");
 
-        let nodeset = nodeset![c, t];
-        let r = setup.evaluate(doc.root(), Sum, vec![Value::Nodeset(nodeset)]);
+        let r = setup.evaluate(doc.root(), Sum, args![nodeset![c, t]]);
 
         assert_eq!(Ok(Value::Number(66.7)), r);
     }
@@ -987,16 +965,16 @@ mod test {
     fn assert_number<F>(f: F, val: f64, expected: f64)
         where F: Function
     {
-        let r = evaluate_literal(f, vec![LiteralValue::Number(val)]);
-
-        if expected.is_nan() {
-            match r {
-                Ok(LiteralValue::Number(a)) => assert!(a.is_nan(), "{} should be NaN", a),
-                _ => assert!(false, "{:?} did not evaluate correctly", r),
+        evaluate_literal(f, args![val], |r| {
+            if expected.is_nan() {
+                match r {
+                    Ok(Value::Number(a)) => assert!(a.is_nan(), "{} should be NaN", a),
+                    _ => assert!(false, "{:?} did not evaluate correctly", r),
+                }
+            } else {
+                assert_eq!(Ok(Value::Number(expected)), r);
             }
-        } else {
-            assert_eq!(Ok(LiteralValue::Number(expected)), r);
-        }
+        });
     }
 
     #[test]

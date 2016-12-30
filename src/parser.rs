@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use self::Error::*;
 
-use ::LiteralValue;
+use ::Value;
 use ::token::{Token, AxisName, NodeTestName};
 use ::tokenizer::{self, TokenResult};
 use ::axis::{Axis, AxisLike, PrincipalNodeType};
@@ -280,7 +280,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(Box::new(expression::Literal::from(LiteralValue::String(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::String(value)))))
         } else {
             Ok(None)
         }
@@ -291,7 +291,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(Box::new(expression::Literal::from(LiteralValue::Number(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::Number(value)))))
         } else {
             Ok(None)
         }
@@ -782,12 +782,15 @@ mod test {
             self.parse_raw(tokens).unwrap().unwrap()
         }
 
-        fn evaluate(&self, expr: &Expression) -> Value<'d> {
+        fn evaluate<E>(&self, expr: E) -> Value<'d>
+            where E: Expression,
+        {
             self.evaluate_on(expr, self.doc.top_node())
         }
 
-        fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
-            where N: Into<Node<'d>>
+        fn evaluate_on<E, N>(&self, expr: E, node: N) -> Value<'d>
+            where E: Expression,
+                  N: Into<Node<'d>>,
         {
             let context = context::Evaluation::new(&self.context, node.into());
             expr.evaluate(&context).unwrap()
@@ -805,7 +808,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![hello], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![hello], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -824,7 +827,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![world], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![world], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -840,7 +843,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -857,7 +860,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(&*expr, hello));
+        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(expr, hello));
     }
 
     #[test]
@@ -875,7 +878,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![two], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![two], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -893,7 +896,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![one, two], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![one, two], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -911,7 +914,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![attr], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![attr], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -929,7 +932,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        match ex.evaluate_on(&*expr, one) {
+        match ex.evaluate_on(expr, one) {
             Value::Nodeset(ns) => {
                 assert_eq!(1, ns.size());
                 match ns.into_iter().next() {
@@ -955,7 +958,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![element], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![element], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -970,7 +973,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![two], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![two], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -985,7 +988,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![two], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![two], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -1000,7 +1003,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![text], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![text], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -1015,7 +1018,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![two], ex.evaluate_on(&*expr, one));
+        assert_eq!(nodeset![two], ex.evaluate_on(expr, one));
     }
 
     #[test]
@@ -1033,7 +1036,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![text], ex.evaluate_on(&*expr, text));
+        assert_eq!(nodeset![text], ex.evaluate_on(expr, text));
     }
 
     #[test]
@@ -1053,7 +1056,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![second], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![second], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -1066,7 +1069,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(String("string".to_owned()), ex.evaluate(&*expr));
+        assert_eq!(String("string".to_owned()), ex.evaluate(expr));
     }
 
     #[test]
@@ -1092,7 +1095,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![first, second], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![first, second], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -1114,7 +1117,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![first, second], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![first, second], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -1136,7 +1139,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -1159,7 +1162,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![second], ex.evaluate_on(&*expr, doc.top_node()));
+        assert_eq!(nodeset![second], ex.evaluate_on(expr, doc.top_node()));
     }
 
     #[test]
@@ -1179,7 +1182,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1203,7 +1206,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1216,7 +1219,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(3.2), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(3.2), ex.evaluate(expr));
     }
 
     #[test]
@@ -1233,7 +1236,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(3.3), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(3.3), ex.evaluate(expr));
     }
 
     #[test]
@@ -1252,7 +1255,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(6.6), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(6.6), ex.evaluate(expr));
     }
 
     #[test]
@@ -1269,7 +1272,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(-1.1), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(-1.1), ex.evaluate(expr));
     }
 
     #[test]
@@ -1288,7 +1291,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(-4.4), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(-4.4), ex.evaluate(expr));
     }
 
     #[test]
@@ -1305,7 +1308,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(2.42), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(2.42), ex.evaluate(expr));
     }
 
     #[test]
@@ -1322,7 +1325,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(71.0), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(71.0), ex.evaluate(expr));
     }
 
     #[test]
@@ -1339,7 +1342,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(1.1), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(1.1), ex.evaluate(expr));
     }
 
     #[test]
@@ -1355,7 +1358,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(-7.2), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(-7.2), ex.evaluate(expr));
     }
 
     #[test]
@@ -1373,7 +1376,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(-7.2), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(-7.2), ex.evaluate(expr));
     }
 
     #[test]
@@ -1390,7 +1393,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(true), ex.evaluate(&*expr));
+        assert_eq!(Boolean(true), ex.evaluate(expr));
     }
 
     #[test]
@@ -1411,7 +1414,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(true), ex.evaluate(&*expr));
+        assert_eq!(Boolean(true), ex.evaluate(expr));
     }
 
     #[test]
@@ -1428,7 +1431,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1445,7 +1448,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1462,7 +1465,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1479,7 +1482,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1496,7 +1499,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(true), ex.evaluate(&*expr));
+        assert_eq!(Boolean(true), ex.evaluate(expr));
     }
 
     #[test]
@@ -1513,7 +1516,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(false), ex.evaluate(&*expr));
+        assert_eq!(Boolean(false), ex.evaluate(expr));
     }
 
     #[test]
@@ -1530,7 +1533,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(Boolean(true), ex.evaluate(&*expr));
+        assert_eq!(Boolean(true), ex.evaluate(expr));
     }
 
     #[test]
@@ -1547,7 +1550,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(1.1), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(1.1), ex.evaluate(expr));
     }
 
     #[test]
@@ -1561,7 +1564,7 @@ mod test {
         ex.context.set_variable("variable-name", 12.3);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(12.3), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(12.3), ex.evaluate(expr));
     }
 
     #[test]
@@ -1576,7 +1579,7 @@ mod test {
         ex.context.set_variable(("uri:vars", "variable-name"), 12.3);
         let expr = ex.parse(tokens);
 
-        assert_approx_eq!(Number(12.3), ex.evaluate(&*expr));
+        assert_approx_eq!(Number(12.3), ex.evaluate(expr));
     }
 
     #[test]
@@ -1600,7 +1603,7 @@ mod test {
 
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![], ex.evaluate(&*expr));
+        assert_eq!(nodeset![], ex.evaluate(expr));
     }
 
     #[test]
@@ -1623,7 +1626,7 @@ mod test {
 
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![child], ex.evaluate(&*expr));
+        assert_eq!(nodeset![child], ex.evaluate(expr));
     }
 
     #[test]
@@ -1645,7 +1648,7 @@ mod test {
 
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![node1, node2], ex.evaluate(&*expr));
+        assert_eq!(nodeset![node1, node2], ex.evaluate(expr));
     }
 
     #[test]
@@ -1662,7 +1665,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![doc.root()], ex.evaluate_on(&*expr, node2));
+        assert_eq!(nodeset![doc.root()], ex.evaluate_on(expr, node2));
     }
 
     #[test]
@@ -1680,7 +1683,7 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(&*expr, node2));
+        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(expr, node2));
     }
 
     #[test]
