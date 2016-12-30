@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use ::{LiteralValue, Value};
+use sxd_document::QName;
+
+use ::{LiteralValue, Value, OwnedPrefixedName};
 use ::Value::{Boolean, Number};
 use ::axis::{Axis, AxisLike};
 use ::context;
@@ -15,13 +17,17 @@ quick_error! {
         NotANodeset {
             description("expression did not evaluate to a nodeset")
         }
-        UnknownFunction(name: String) {
+        UnknownFunction(name: OwnedPrefixedName) {
             description("unknown function")
-            display("unknown function {}", name)
+            display("unknown function {:?}", name)
         }
-        UnknownVariable(name: String) {
+        UnknownVariable(name: OwnedPrefixedName) {
             description("unknown variable")
-            display("unknown variable {}", name)
+            display("unknown variable {:?}", name)
+        }
+        UnknownNamespace(prefix: String) {
+            description("unknown namespace prefix")
+            display("unknown namespace prefix {}", prefix)
         }
         FunctionEvaluation(err: function::Error) {
             from()
@@ -160,13 +166,14 @@ impl Expression for NotEqual {
 
 #[derive(Debug)]
 pub struct Function {
-    pub name: String,
+    pub name: OwnedPrefixedName,
     pub arguments: Vec<SubExpression>,
 }
 
 impl Expression for Function {
     fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
-        context.function_for_name(&self.name)
+        let name = resolve_prefixed_name(context, &self.name)?;
+        context.function_for_name(name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
             .and_then(|fun| {
                 let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
@@ -479,14 +486,33 @@ impl Expression for Union {
     }
 }
 
+fn resolve_prefixed_name<'a>(context: &'a context::Evaluation, name: &'a OwnedPrefixedName)
+                             -> Result<QName<'a>, Error>
+{
+    // What about a "default" namespace?
+    let ns_uri = match name.prefix {
+        None => None,
+        Some(ref prefix) => {
+            match context.namespace_for(prefix) {
+                None => return Err(Error::UnknownNamespace(prefix.clone())),
+                Some(uri) => Some(uri),
+            }
+        }
+    };
+
+    Ok(QName::with_namespace_uri(ns_uri, name.local_part.as_str()))
+}
+
 #[derive(Debug)]
 pub struct Variable {
-    pub name: String,
+    pub name: OwnedPrefixedName,
 }
 
 impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
-        context.value_of(&self.name)
+        let name = resolve_prefixed_name(context, &self.name)?;
+
+        context.value_of(name)
             .cloned()
             .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
     }
@@ -579,8 +605,8 @@ mod test {
         setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1]));
         setup.context.set_variable("right", Value::Nodeset(nodeset![string_value_2]));
 
-        let left  = Box::new(Variable{name: "left".to_owned()});
-        let right = Box::new(Variable{name: "right".to_owned()});
+        let left  = Box::new(Variable { name: "left".into() });
+        let right = Box::new(Variable { name: "right".into() });
 
         let expr = Equal{left: left, right: right};
 
@@ -598,7 +624,7 @@ mod test {
         let string_value = setup.doc.create_text("3.14");
         setup.context.set_variable("left", Value::Nodeset(nodeset![string_value]));
 
-        let left  = Box::new(Variable{name: "left".to_owned()});
+        let left  = Box::new(Variable { name: "left".into() });
         let right = Box::new(Literal{value: LiteralValue::Number(6.28)});
 
         let expr = Equal{left: left, right: right};
@@ -618,7 +644,7 @@ mod test {
         let string_value_2 = setup.doc.create_text("boat");
         setup.context.set_variable("left", Value::Nodeset(nodeset![string_value_1, string_value_2]));
 
-        let left  = Box::new(Variable{name: "left".to_owned()});
+        let left  = Box::new(Variable { name: "left".into() });
         let right = Box::new(Literal{value: LiteralValue::String("boat".to_owned())});
 
         let expr = Equal{left: left, right: right};
@@ -714,7 +740,7 @@ mod test {
         let arg_expr: Box<Expression> = Box::new(Literal{value: LiteralValue::Boolean(true)});
         setup.context.set_function("test-fn", StubFunction { value: "the function ran" });
 
-        let expr = Function { name: "test-fn".to_owned(), arguments: vec![arg_expr] };
+        let expr = Function { name: "test-fn".into(), arguments: vec![arg_expr] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -727,12 +753,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = Function { name: "unknown-fn".to_owned(), arguments: vec![] };
+        let expr = Function { name: "unknown-fn".into(), arguments: vec![] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".to_owned())));
+        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".into())));
     }
 
     #[test]
@@ -762,7 +788,7 @@ mod test {
 
         setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
-        let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
+        let selected_nodes = Box::new(Variable { name: "nodes".into() });
         let predicate = Box::new(Literal{value: LiteralValue::Number(1.0)});
 
         let expr = Filter::new(selected_nodes, predicate);
@@ -784,7 +810,7 @@ mod test {
 
         setup.context.set_variable("nodes", Value::Nodeset(input_nodeset));
 
-        let selected_nodes = Box::new(Variable{name: "nodes".to_owned()});
+        let selected_nodes = Box::new(Variable { name: "nodes".into() });
         let predicate = Box::new(Literal{value: LiteralValue::Boolean(false)});
 
         let expr = Filter::new(selected_nodes, predicate);
@@ -879,12 +905,12 @@ mod test {
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
         setup.context.set_variable("left", Value::Nodeset(nodes));
-        let left = Box::new(Variable{name: "left".to_owned()});
+        let left = Box::new(Variable { name: "left".into() });
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
         setup.context.set_variable("right", Value::Nodeset(nodes));
-        let right = Box::new(Variable{name: "right".to_owned()});
+        let right = Box::new(Variable { name: "right".into() });
 
         let expr = Union{left: left, right: right};
 
@@ -900,7 +926,7 @@ mod test {
         let mut setup = Setup::new(&package);
         setup.context.set_variable("foo", Boolean(true));
 
-        let expr = Variable{name: "foo".to_owned()};
+        let expr = Variable { name: "foo".into() };
 
         let context = setup.context();
         let res = expr.evaluate(&context);

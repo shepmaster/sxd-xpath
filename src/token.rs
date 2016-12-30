@@ -1,5 +1,6 @@
 use std::string;
 
+use ::OwnedPrefixedName;
 use ::node_test;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -58,10 +59,10 @@ pub enum Token {
 
     // Specializations
     Axis(AxisName),
-    Function(string::String),
+    Function(OwnedPrefixedName),
     NameTest(node_test::NameTest),
     NodeTest(NodeTestName),
-    Variable(string::String),
+    Variable(OwnedPrefixedName),
 }
 
 impl Token {
