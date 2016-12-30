@@ -28,12 +28,11 @@ type Namespaces = HashMap<String, String>;
 ///
 /// use std::collections::HashMap;
 /// use sxd_document::parser;
-/// use sxd_xpath::{Factory, Value};
-/// use sxd_xpath::context::{self, Context};
-/// use sxd_xpath::function::{self, Function};
+/// use sxd_xpath::{Factory, Context, Value};
+/// use sxd_xpath::{context, function};
 ///
 /// struct Sigmoid;
-/// impl Function for Sigmoid {
+/// impl function::Function for Sigmoid {
 ///     fn evaluate<'a, 'd>(&self,
 ///                         _context: &context::Evaluation<'a, 'd>,
 ///                         args: Vec<Value<'d>>)
