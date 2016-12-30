@@ -11,7 +11,7 @@ use ::nodeset::{self, Node, Nodeset};
 use ::function;
 
 /// A mapping of names to XPath functions.
-type Functions = HashMap<String, Box<function::Function + 'static>>;
+type Functions = HashMap<OwnedQName, Box<function::Function + 'static>>;
 /// A mapping of names to XPath variables.
 type Variables<'d> = HashMap<OwnedQName, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
@@ -102,8 +102,9 @@ impl<'d> Context<'d> {
     }
 
     /// Register a function within the context
-    pub fn set_function<F>(&mut self, name: &str, function: F)
-        where F: function::Function + 'static,
+    pub fn set_function<N, F>(&mut self, name: N, function: F)
+        where N: Into<OwnedQName>,
+              F: function::Function + 'static,
     {
         self.functions.insert(name.into(), Box::new(function));
     }
@@ -168,8 +169,10 @@ impl<'a, 'd> Evaluation<'a, 'd> {
     }
 
     /// Looks up the function with the given name
-    pub fn function_for_name(&self, name: &str) -> Option<&'a function::Function> {
-        self.functions.get(name).map(AsRef::as_ref)
+    pub fn function_for_name(&self, name: QName) -> Option<&'a function::Function> {
+        // FIXME: remove allocation
+        let name = name.into();
+        self.functions.get(&name).map(AsRef::as_ref)
     }
 
     /// Looks up the value of the variable

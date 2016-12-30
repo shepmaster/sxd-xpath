@@ -4,6 +4,7 @@ extern crate sxd_xpath;
 use std::borrow::ToOwned;
 use sxd_document::{dom, parser};
 use sxd_xpath::{Value, Factory, Context, evaluate_xpath};
+use sxd_xpath::{context, function};
 
 #[test]
 fn functions_accept_arguments() {
@@ -45,6 +46,19 @@ fn variables_with_qualified_names() {
     });
 }
 
+#[test]
+fn functions_with_qualified_names() {
+    with_document("<a/>", |doc| {
+        let mut setup = Setup::new();
+        setup.context.set_function(("uri:namespace", "constant"), ConstantValueFunction(42.0));
+        setup.context.set_namespace("prefix", "uri:namespace");
+
+        let result = setup.evaluate(&doc, "prefix:constant()");
+
+        assert_eq!(Value::Number(42.0), result);
+    });
+}
+
 fn with_document<F>(xml: &str, f: F)
     where F: FnOnce(dom::Document),
 {
@@ -66,5 +80,16 @@ impl<'d> Setup<'d> {
     fn evaluate(&self, doc: &'d dom::Document<'d>, xpath: &str) -> Value<'d> {
         let xpath = self.factory.build(xpath).unwrap().unwrap();
         xpath.evaluate(&self.context, doc.root()).unwrap()
+    }
+}
+
+struct ConstantValueFunction(f64);
+
+impl function::Function for ConstantValueFunction {
+    fn evaluate<'a, 'd>(&self,
+                        _context: &context::Evaluation<'a, 'd>,
+                        _args: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
+    {
+        Ok(Value::Number(self.0))
     }
 }

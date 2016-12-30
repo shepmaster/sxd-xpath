@@ -260,9 +260,7 @@ fn parse_function_call(p: StringPoint) -> XPathProgress<Token, Error> {
     // left-paren, but do not want to actually consume it here.
     try_parse!(p.consume_literal("(").map_err(|_| ExpectedLeftParenthesis));
 
-    // TODO: We should be using the prefix here!
-    let name = name.local_part().to_owned();
-    peresil::Progress::success(p, Token::Function(name))
+    peresil::Progress::success(p, Token::Function(name.into()))
 }
 
 fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
@@ -837,7 +835,7 @@ mod test {
     fn tokenizes_function_call() {
         let tokenizer = Tokenizer::new("hello()");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
                                                Token::LeftParen,
                                                Token::RightParen]);
     }
@@ -846,7 +844,7 @@ mod test {
     fn tokenizes_function_call_with_argument() {
         let tokenizer = Tokenizer::new("hello(1)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
                                                Token::LeftParen,
                                                Token::Number(1.0),
                                                Token::RightParen]);
@@ -856,11 +854,20 @@ mod test {
     fn tokenizes_function_call_with_multiple_arguments() {
         let tokenizer = Tokenizer::new("hello(1, 2)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".to_owned()),
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
                                                Token::LeftParen,
                                                Token::Number(1.0),
                                                Token::Comma,
                                                Token::Number(2.0),
+                                               Token::RightParen]);
+    }
+
+    #[test]
+    fn tokenizes_function_call_with_prefixed_name() {
+        let tokenizer = Tokenizer::new("ns:hello()");
+
+        assert_eq!(all_tokens(tokenizer), vec![Token::Function(("ns", "hello").into()),
+                                               Token::LeftParen,
                                                Token::RightParen]);
     }
 

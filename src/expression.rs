@@ -17,9 +17,9 @@ quick_error! {
         NotANodeset {
             description("expression did not evaluate to a nodeset")
         }
-        UnknownFunction(name: String) {
+        UnknownFunction(name: OwnedPrefixedName) {
             description("unknown function")
-            display("unknown function {}", name)
+            display("unknown function {:?}", name)
         }
         UnknownVariable(name: OwnedPrefixedName) {
             description("unknown variable")
@@ -166,13 +166,14 @@ impl Expression for NotEqual {
 
 #[derive(Debug)]
 pub struct Function {
-    pub name: String,
+    pub name: OwnedPrefixedName,
     pub arguments: Vec<SubExpression>,
 }
 
 impl Expression for Function {
     fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
-        context.function_for_name(&self.name)
+        let name = resolve_prefixed_name(context, &self.name)?;
+        context.function_for_name(name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
             .and_then(|fun| {
                 let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
@@ -485,6 +486,23 @@ impl Expression for Union {
     }
 }
 
+fn resolve_prefixed_name<'a>(context: &'a context::Evaluation, name: &'a OwnedPrefixedName)
+                             -> Result<QName<'a>, Error>
+{
+    // What about a "default" namespace?
+    let ns_uri = match name.prefix {
+        None => None,
+        Some(ref prefix) => {
+            match context.namespace_for(prefix) {
+                None => return Err(Error::UnknownNamespace(prefix.clone())),
+                Some(uri) => Some(uri),
+            }
+        }
+    };
+
+    Ok(QName::with_namespace_uri(ns_uri, name.local_part.as_str()))
+}
+
 #[derive(Debug)]
 pub struct Variable {
     pub name: OwnedPrefixedName,
@@ -492,19 +510,7 @@ pub struct Variable {
 
 impl Expression for Variable {
     fn evaluate<'a, 'd>(&self, context: &context::Evaluation<'a, 'd>) -> Result<Value<'d>, Error> {
-        // What about a "default" namespace?
-
-        let ns_uri = match self.name.prefix {
-            None => None,
-            Some(ref prefix) => {
-                match context.namespace_for(prefix) {
-                    None => return Err(Error::UnknownNamespace(prefix.clone())),
-                    Some(uri) => Some(uri),
-                }
-            }
-        };
-
-        let name = QName::with_namespace_uri(ns_uri, self.name.local_part.as_str());
+        let name = resolve_prefixed_name(context, &self.name)?;
 
         context.value_of(name)
             .cloned()
@@ -734,7 +740,7 @@ mod test {
         let arg_expr: Box<Expression> = Box::new(Literal{value: LiteralValue::Boolean(true)});
         setup.context.set_function("test-fn", StubFunction { value: "the function ran" });
 
-        let expr = Function { name: "test-fn".to_owned(), arguments: vec![arg_expr] };
+        let expr = Function { name: "test-fn".into(), arguments: vec![arg_expr] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -747,12 +753,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = Function { name: "unknown-fn".to_owned(), arguments: vec![] };
+        let expr = Function { name: "unknown-fn".into(), arguments: vec![] };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".to_owned())));
+        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".into())));
     }
 
     #[test]

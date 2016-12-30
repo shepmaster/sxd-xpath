@@ -1078,11 +1078,11 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_owned()),
+            Token::Function("false".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1104,7 +1104,7 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1126,7 +1126,7 @@ mod test {
         let tokens = tokens![
             name_test("*"),
             Token::LeftBracket,
-            Token::Function("false".to_owned()),
+            Token::Function("false".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightBracket
@@ -1169,9 +1169,9 @@ mod test {
     #[test]
     fn functions_accept_arguments() {
         let tokens = tokens![
-            Token::Function("not".to_owned()),
+            Token::Function("not".into()),
             Token::LeftParen,
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightParen,
@@ -1189,13 +1189,13 @@ mod test {
     #[test]
     fn functions_accept_any_expression_as_an_argument() {
         let tokens = tokens![
-            Token::Function("not".to_owned()),
+            Token::Function("not".into()),
             Token::LeftParen,
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_owned()),
+            Token::Function("false".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::RightParen,
@@ -1383,7 +1383,7 @@ mod test {
     #[test]
     fn top_level_function_call() {
         let tokens = tokens![
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
         ];
@@ -1400,11 +1400,11 @@ mod test {
     #[test]
     fn or_expression() {
         let tokens = tokens![
-            Token::Function("true".to_owned()),
+            Token::Function("true".into()),
             Token::LeftParen,
             Token::RightParen,
             Token::Or,
-            Token::Function("false".to_owned()),
+            Token::Function("false".into()),
             Token::LeftParen,
             Token::RightParen,
         ];
@@ -1690,7 +1690,7 @@ mod test {
     #[test]
     fn unexpected_token_is_reported_as_an_error() {
         let tokens = tokens![
-            Token::Function("does-not-matter".to_owned()),
+            Token::Function("does-not-matter".into()),
             Token::RightParen
         ];
 
@@ -1779,7 +1779,7 @@ mod test {
 
     #[test]
     fn running_out_of_input_is_reported_as_an_error() {
-        let tokens = tokens![Token::Function("func".to_owned())];
+        let tokens = tokens![Token::Function("func".into())];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1804,7 +1804,7 @@ mod test {
     #[test]
     fn a_tokenizer_error_is_reported_as_an_error() {
         let tokens = vec![
-            Ok(Token::Function("func".to_owned())),
+            Ok(Token::Function("func".into())),
             Err(tokenizer::Error::UnableToCreateToken)
         ];
 

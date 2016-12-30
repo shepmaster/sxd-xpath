@@ -59,7 +59,7 @@ pub enum Token {
 
     // Specializations
     Axis(AxisName),
-    Function(string::String),
+    Function(OwnedPrefixedName),
     NameTest(node_test::NameTest),
     NodeTest(NodeTestName),
     Variable(OwnedPrefixedName),
