@@ -180,7 +180,7 @@ mod test {
     use sxd_document::Package;
     use sxd_document::dom;
 
-    use ::context;
+    use ::context::{self, Context};
     use ::node_test::NodeTest;
     use ::nodeset::{Nodeset, Node};
 
@@ -198,11 +198,12 @@ mod test {
     fn execute<'n, N>(axis: Axis, node: N) -> Nodeset<'n>
         where N: Into<Node<'n>>,
     {
-        let context = context::Core::without_core_functions().with_context_node(node);
+        let context = Context::without_core_functions();
+        let context = context::Evaluation::new(&context, node.into());
         let node_test = &DummyNodeTest;
         let mut result = Nodeset::new();
 
-        axis.select_nodes(&(&context).into(), node_test, &mut result);
+        axis.select_nodes(&context, node_test, &mut result);
 
         result
     }

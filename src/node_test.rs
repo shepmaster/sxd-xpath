@@ -171,21 +171,21 @@ mod test {
     use sxd_document::{Package, QName};
     use sxd_document::dom::{self, Document};
 
-    use ::context;
+    use ::context::{self, Context};
     use ::nodeset::Nodeset;
 
     use super::*;
 
     struct Setup<'d> {
         doc: Document<'d>,
-        context: context::Core<'d>,
+        context: Context<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup {
             Setup {
                 doc: package.as_document(),
-                context: context::Core::without_core_functions(),
+                context: Context::without_core_functions(),
             }
         }
 
@@ -199,7 +199,7 @@ mod test {
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
-            let c = self.context.borrow_with_context_node(a).into();
+            let c = context::Evaluation::new(&self.context, a.into());
             (a, c)
         }
 
@@ -215,7 +215,7 @@ mod test {
             where N: Into<QName<'n>>
         {
             let e = self.doc.create_element(name);
-            let c = self.context.borrow_with_context_node(e).into();
+            let c = context::Evaluation::new(&self.context, e.into());
             (e, c)
         }
 

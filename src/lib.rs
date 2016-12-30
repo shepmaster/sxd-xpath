@@ -52,16 +52,18 @@
 //! use sxd_xpath::{Factory, Context, Value};
 //!
 //! fn main() {
-//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//!     let package = parser::parse("<root>hello</root>")
+//!         .expect("failed to parse XML");
 //!     let document = package.as_document();
 //!
 //!     let factory = Factory::new();
 //!     let xpath = factory.build("/root").expect("Could not compile XPath");
 //!     let xpath = xpath.expect("No XPath was compiled");
 //!
-//!     let context = Context::new(document.root());
+//!     let context = Context::new();
 //!
-//!     let value = xpath.evaluate(&context).expect("XPath evaluation failed");
+//!     let value = xpath.evaluate(&context, document.root())
+//!         .expect("XPath evaluation failed");
 //!
 //!     assert_eq!("hello", value.string());
 //! }
@@ -231,8 +233,8 @@ impl XPath {
     /// use sxd_xpath::{XPath, Context};
     ///
     /// fn my_evaluate(doc: Document, xpath: XPath) {
-    ///     let mut context = Context::new(doc.root());
-    ///     let value = xpath.evaluate(&context);
+    ///     let mut context = Context::new();
+    ///     let value = xpath.evaluate(&context, doc.root());
     ///     println!("The result was: {:?}", value);
     /// }
     ///
@@ -240,10 +242,11 @@ impl XPath {
     /// ```
     ///
     /// [`Context`]: context/struct.Context.html
-    pub fn evaluate<'a, 'd: 'a, C>(&self, context: C) -> Result<Value<'d>, expression::Error>
-        where C: Into<context::Evaluation<'a, 'd>>,
+    pub fn evaluate<'a, 'd: 'a, N>(&self, context: &'a Context<'d>, node: N)
+                                   -> Result<Value<'d>, expression::Error>
+        where N: Into<nodeset::Node<'d>>,
     {
-        let context = context.into();
+        let context = context::Evaluation::new(context, node.into());
         self.0.evaluate(&context)
     }
 }
@@ -329,9 +332,9 @@ pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Val
     let expression = factory.build(xpath)?;
     let expression = expression.ok_or(Error::NoXPath)?;
 
-    let context = context::Context::new(document.root());
+    let context = Context::new();
 
-    expression.evaluate(&context).map_err(Into::into)
+    expression.evaluate(&context, document.root()).map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -647,7 +647,7 @@ mod test {
 
     use ::Value;
     use ::Value::{Boolean, Number, String};
-    use ::context;
+    use ::context::{self, Context};
     use ::expression::{Expression, SubExpression};
     use ::node_test;
     use ::nodeset::Node;
@@ -761,7 +761,7 @@ mod test {
 
     struct Exercise<'d> {
         doc: &'d TestDoc<'d>,
-        context: context::Core<'d>,
+        context: Context<'d>,
         parser: Parser,
     }
 
@@ -769,7 +769,7 @@ mod test {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
             Exercise {
                 doc: doc,
-                context: context::Core::new(),
+                context: Context::new(),
                 parser: Parser::new(),
             }
         }
@@ -793,7 +793,8 @@ mod test {
         fn evaluate_on<N>(&self, expr: &Expression, node: N) -> Value<'d>
             where N: Into<Node<'d>>
         {
-            expr.evaluate(&self.context.borrow_with_context_node(node).into()).unwrap()
+            let context = context::Evaluation::new(&self.context, node.into());
+            expr.evaluate(&context).unwrap()
         }
     }
 

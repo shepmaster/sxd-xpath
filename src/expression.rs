@@ -504,7 +504,7 @@ mod test {
     use ::{LiteralValue, Value};
     use ::Value::{Boolean, Number, String};
     use ::axis::AxisLike;
-    use ::context;
+    use ::context::{self, Context};
     use ::function;
     use ::node_test::NodeTest;
     use ::nodeset::Nodeset;
@@ -521,20 +521,20 @@ mod test {
 
     struct Setup<'d> {
         doc: Document<'d>,
-        context: context::Core<'d>,
+        context: Context<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new(package: &'d Package) -> Setup<'d> {
             Setup {
                 doc: package.as_document(),
-                context: context::Core::without_core_functions(),
+                context: Context::without_core_functions(),
             }
         }
 
         fn context(&'d self) -> context::Evaluation<'d, 'd> {
             let node = self.doc.create_element("test");
-            self.context.borrow_with_context_node(node).into()
+            context::Evaluation::new(&self.context, node.into())
         }
     }
 

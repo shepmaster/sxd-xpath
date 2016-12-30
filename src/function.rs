@@ -588,7 +588,7 @@ fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
 /// [corelib]: https://www.w3.org/TR/xpath/#corelib
-pub fn register_core_functions(context: &mut context::Core) {
+pub fn register_core_functions(context: &mut context::Context) {
     context.set_function("last", Last);
     context.set_function("position", Position);
     context.set_function("count", Count);
@@ -654,13 +654,13 @@ mod test {
     };
 
     struct Setup<'d> {
-        context: context::Core<'d>,
+        context: context::Context<'d>,
     }
 
     impl<'d> Setup<'d> {
         fn new() -> Setup<'d> {
             Setup {
-                context: context::Core::without_core_functions(),
+                context: context::Context::without_core_functions(),
             }
         }
 
@@ -669,7 +669,8 @@ mod test {
             where N: Into<Node<'d>>,
                   F: Function
         {
-            f.evaluate(&self.context.borrow_with_context_node(node).into(), args)
+            let context = context::Evaluation::new(&self.context, node.into());
+            f.evaluate(&context, args)
         }
     }
 

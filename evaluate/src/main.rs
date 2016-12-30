@@ -132,11 +132,11 @@ fn main() {
 
         let doc = package.as_document();
 
-        let mut context = Context::new(doc.root());
+        let mut context = Context::new();
         build_variables(&arguments, &mut context);
         build_namespaces(&arguments, &mut context);
 
-        let res = xpath.evaluate(&context);
+        let res = xpath.evaluate(&context, doc.root());
 
         println!("{:?}", res);
     }
