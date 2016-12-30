@@ -78,8 +78,11 @@ impl<'d> Setup<'d> {
     }
 
     fn evaluate(&self, doc: &'d dom::Document<'d>, xpath: &str) -> Value<'d> {
-        let xpath = self.factory.build(xpath).unwrap().unwrap();
-        xpath.evaluate(&self.context, doc.root()).unwrap()
+        let xpath = self.factory.build(xpath)
+            .expect("Unable to build XPath")
+            .expect("No XPath was built");
+        xpath.evaluate(&self.context, doc.root())
+            .expect("Unable to evaluate XPath")
     }
 }
 

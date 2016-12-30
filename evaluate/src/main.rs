@@ -118,14 +118,14 @@ fn main() {
         },
     };
 
-    let xpath_str = arguments.opt_str("xpath").unwrap();
+    let xpath_str = arguments.opt_str("xpath").expect("No XPath provided");
     let xpath = build_xpath(&xpath_str);
 
     for filename in &arguments.free {
         let package = if *filename == "-" {
             load_xml(io::stdin())
         } else {
-            let file = File::open(filename).unwrap();
+            let file = File::open(filename).expect("Could not open XML file");
             load_xml(file)
         };
 
