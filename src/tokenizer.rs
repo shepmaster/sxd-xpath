@@ -202,7 +202,8 @@ fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgre
     });
 
     let num = before_p.to(p);
-    let num = num.parse().unwrap();
+    // Should always be able to parse as we've pre-validated with our own parser
+    let num = num.parse().expect("Could not parse number");
 
     peresil::Progress::success(p, Token::Number(num))
 }
@@ -360,7 +361,8 @@ impl Tokenizer {
                 if point.offset == self.start {
                     Err(UnableToCreateToken)
                 } else {
-                    Err(e.pop().unwrap())
+                    // Should always have one error, otherwise we wouldn't be here!
+                    Err(e.pop().expect("Unknown error while parsing"))
                 }
             },
         }

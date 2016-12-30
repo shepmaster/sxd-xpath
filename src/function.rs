@@ -53,6 +53,9 @@ quick_error! {
             description("not enough arguments")
             display("not enough arguments, expected {} but had {}", expected, actual)
         }
+        ArgumentMissing {
+            description("attempted to use an argument that was not present")
+        }
         WrongType { expected: ArgumentType, actual: ArgumentType } {
             description("argument of wrong type")
             display("argument was the wrong type, expected {:?} but had {:?}", expected, actual)
@@ -127,7 +130,8 @@ impl<'d> Args<'d> {
     /// the argument is not a boolean, a type mismatch error is
     /// returned.
     pub fn pop_boolean(&mut self) -> Result<bool, Error> {
-        match self.0.pop().unwrap() {
+        let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
+        match v {
             Value::Boolean(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Boolean)),
         }
@@ -137,7 +141,8 @@ impl<'d> Args<'d> {
     /// the argument is not a number, a type mismatch error is
     /// returned.
     pub fn pop_number(&mut self) -> Result<f64, Error> {
-        match self.0.pop().unwrap() {
+        let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
+        match v {
             Value::Number(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Number)),
         }
@@ -147,7 +152,8 @@ impl<'d> Args<'d> {
     /// the argument is not a string, a type mismatch error is
     /// returned.
     pub fn pop_string(&mut self) -> Result<String, Error> {
-        match self.0.pop().unwrap() {
+        let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
+        match v {
             Value::String(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::String)),
         }
@@ -157,7 +163,8 @@ impl<'d> Args<'d> {
     /// the argument is not a nodeset, a type mismatch error is
     /// returned.
     pub fn pop_nodeset(&mut self) -> Result<Nodeset<'d>, Error> {
-        match self.0.pop().unwrap() {
+        let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
+        match v {
             Value::Nodeset(v) => Ok(v),
             a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
         }
@@ -294,7 +301,7 @@ impl Function for Name {
         let name =
             arg.document_order_first()
             .and_then(|n| n.prefixed_name())
-            .unwrap_or("".to_owned());
+            .unwrap_or_else(String::new);
         Ok(Value::String(name))
     }
 }

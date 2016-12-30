@@ -598,7 +598,9 @@ mod test {
         let expr = And{left: left, right: right};
 
         let context = setup.context();
-        expr.evaluate(&context).unwrap();
+        let res = expr.evaluate(&context);
+
+        assert_eq!(res, Ok(Boolean(false)));
     }
 
     #[test]

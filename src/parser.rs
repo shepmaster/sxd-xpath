@@ -779,7 +779,9 @@ mod test {
         }
 
         fn parse(&self, tokens: Vec<TokenResult>) -> SubExpression {
-            self.parse_raw(tokens).unwrap().unwrap()
+            self.parse_raw(tokens)
+                .expect("Unable to parse expression")
+                .expect("Expression missing")
         }
 
         fn evaluate<E>(&self, expr: E) -> Value<'d>
@@ -793,7 +795,7 @@ mod test {
                   N: Into<Node<'d>>,
         {
             let context = context::Evaluation::new(&self.context, node.into());
-            expr.evaluate(&context).unwrap()
+            expr.evaluate(&context).expect("Unable to evaluate expression")
         }
     }
 
