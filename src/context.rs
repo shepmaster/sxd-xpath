@@ -1,3 +1,6 @@
+//! Support for the various types of contexts before and during XPath
+//! evaluation.
+
 use std::collections::HashMap;
 use std::iter;
 
