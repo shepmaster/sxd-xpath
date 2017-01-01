@@ -626,7 +626,7 @@ pub fn register_core_functions(context: &mut context::Context) {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::f64;
+    use std::{fmt, f64};
 
     use sxd_document::Package;
 
@@ -971,14 +971,40 @@ mod test {
         assert_eq!(Ok(Value::Number(66.7)), r);
     }
 
-    fn assert_number(expected: f64, actual: Result<Value, Error>) {
-        if expected.is_nan() {
-            match actual {
-                Ok(Value::Number(n)) => assert!(n.is_nan(), "{} should be NaN", n),
-                _ => assert!(false, "{:?} did not evaluate correctly", actual),
+    /// By default, NaN != NaN and -0.0 == 0.0. We don't want either
+    /// of those to be true.
+    struct PedanticNumber(f64);
+
+    impl PedanticNumber {
+        fn non_nan_key(&self) -> (bool, bool, f64) {
+            (self.0.is_finite(), self.0.is_sign_positive(), self.0)
+        }
+    }
+
+    impl PartialEq for PedanticNumber {
+        fn eq(&self, other: &Self) -> bool {
+            if self.0.is_nan() {
+                other.0.is_nan()
+            } else {
+                self.non_nan_key() == other.non_nan_key()
             }
-        } else {
-            assert_eq!(Ok(Value::Number(expected)), actual);
+        }
+    }
+
+    impl fmt::Debug for PedanticNumber {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{{ {}, NaN: {}, finite: {}, positive: {} }}",
+                   self.0,
+                   self.0.is_nan(),
+                   self.0.is_finite(),
+                   self.0.is_sign_positive())
+        }
+    }
+
+    fn assert_number(expected: f64, actual: Result<Value, Error>) {
+        match actual {
+            Ok(Value::Number(n)) => assert_eq!(PedanticNumber(n), PedanticNumber(expected)),
+            _ => assert!(false, "{:?} did not evaluate correctly", actual),
         }
     }
 
