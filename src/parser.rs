@@ -196,6 +196,7 @@ impl Parser {
             let name = consume_value!(source, Token::Axis);
 
             match name {
+                AxisName::Child => Ok(Axis::Child),
                 AxisName::SelfAxis => Ok(Axis::SelfAxis),
                 AxisName::Parent => Ok(Axis::Parent),
                 AxisName::Descendant => Ok(Axis::Descendant),
@@ -208,7 +209,6 @@ impl Parser {
                 AxisName::FollowingSibling => Ok(Axis::FollowingSibling),
                 AxisName::Preceding => Ok(Axis::Preceding),
                 AxisName::Following => Ok(Axis::Following),
-                _ => unimplemented!(),
             }
         } else {
             Ok(Axis::Child)
@@ -863,6 +863,24 @@ mod test {
         let expr = ex.parse(tokens);
 
         assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(expr, hello));
+    }
+
+    #[test]
+    fn parses_child_axis() {
+        let tokens = tokens![
+            Token::Axis(AxisName::Child),
+            name_test("*")
+        ];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+        let one = doc.add_top_child("one");
+        let two = doc.add_child(one, "two");
+
+        let ex = Exercise::new(&doc);
+        let expr = ex.parse(tokens);
+
+        assert_eq!(nodeset![two], ex.evaluate_on(expr, one));
     }
 
     #[test]
