@@ -585,8 +585,13 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
     if x == y {
         x
     } else {
-        let z = (2.0*x-y).floor();
-        z * x.signum() // Should use copysign
+        let z = (2.0 * x - y).floor();
+        // Should use copysign
+        if x.is_sign_positive() ^ z.is_sign_positive() {
+            -z
+        } else {
+            z
+        }
     }
 }
 
@@ -626,6 +631,7 @@ pub fn register_core_functions(context: &mut context::Context) {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
+    use std::{fmt, f64};
 
     use sxd_document::Package;
 
@@ -857,22 +863,22 @@ mod test {
 
     #[test]
     fn substring_with_nan_start_is_empty() {
-        assert_eq!("", substring_test("あいうえお", ::std::f64::NAN, 3.0));
+        assert_eq!("", substring_test("あいうえお", f64::NAN, 3.0));
     }
 
     #[test]
     fn substring_with_nan_len_is_empty() {
-        assert_eq!("", substring_test("あいうえお", 1.0, ::std::f64::NAN));
+        assert_eq!("", substring_test("あいうえお", 1.0, f64::NAN));
     }
 
     #[test]
     fn substring_with_infinite_len_goes_to_end_of_string() {
-        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, ::std::f64::INFINITY));
+        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, f64::INFINITY));
     }
 
     #[test]
     fn substring_with_negative_infinity_start_is_empty() {
-        assert_eq!("", substring_test("あいうえお", ::std::f64::NEG_INFINITY, ::std::f64::INFINITY));
+        assert_eq!("", substring_test("あいうえお", f64::NEG_INFINITY, f64::INFINITY));
     }
 
     #[test]
@@ -952,6 +958,11 @@ mod test {
     }
 
     #[test]
+    fn number_fails_with_nan() {
+        evaluate_literal(NumberFn, args![" nope "], |r| assert_number(f64::NAN, r));
+    }
+
+    #[test]
     fn sum_adds_up_nodeset() {
         let package = Package::new();
         let doc = package.as_document();
@@ -965,63 +976,94 @@ mod test {
         assert_eq!(Ok(Value::Number(66.7)), r);
     }
 
-    fn assert_number<F>(f: F, val: f64, expected: f64)
-        where F: Function
-    {
-        evaluate_literal(f, args![val], |r| {
-            if expected.is_nan() {
-                match r {
-                    Ok(Value::Number(a)) => assert!(a.is_nan(), "{} should be NaN", a),
-                    _ => assert!(false, "{:?} did not evaluate correctly", r),
-                }
+    /// By default, NaN != NaN and -0.0 == 0.0. We don't want either
+    /// of those to be true.
+    struct PedanticNumber(f64);
+
+    impl PedanticNumber {
+        fn non_nan_key(&self) -> (bool, bool, f64) {
+            (self.0.is_finite(), self.0.is_sign_positive(), self.0)
+        }
+    }
+
+    impl PartialEq for PedanticNumber {
+        fn eq(&self, other: &Self) -> bool {
+            if self.0.is_nan() {
+                other.0.is_nan()
             } else {
-                assert_eq!(Ok(Value::Number(expected)), r);
+                self.non_nan_key() == other.non_nan_key()
             }
-        });
+        }
+    }
+
+    impl fmt::Debug for PedanticNumber {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{{ {}, NaN: {}, finite: {}, positive: {} }}",
+                   self.0,
+                   self.0.is_nan(),
+                   self.0.is_finite(),
+                   self.0.is_sign_positive())
+        }
+    }
+
+    fn assert_number(expected: f64, actual: Result<Value, Error>) {
+        match actual {
+            Ok(Value::Number(n)) => assert_eq!(PedanticNumber(n), PedanticNumber(expected)),
+            _ => assert!(false, "{:?} did not evaluate correctly", actual),
+        }
     }
 
     #[test]
     fn floor_rounds_down() {
-        assert_number(floor(), 199.99, 199.0);
+        evaluate_literal(floor(), args![199.99], |r| assert_number(199.0, r));
     }
 
     #[test]
     fn ceiling_rounds_up() {
-        assert_number(ceiling(), 199.99, 200.0);
+        evaluate_literal(ceiling(), args![199.99], |r| assert_number(200.0, r));
     }
 
     #[test]
     fn round_nan_to_nan() {
-        assert_number(round(), ::std::f64::NAN, ::std::f64::NAN);
+        evaluate_literal(round(), args![f64::NAN], |r| assert_number(f64::NAN, r));
     }
 
     #[test]
     fn round_pos_inf_to_pos_inf() {
-        assert_number(round(), ::std::f64::INFINITY, ::std::f64::INFINITY);
+        evaluate_literal(round(), args![f64::INFINITY], |r| {
+            assert_number(f64::INFINITY, r)
+        });
     }
 
     #[test]
     fn round_neg_inf_to_neg_inf() {
-        assert_number(round(), ::std::f64::NEG_INFINITY, ::std::f64::NEG_INFINITY);
+        evaluate_literal(round(), args![f64::NEG_INFINITY], |r| {
+            assert_number(f64::NEG_INFINITY, r)
+        });
     }
 
     #[test]
     fn round_pos_zero_to_pos_zero() {
-        assert_number(round(), 0.0, 0.0);
+        evaluate_literal(round(), args![0.0], |r| assert_number(0.0, r));
     }
 
     #[test]
     fn round_neg_zero_to_neg_zero() {
-        assert_number(round(), -0.0, -0.0);
+        evaluate_literal(round(), args![-0.0], |r| assert_number(-0.0, r));
     }
 
     #[test]
     fn round_neg_zero_point_five_to_neg_zero() {
-        assert_number(round(), -0.5, -0.0);
+        evaluate_literal(round(), args![-0.5], |r| assert_number(-0.0, r));
+    }
+
+    #[test]
+    fn round_neg_five_to_neg_five() {
+        evaluate_literal(round(), args![-5.0], |r| assert_number(-5.0, r));
     }
 
     #[test]
     fn round_pos_zero_point_five_to_pos_one() {
-        assert_number(round(), 0.5, 1.0);
+        evaluate_literal(round(), args![0.5], |r| assert_number(1.0, r));
     }
 }
