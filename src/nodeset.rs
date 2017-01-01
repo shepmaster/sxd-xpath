@@ -330,8 +330,8 @@ impl<'d> Nodeset<'d> {
         self.nodes.iter().min_by_key(|&&n| order.order_of(n)).cloned()
     }
 
-    pub fn document_order(self) -> Vec<Node<'d>> {
-        let mut nodes: Vec<_> = self.nodes.into_iter().collect();
+    pub fn document_order(&self) -> Vec<Node<'d>> {
+        let mut nodes: Vec<_> = self.iter().collect();
         let doc = match nodes.first().map(Node::document) {
             Some(doc) => doc,
             None => return nodes,
