@@ -505,7 +505,7 @@ impl Expression for Union {
         let mut left_nodes = try!(as_nodes(&self.left));
         let right_nodes = try!(as_nodes(&self.right));
 
-        left_nodes.add_nodeset(&right_nodes);
+        left_nodes.extend(right_nodes);
         Ok(Value::Nodeset(left_nodes))
     }
 }

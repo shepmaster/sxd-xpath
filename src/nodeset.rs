@@ -307,11 +307,6 @@ impl<'d> Nodeset<'d> {
         IntoIterator::into_iter(self)
     }
 
-    /// Add all the given nodes to the set
-    pub fn add_nodeset(&mut self, other: &Nodeset<'d>) {
-        self.nodes.extend(other);
-    }
-
     pub fn size(&self) -> usize {
         self.nodes.len()
     }
@@ -340,6 +335,14 @@ impl<'d> Nodeset<'d> {
         let order = DocOrder::new(doc);
         nodes.sort_by_key(|&n| order.order_of(n));
         nodes
+    }
+}
+
+impl<'d> Extend<Node<'d>> for Nodeset<'d> {
+    fn extend<I>(&mut self, iter: I)
+        where I: IntoIterator<Item = Node<'d>>
+    {
+        self.nodes.extend(iter)
     }
 }
 
@@ -515,7 +518,7 @@ mod test {
         nodes1.add(e1);
         nodes2.add(e2);
 
-        nodes1.add_nodeset(&nodes2);
+        nodes1.extend(nodes2);
 
         assert_eq!(all_nodes, nodes1);
     }
