@@ -953,6 +953,11 @@ mod test {
     }
 
     #[test]
+    fn number_fails_with_nan() {
+        evaluate_literal(NumberFn, args![" nope "], |r| assert_number(f64::NAN, r));
+    }
+
+    #[test]
     fn sum_adds_up_nodeset() {
         let package = Package::new();
         let doc = package.as_document();
