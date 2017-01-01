@@ -121,10 +121,24 @@ impl AxisLike for Axis {
                 preceding_following_sibling(context, node_test, result, Node::following_siblings)
             }
             Preceding => {
-                preceding_following(context, node_test, result, Node::preceding_siblings)
+                node_and_each_parent(context.node, |node| {
+                    for sibling in node.preceding_siblings() {
+                        postorder_right_to_left(sibling, |current| {
+                            let child_context = context.new_context_for(current);
+                            node_test.test(&child_context, result);
+                        });
+                    }
+                })
             }
             Following => {
-                preceding_following(context, node_test, result, Node::following_siblings)
+                node_and_each_parent(context.node, |node| {
+                    for sibling in node.following_siblings() {
+                        preorder_left_to_right(sibling, |current| {
+                            let child_context = context.new_context_for(current);
+                            node_test.test(&child_context, result);
+                        });
+                    }
+                })
             }
             SelfAxis => {
                 node_test.test(context, result);
@@ -154,24 +168,53 @@ fn preceding_following_sibling<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
     }
 }
 
-fn preceding_following<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
-                               node_test: &NodeTest,
-                               result:    &mut OrderedNodes<'d>,
-                               f: fn(&Node<'d>) -> Vec<Node<'d>>)
+fn preorder_left_to_right<'d, F>(node: Node<'d>, mut f: F)
+    where F: FnMut(Node<'d>),
 {
-    let mut node = context.node;
+    let mut stack = vec![node];
 
-    loop {
-        let sibs = f(&node);
-        for sibling in sibs {
-            let child_context = context.new_context_for(sibling);
-            node_test.test(&child_context, result);
-        }
+    while let Some(current) = stack.pop() {
+        f(current);
 
-        match node.parent() {
-            Some(parent) => node = parent,
-            None => break
+        for child in current.children().into_iter().rev() {
+            stack.push(child);
         }
+    }
+}
+
+// There's other implementations that only require a single stack; are
+// those applicable? Are they better?
+fn postorder_right_to_left<'d, F>(node: Node<'d>, mut f: F)
+    where F: FnMut(Node<'d>),
+{
+    let mut stack = vec![node];
+    let mut stack2 = vec![];
+
+    while let Some(current) = stack.pop() {
+        for child in current.children().into_iter().rev() {
+            stack.push(child);
+        }
+        stack2.push(current);
+    }
+
+    for current in stack2.into_iter().rev() {
+        f(current);
+    }
+}
+
+fn node_and_each_parent<'d, F>(node: Node<'d>, mut f: F)
+    where F: FnMut(Node<'d>)
+{
+    f(node);
+    each_parent(node, f);
+}
+
+fn each_parent<'d, F>(mut node: Node<'d>, mut f: F)
+    where F: FnMut(Node<'d>)
+{
+    while let Some(parent) = node.parent() {
+        f(parent);
+        node = parent;
     }
 }
 
@@ -280,50 +323,85 @@ mod test {
         assert_eq!(result, ordered_nodes![child2, child3]);
     }
 
-    fn setup_preceding_following<'d>(doc: &'d dom::Document<'d>) ->
-        (dom::Element<'d>, dom::Element<'d>, dom::Element<'d>,
-         dom::Element<'d>, dom::Element<'d>)
-    {
-        let parent = doc.create_element("parent");
+    // <a0>
+    //   <b0>
+    //     <c0 />
+    //     <c1 />
+    //   </b0>
+    //   <b1>
+    //     <c2 />
+    //     <c3 />
+    //     <c4 />
+    //   </b1>
+    //   <b2>
+    //     <c5 />
+    //     <c6 />
+    //   </b2>
+    // </a0>
 
-        let a1 = doc.create_element("a1");
-        let a2 = doc.create_element("a2");
-        let a3 = doc.create_element("a3");
+    struct PrecedingFollowing<'d> {
+        b: [dom::Element<'d>; 3],
+        c: [dom::Element<'d>; 7],
+        midpoint: dom::Element<'d>,
+    }
 
-        let b1 = doc.create_element("b1");
-        let b2 = doc.create_element("b2");
-        let b3 = doc.create_element("b3");
+    impl<'d> PrecedingFollowing<'d> {
+        fn new(doc: dom::Document<'d>) -> Self {
+            let a = doc.create_element("a");
 
-        parent.append_child(a1);
-        parent.append_child(a2);
-        parent.append_child(a3);
+            let b0 = doc.create_element("b0");
+            let b1 = doc.create_element("b1");
+            let b2 = doc.create_element("b2");
 
-        a2.append_child(b1);
-        a2.append_child(b2);
-        a2.append_child(b3);
+            let c0 = doc.create_element("c0");
+            let c1 = doc.create_element("c1");
+            let c2 = doc.create_element("c2");
+            let c3 = doc.create_element("c3");
+            let c4 = doc.create_element("c4");
+            let c5 = doc.create_element("c5");
+            let c6 = doc.create_element("c6");
 
-        (a1, b1, b2, b3, a3)
+            a.append_child(b0);
+            a.append_child(b1);
+            a.append_child(b2);
+
+            b0.append_child(c0);
+            b0.append_child(c1);
+
+            b1.append_child(c2);
+            b1.append_child(c3);
+            b1.append_child(c4);
+
+            b2.append_child(c5);
+            b2.append_child(c6);
+
+            PrecedingFollowing {
+                midpoint: c3,
+                b: [b0, b1, b2],
+                c: [c0, c1, c2, c3, c4, c5, c6],
+            }
+        }
     }
 
     #[test]
     fn preceding_selects_in_reverse_document_order() {
         let package = Package::new();
         let doc = package.as_document();
-        let (a1, b1, b2, _, _) = setup_preceding_following(&doc);
+        let PrecedingFollowing { b, c, midpoint } = PrecedingFollowing::new(doc);
 
-        let result = execute(Preceding, b2);
+        let result = execute(Preceding, midpoint);
 
-        assert_eq!(result, ordered_nodes![b1, a1]);
+        assert_eq!(result, ordered_nodes![c[2], c[1], c[0], b[0]]);
     }
 
     #[test]
     fn following_selects_in_document_order() {
         let package = Package::new();
         let doc = package.as_document();
-        let (_, _, b2, b3, a3) = setup_preceding_following(&doc);
+        let PrecedingFollowing { b, c, midpoint } = PrecedingFollowing::new(doc);
 
-        let result = execute(Following, b2);
+        let result = execute(Following, midpoint);
 
-        assert_eq!(result, ordered_nodes![b3, a3]);
+        assert_eq!(result, ordered_nodes![c[4], b[2], c[5], c[6]]);
     }
 }
