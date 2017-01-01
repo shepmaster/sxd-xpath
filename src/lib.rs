@@ -306,6 +306,7 @@ partial_eq_impl!(nodeset::Nodeset<'d>, Value::Nodeset(ref v) => v);
 /// A compiled XPath. Construct via [`Factory`][].
 ///
 /// [`Factory`]: struct.Factory.html
+#[derive(Debug)]
 pub struct XPath(Box<expression::Expression + 'static>);
 
 impl XPath {
