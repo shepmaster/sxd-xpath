@@ -585,8 +585,13 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
     if x == y {
         x
     } else {
-        let z = (2.0*x-y).floor();
-        z * x.signum() // Should use copysign
+        let z = (2.0 * x - y).floor();
+        // Should use copysign
+        if x.is_sign_positive() ^ z.is_sign_positive() {
+            -z
+        } else {
+            z
+        }
     }
 }
 
@@ -1050,6 +1055,11 @@ mod test {
     #[test]
     fn round_neg_zero_point_five_to_neg_zero() {
         evaluate_literal(round(), args![-0.5], |r| assert_number(-0.0, r));
+    }
+
+    #[test]
+    fn round_neg_five_to_neg_five() {
+        evaluate_literal(round(), args![-5.0], |r| assert_number(-5.0, r));
     }
 
     #[test]
