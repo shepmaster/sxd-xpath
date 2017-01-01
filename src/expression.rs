@@ -453,40 +453,27 @@ impl<A> ParameterizedStep<A>
                         -> Result<Nodeset<'d>, Error>
     {
         // For every starting node, we collect new nodes based on the
-        // axis and node-test. We evaluate the predicates on the total
-        // set of new nodes.
+        // axis and node-test. We evaluate the predicates on each node.
 
         // This seems like a likely place where we could differ from
-        // the spec, so thorough testing would be ideal.
+        // the spec, so thorough testing is key.
 
-        self.apply_predicates(context, self.apply_axis(context, starting_nodes))
-    }
-
-    fn apply_axis<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, starting_nodes: Nodeset<'d>)
-                        -> OrderedNodes<'d>
-    {
-        let mut result = OrderedNodes::new();
+        let mut unique = Nodeset::new();
 
         for node in starting_nodes.iter() {
+            let mut nodes = OrderedNodes::new();
+
             let child_context = context.new_context_for(node);
-            self.axis.select_nodes(&child_context, &self.node_test, &mut result);
+            self.axis.select_nodes(&child_context, &self.node_test, &mut nodes);
+
+            for predicate in &self.predicates {
+                nodes = try!(predicate.select(context, nodes));
+            }
+
+            unique.extend(Vec::from(nodes));
         }
 
-        result
-    }
-
-    fn apply_predicates<'c, 'd>(&self,
-                                context: &context::Evaluation<'c, 'd>,
-                                nodes: OrderedNodes<'d>)
-                                -> Result<Nodeset<'d>, Error>
-    {
-        let mut nodes = nodes;
-
-        for predicate in &self.predicates {
-            nodes = try!(predicate.select(context, nodes));
-        }
-
-        Ok(nodes.into())
+        Ok(unique)
     }
 }
 
