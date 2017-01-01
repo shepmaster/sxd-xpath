@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::iter;
 
 use ::{Value, OwnedQName};
-use ::nodeset::{self, Node, Nodeset};
+use ::nodeset::{Node, OrderedNodes};
 use ::function;
 
 /// A mapping of names to XPath functions.
@@ -195,11 +195,11 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     }
 
     /// Yields a new `Evaluation` context for each node in the nodeset.
-    pub fn new_contexts_for(self, nodes: Nodeset<'d>) -> EvaluationNodesetIter<'c, 'd> {
+    pub fn new_contexts_for(self, nodes: OrderedNodes<'d>) -> EvaluationNodesetIter<'c, 'd> {
         let sz = nodes.size();
         EvaluationNodesetIter {
             parent: self,
-            nodes: nodes.into_iter().enumerate(),
+            nodes: Vec::from(nodes).into_iter().enumerate(),
             size: sz,
         }
     }
@@ -208,7 +208,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 /// An iterator for the contexts of each node in a nodeset
 pub struct EvaluationNodesetIter<'c, 'd: 'c> {
     parent: Evaluation<'c, 'd>,
-    nodes: iter::Enumerate<nodeset::IntoIter<'d>>,
+    nodes: iter::Enumerate<::std::vec::IntoIter<Node<'d>>>,
     size: usize,
 }
 

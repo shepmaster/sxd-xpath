@@ -4,7 +4,7 @@ use std::fmt;
 
 use ::context;
 use ::node_test::NodeTest;
-use ::nodeset::{self, Nodeset, Node};
+use ::nodeset::{self, OrderedNodes, Node};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PrincipalNodeType {
@@ -20,7 +20,7 @@ pub trait AxisLike: fmt::Debug {
     fn select_nodes<'c, 'd>(&self,
                             context:   &context::Evaluation<'c, 'd>,
                             node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>);
+                            result:    &mut OrderedNodes<'d>);
 
     /// Describes what node type is naturally selected by this axis.
     fn principal_node_type(&self) -> PrincipalNodeType {
@@ -49,7 +49,7 @@ impl AxisLike for Axis {
     fn select_nodes<'c, 'd>(&self,
                             context:   &context::Evaluation<'c, 'd>,
                             node_test: &NodeTest,
-                            result:    &mut Nodeset<'d>)
+                            result:    &mut OrderedNodes<'d>)
     {
         use self::Axis::*;
         match *self {
@@ -144,7 +144,7 @@ impl AxisLike for Axis {
 
 fn preceding_following_sibling<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
                                        node_test: &NodeTest,
-                                       result:    &mut Nodeset<'d>,
+                                       result:    &mut OrderedNodes<'d>,
                                        f: fn(&Node<'d>) -> Vec<Node<'d>>)
 {
     let sibs = f(&context.node);
@@ -156,7 +156,7 @@ fn preceding_following_sibling<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
 
 fn preceding_following<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
                                node_test: &NodeTest,
-                               result:    &mut Nodeset<'d>,
+                               result:    &mut OrderedNodes<'d>,
                                f: fn(&Node<'d>) -> Vec<Node<'d>>)
 {
     let mut node = context.node;
@@ -182,7 +182,7 @@ mod test {
 
     use ::context::{self, Context};
     use ::node_test::NodeTest;
-    use ::nodeset::{Nodeset, Node};
+    use ::nodeset::{OrderedNodes, Node};
 
     use super::*;
     use super::Axis::*;
@@ -190,18 +190,18 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+        fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
             result.add(context.node)
         }
     }
 
-    fn execute<'n, N>(axis: Axis, node: N) -> Nodeset<'n>
+    fn execute<'n, N>(axis: Axis, node: N) -> OrderedNodes<'n>
         where N: Into<Node<'n>>,
     {
         let context = Context::without_core_functions();
         let context = context::Evaluation::new(&context, node.into());
         let node_test = &DummyNodeTest;
-        let mut result = Nodeset::new();
+        let mut result = OrderedNodes::new();
 
         axis.select_nodes(&context, node_test, &mut result);
 
@@ -222,7 +222,7 @@ mod test {
 
         let result = execute(Ancestor, level2);
 
-        assert_eq!(result, nodeset![level1, level0]);
+        assert_eq!(result, ordered_nodes![level1, level0]);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod test {
 
         let result = execute(AncestorOrSelf, level2);
 
-        assert_eq!(result, nodeset![level2, level1, level0]);
+        assert_eq!(result, ordered_nodes![level2, level1, level0]);
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod test {
 
         let result = execute(PrecedingSibling, child3);
 
-        assert_eq!(result, nodeset![child2, child1]);
+        assert_eq!(result, ordered_nodes![child2, child1]);
     }
 
     #[test]
@@ -277,7 +277,7 @@ mod test {
 
         let result = execute(FollowingSibling, child1);
 
-        assert_eq!(result, nodeset![child2, child3]);
+        assert_eq!(result, ordered_nodes![child2, child3]);
     }
 
     fn setup_preceding_following<'d>(doc: &'d dom::Document<'d>) ->
@@ -313,7 +313,7 @@ mod test {
 
         let result = execute(Preceding, b2);
 
-        assert_eq!(result, nodeset![b1, a1]);
+        assert_eq!(result, ordered_nodes![b1, a1]);
     }
 
     #[test]
@@ -324,6 +324,6 @@ mod test {
 
         let result = execute(Following, b2);
 
-        assert_eq!(result, nodeset![b3, a3]);
+        assert_eq!(result, ordered_nodes![b3, a3]);
     }
 }

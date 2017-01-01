@@ -3,16 +3,16 @@ use std::fmt;
 use sxd_document::QName;
 
 use ::context;
-use ::nodeset::{self, Nodeset};
+use ::nodeset::{self, OrderedNodes};
 
 pub trait NodeTest: fmt::Debug {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>);
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>);
 }
 
 impl<T: ?Sized> NodeTest for Box<T>
     where T: NodeTest,
 {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         (**self).test(context, result)
     }
 }
@@ -60,7 +60,7 @@ impl Attribute {
 }
 
 impl NodeTest for Attribute {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Attribute(ref a) = context.node {
             if self.name_test.matches(context, a.name()) {
                 result.add(context.node);
@@ -83,7 +83,7 @@ impl Namespace {
 }
 
 impl NodeTest for Namespace {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Namespace(ref ns) = context.node {
             if self.name_test.matches(context, QName::new(ns.prefix())) {
                 result.add(context.node);
@@ -106,7 +106,7 @@ impl Element {
 }
 
 impl NodeTest for Element {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Element(ref e) = context.node {
             if self.name_test.matches(context, e.name()) {
                 result.add(context.node);
@@ -120,7 +120,7 @@ impl NodeTest for Element {
 pub struct Node;
 
 impl NodeTest for Node {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         result.add(context.node);
     }
 }
@@ -130,7 +130,7 @@ impl NodeTest for Node {
 pub struct Text;
 
 impl NodeTest for Text {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Text(_) = context.node {
             result.add(context.node);
         }
@@ -142,7 +142,7 @@ impl NodeTest for Text {
 pub struct Comment;
 
 impl NodeTest for Comment {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Comment(_) = context.node {
             result.add(context.node);
         }
@@ -161,7 +161,7 @@ impl ProcessingInstruction {
 }
 
 impl NodeTest for ProcessingInstruction {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut Nodeset<'d>) {
+    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
             match self.target {
                 Some(ref name) if name == &pi.target() => result.add(context.node),
@@ -180,7 +180,7 @@ mod test {
     use sxd_document::dom::{self, Document};
 
     use ::context::{self, Context};
-    use ::nodeset::Nodeset;
+    use ::nodeset::OrderedNodes;
 
     use super::*;
 
@@ -236,9 +236,9 @@ mod test {
     }
 
     fn run_attribute<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
-                       -> Nodeset<'d>
+                       -> OrderedNodes<'d>
     {
-        let mut result = Nodeset::new();
+        let mut result = OrderedNodes::new();
         let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
             local_part: local.to_owned()
@@ -255,7 +255,7 @@ mod test {
         let (attribute, context) = setup.context_for_attribute("hello", "world");
 
         let result = run_attribute(&context, None, "hello");
-        assert_eq!(nodeset![attribute], result);
+        assert_eq!(ordered_nodes![attribute], result);
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod test {
         let (_, context) = setup.context_for_attribute("goodbye", "world");
 
         let result = run_attribute(&context, None, "hello");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -275,7 +275,7 @@ mod test {
         let (attribute, context) = setup.context_for_attribute("whatever", "value");
 
         let result = run_attribute(&context, None, "*");
-        assert_eq!(nodeset![attribute], result);
+        assert_eq!(ordered_nodes![attribute], result);
     }
 
     #[test]
@@ -286,13 +286,13 @@ mod test {
         let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, Some("prefix"), "name");
-        assert_eq!(nodeset![attribute], result);
+        assert_eq!(ordered_nodes![attribute], result);
 
         let result = run_attribute(&context, Some("prefix"), "wrong-name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
 
         let result = run_attribute(&context, Some("another"), "name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -303,10 +303,10 @@ mod test {
         let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, Some("prefix"), "*");
-        assert_eq!(nodeset![attribute], result);
+        assert_eq!(ordered_nodes![attribute], result);
 
         let result = run_attribute(&context, Some("another"), "*");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -316,7 +316,7 @@ mod test {
         let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, None, "*");
-        assert_eq!(nodeset![attribute], result);
+        assert_eq!(ordered_nodes![attribute], result);
     }
 
     #[test]
@@ -326,13 +326,13 @@ mod test {
         let (_, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, None, "name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     fn run_element<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
-                       -> Nodeset<'d>
+                       -> OrderedNodes<'d>
     {
-        let mut result = Nodeset::new();
+        let mut result = OrderedNodes::new();
         let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
             local_part: local.to_owned()
@@ -349,7 +349,7 @@ mod test {
         let (element, context) = setup.context_for_element("hello");
 
         let result = run_element(&context, None, "hello");
-        assert_eq!(nodeset![element], result);
+        assert_eq!(ordered_nodes![element], result);
     }
 
     #[test]
@@ -359,7 +359,7 @@ mod test {
         let (_, context) = setup.context_for_element("goodbye");
 
         let result = run_element(&context, None, "hello");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -369,7 +369,7 @@ mod test {
         let (element, context) = setup.context_for_element("hello");
 
         let result = run_element(&context, None, "*");
-        assert_eq!(nodeset![element], result);
+        assert_eq!(ordered_nodes![element], result);
     }
 
     #[test]
@@ -380,13 +380,13 @@ mod test {
         let (element, context) = setup.context_for_ns_element("prefix", "uri", "name");
 
         let result = run_element(&context, Some("prefix"), "name");
-        assert_eq!(nodeset![element], result);
+        assert_eq!(ordered_nodes![element], result);
 
         let result = run_element(&context, Some("prefix"), "wrong-name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
 
         let result = run_element(&context, Some("another"), "name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -397,10 +397,10 @@ mod test {
         let (element, context) = setup.context_for_ns_element("prefix", "uri", "name");
 
         let result = run_element(&context, Some("prefix"), "*");
-        assert_eq!(nodeset![element], result);
+        assert_eq!(ordered_nodes![element], result);
 
         let result = run_element(&context, Some("another"), "*");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod test {
         let (element, context) = setup.context_for_ns_element("prefix", "uri", "name");
 
         let result = run_element(&context, None, "*");
-        assert_eq!(nodeset![element], result);
+        assert_eq!(ordered_nodes![element], result);
     }
 
     #[test]
@@ -420,6 +420,6 @@ mod test {
         let (_, context) = setup.context_for_ns_element("prefix", "uri", "name");
 
         let result = run_element(&context, None, "name");
-        assert_eq!(nodeset![], result);
+        assert_eq!(ordered_nodes![], result);
     }
 }

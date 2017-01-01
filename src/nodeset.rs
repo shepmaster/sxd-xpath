@@ -1,14 +1,13 @@
 //! Support for collections of nodes.
 
 use std::borrow::ToOwned;
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
+use std::collections::hash_set;
 use std::iter::{IntoIterator, FromIterator};
-use std::{slice, vec};
+use std::usize;
 
 use sxd_document::QName;
 use sxd_document::dom;
-
-use ::context;
 
 macro_rules! unpack(
     ($enum_name:ident, {
@@ -279,10 +278,10 @@ impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
     }
 }
 
-/// A collection of unique nodes
+/// An unordered collection of unique nodes
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Nodeset<'d> {
-    nodes: Vec<Node<'d>>,
+    nodes: HashSet<Node<'d>>,
 }
 
 impl<'d> Nodeset<'d> {
@@ -290,11 +289,18 @@ impl<'d> Nodeset<'d> {
         Default::default()
     }
 
+    /// Checks if the node is present in the set
+    pub fn contains<N>(&self, node: N) -> bool
+        where N: Into<Node<'d>>,
+    {
+        self.nodes.contains(&node.into())
+    }
+
     /// Add the given node to the set
     pub fn add<N>(&mut self, node: N)
         where N: Into<Node<'d>>
     {
-        self.nodes.push(node.into());
+        self.nodes.insert(node.into());
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
@@ -314,38 +320,59 @@ impl<'d> Nodeset<'d> {
     ///
     /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order_first(&self) -> Option<Node<'d>> {
-        let doc = match self.nodes.first() {
+        let doc = match self.nodes.iter().next() {
             Some(n) => n.document(),
             None => return None,
         };
 
-        // Rebuilding this each time cannot possibly be performant,
-        // but I want to see how widely used this is first before
-        // picking an appropriate caching point.
-        let order = build_ordering_of_document(doc);
+        let order = DocOrder::new(doc);
 
-        self.nodes.iter().min_by_key(|&n| order[n]).cloned()
+        self.nodes.iter().min_by_key(|&&n| order.order_of(n)).cloned()
+    }
+
+    pub fn document_order(self) -> Vec<Node<'d>> {
+        let mut nodes: Vec<_> = self.nodes.into_iter().collect();
+        let doc = match nodes.first().map(Node::document) {
+            Some(doc) => doc,
+            None => return nodes,
+        };
+
+        let order = DocOrder::new(doc);
+        nodes.sort_by_key(|&n| order.order_of(n));
+        nodes
     }
 }
 
-fn build_ordering_of_document(doc: dom::Document) -> HashMap<Node, usize> {
-    let mut idx = 0;
-    let mut stack: Vec<Node> = vec![doc.root().into()];
-    let mut order = HashMap::new();
+// Rebuilding this multiple times cannot possibly be performant,
+// but I want to see how widely used this is first before
+// picking an appropriate caching point.
+struct DocOrder<'d>(HashMap<Node<'d>, usize>);
 
-    while let Some(n) = stack.pop() {
-        order.insert(n, idx);
-        idx += 1;
+impl<'d> DocOrder<'d> {
+    fn new(doc: dom::Document<'d>) -> Self {
+        let mut idx = 0;
+        let mut stack: Vec<Node> = vec![doc.root().into()];
+        let mut order = HashMap::new();
 
-        stack.extend(n.children().into_iter().rev());
+        while let Some(n) = stack.pop() {
+            order.insert(n, idx);
+            idx += 1;
 
-        if let Node::Element(e) = n {
-            // TODO: namespaces
-            stack.extend(e.attributes().into_iter().map(Node::Attribute));
+            stack.extend(n.children().into_iter().rev());
+
+            if let Node::Element(e) = n {
+                // TODO: namespaces
+                stack.extend(e.attributes().into_iter().map(Node::Attribute));
+            }
         }
+
+        DocOrder(order)
     }
 
-    order
+    fn order_of(&self, node: Node<'d>) -> usize {
+        // See the library-level docs for rationale on this MAX
+        self.0.get(&node).cloned().unwrap_or(usize::MAX)
+    }
 }
 
 impl<'a, 'd: 'a> IntoIterator for &'a Nodeset<'d> {
@@ -366,18 +393,22 @@ impl<'d> IntoIterator for Nodeset<'d> {
     }
 }
 
-impl<'c, 'd: 'c> FromIterator<context::Evaluation<'c, 'd>> for Nodeset<'d> {
-    fn from_iter<T>(iterator: T) -> Nodeset<'d>
-        where T: IntoIterator<Item = context::Evaluation<'c, 'd>>
+impl<'d> From<OrderedNodes<'d>> for Nodeset<'d> {
+    fn from(other: OrderedNodes<'d>) -> Self {
+        other.0.into_iter().collect()
+    }
+}
+
+impl<'d> FromIterator<Node<'d>> for Nodeset<'d> {
+    fn from_iter<I>(iterator: I) -> Nodeset<'d>
+        where I: IntoIterator<Item = Node<'d>>
     {
-        let mut ns = Nodeset::new();
-        for n in iterator { ns.add(n.node) };
-        ns
+        Nodeset { nodes: iterator.into_iter().collect() }
     }
 }
 
 pub struct Iter<'a, 'd: 'a> {
-    iter: slice::Iter<'a, Node<'d>>,
+    iter: hash_set::Iter<'a, Node<'d>>,
 }
 
 impl<'a, 'd: 'a> Iterator for Iter<'a, 'd> {
@@ -386,12 +417,44 @@ impl<'a, 'd: 'a> Iterator for Iter<'a, 'd> {
 }
 
 pub struct IntoIter<'d> {
-    iter: vec::IntoIter<Node<'d>>,
+    iter: hash_set::IntoIter<Node<'d>>,
 }
 
 impl<'d> Iterator for IntoIter<'d> {
     type Item = Node<'d>;
     fn next(&mut self) -> Option<Node<'d>> { self.iter.next() }
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct OrderedNodes<'d>(Vec<Node<'d>>);
+
+impl<'d> OrderedNodes<'d> {
+    pub fn new() -> Self { Default::default() }
+    pub fn size(&self) -> usize { self.0.len() }
+
+    pub fn add(&mut self, node: Node<'d>) {
+        self.0.push(node.into())
+    }
+}
+
+impl<'d> From<Vec<Node<'d>>> for OrderedNodes<'d> {
+    fn from(other: Vec<Node<'d>>) -> Self {
+        OrderedNodes(other)
+    }
+}
+
+impl<'d> From<OrderedNodes<'d>> for Vec<Node<'d>> {
+    fn from(other: OrderedNodes<'d>) -> Self {
+        other.0
+    }
+}
+
+impl<'d> FromIterator<Node<'d>> for OrderedNodes<'d> {
+    fn from_iter<I>(iterator: I) -> OrderedNodes<'d>
+        where I: IntoIterator<Item = Node<'d>>
+    {
+        OrderedNodes(iterator.into_iter().collect())
+    }
 }
 
 #[cfg(test)]
@@ -425,15 +488,13 @@ mod test {
         nodes.add(c);
         nodes.add(p);
 
-        let node_vec: Vec<_> = nodes.iter().collect();
-
-        assert_eq!(6, node_vec.len());
-        assert_eq!(node_vec[0], Root(r));
-        assert_eq!(node_vec[1], Element(e));
-        assert_eq!(node_vec[2], Attribute(a));
-        assert_eq!(node_vec[3], Text(t));
-        assert_eq!(node_vec[4], Comment(c));
-        assert_eq!(node_vec[5], ProcessingInstruction(p));
+        assert_eq!(6, nodes.size());
+        assert!(nodes.contains(Root(r)));
+        assert!(nodes.contains(Element(e)));
+        assert!(nodes.contains(Attribute(a)));
+        assert!(nodes.contains(Text(t)));
+        assert!(nodes.contains(Comment(c)));
+        assert!(nodes.contains(ProcessingInstruction(p)));
     }
 
     #[test]
