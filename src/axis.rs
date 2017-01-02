@@ -54,16 +54,16 @@ impl AxisLike for Axis {
         use self::Axis::*;
         match *self {
             Ancestor => {
-                let mut node = context.node;
-                while let Some(parent) = node.parent() {
-                    let child_context = context.new_context_for(parent);
-                    node_test.test(&child_context, result);
-                    node = parent;
-                }
+                each_parent(context.node, |parent| {
+                    let parent_context = context.new_context_for(parent);
+                    node_test.test(&parent_context, result);
+                });
             }
             AncestorOrSelf => {
-                node_test.test(context, result);
-                Ancestor.select_nodes(context, node_test, result)
+                node_and_each_parent(context.node, |node| {
+                    let parent_context = context.new_context_for(node);
+                    node_test.test(&parent_context, result);
+                });
             }
             Attribute => {
                 if let Node::Element(ref e) = context.node {
@@ -88,9 +88,7 @@ impl AxisLike for Axis {
                 }
             }
             Child => {
-                let n = context.node;
-
-                for child in n.children() {
+                for child in context.node.children() {
                     let child_context = context.new_context_for(child);
                     node_test.test(&child_context, result);
                 }
@@ -141,7 +139,8 @@ impl AxisLike for Axis {
                 })
             }
             SelfAxis => {
-                node_test.test(context, result);
+                let dummy = context.new_context_for(context.node);
+                node_test.test(&dummy, result);
             }
         }
     }
