@@ -52,24 +52,19 @@ impl AxisLike for Axis {
                             result:    &mut OrderedNodes<'d>)
     {
         use self::Axis::*;
+
+        let mut run_node_test = |node| {
+            let new_context = context.new_context_for(node);
+            node_test.test(&new_context, result);
+        };
+
         match *self {
-            Ancestor => {
-                each_parent(context.node, |parent| {
-                    let parent_context = context.new_context_for(parent);
-                    node_test.test(&parent_context, result);
-                });
-            }
-            AncestorOrSelf => {
-                node_and_each_parent(context.node, |node| {
-                    let parent_context = context.new_context_for(node);
-                    node_test.test(&parent_context, result);
-                });
-            }
+            Ancestor => each_parent(context.node, run_node_test),
+            AncestorOrSelf => node_and_each_parent(context.node, run_node_test),
             Attribute => {
                 if let Node::Element(ref e) = context.node {
                     for attr in e.attributes() {
-                        let attr_context = context.new_context_for(attr);
-                        node_test.test(&attr_context, result);
+                        run_node_test(Node::Attribute(attr));
                     }
                 }
             }
@@ -82,67 +77,51 @@ impl AxisLike for Axis {
                             uri: ns.uri(),
                         });
 
-                        let attr_context = context.new_context_for(ns);
-                        node_test.test(&attr_context, result);
+                        run_node_test(ns);
                     }
                 }
             }
             Child => {
                 for child in context.node.children() {
-                    let child_context = context.new_context_for(child);
-                    node_test.test(&child_context, result);
+                    run_node_test(child);
                 }
             }
             Descendant => {
                 for child in context.node.children() {
-                    preorder_left_to_right(child, |descendant| {
-                        let descendant_context = context.new_context_for(descendant);
-                        node_test.test(&descendant_context, result);
-                    });
+                    preorder_left_to_right(child, &mut run_node_test);
                 }
             }
-            DescendantOrSelf => {
-                preorder_left_to_right(context.node, |descendant| {
-                    let descendant_context = context.new_context_for(descendant);
-                    node_test.test(&descendant_context, result);
-                });
-            }
+            DescendantOrSelf => preorder_left_to_right(context.node, run_node_test),
             Parent => {
-                if let Some(p) = context.node.parent() {
-                    let parent_context = context.new_context_for(p);
-                    node_test.test(&parent_context, result);
+                if let Some(parent) = context.node.parent() {
+                    run_node_test(parent);
                 }
             }
             PrecedingSibling => {
-                preceding_following_sibling(context, node_test, result, Node::preceding_siblings)
+                for sibling in context.node.preceding_siblings() {
+                    run_node_test(sibling)
+                }
             }
             FollowingSibling => {
-                preceding_following_sibling(context, node_test, result, Node::following_siblings)
+                for sibling in context.node.following_siblings() {
+                    run_node_test(sibling)
+                }
             }
             Preceding => {
                 node_and_each_parent(context.node, |node| {
                     for sibling in node.preceding_siblings() {
-                        postorder_right_to_left(sibling, |current| {
-                            let child_context = context.new_context_for(current);
-                            node_test.test(&child_context, result);
-                        });
+                        postorder_right_to_left(sibling, &mut run_node_test);
                     }
                 })
             }
             Following => {
                 node_and_each_parent(context.node, |node| {
                     for sibling in node.following_siblings() {
-                        preorder_left_to_right(sibling, |current| {
-                            let child_context = context.new_context_for(current);
-                            node_test.test(&child_context, result);
-                        });
+                        preorder_left_to_right(sibling, &mut run_node_test);
                     }
                 })
             }
-            SelfAxis => {
-                let dummy = context.new_context_for(context.node);
-                node_test.test(&dummy, result);
-            }
+            SelfAxis => run_node_test(context.node),
         }
     }
 
@@ -153,18 +132,6 @@ impl AxisLike for Axis {
             Namespace => PrincipalNodeType::Namespace,
             _ => PrincipalNodeType::Element,
         }
-    }
-}
-
-fn preceding_following_sibling<'c, 'd>(context:   &context::Evaluation<'c, 'd>,
-                                       node_test: &NodeTest,
-                                       result:    &mut OrderedNodes<'d>,
-                                       f: fn(&Node<'d>) -> Vec<Node<'d>>)
-{
-    let sibs = f(&context.node);
-    for sibling in sibs {
-        let child_context = context.new_context_for(sibling);
-        node_test.test(&child_context, result);
     }
 }
 
