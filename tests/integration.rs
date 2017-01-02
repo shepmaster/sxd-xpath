@@ -17,11 +17,17 @@ fn functions_accept_arguments() {
 }
 
 #[test]
-fn axis_is_fully_applied_before_predicates_filter() {
-    with_document("<a><b/></a>", |doc| {
-        let result = evaluate_xpath(&doc, "count(//*[1])");
+fn axis_predicate_order() {
+    with_document("<a><b><c/></b><b><c/></b></a>", |doc| {
+        // All the `c` elements that are the first child
+        let result = evaluate_xpath(&doc, "//c[1]");
 
-        assert_eq!(Ok(Value::Number(1.0)), result);
+        let a = doc.root().children()[0].element().expect("No element a");
+        let b0 = a.children()[0].element().expect("No element b0");
+        let b1 = a.children()[1].element().expect("No element b1");
+        let c0 = b0.children()[0].element().expect("No element c0");
+        let c1 = b1.children()[0].element().expect("No element c1");
+        assert_eq!(Ok(Value::Nodeset(nodeset![c0, c1])), result);
     });
 }
 
