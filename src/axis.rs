@@ -94,17 +94,18 @@ impl AxisLike for Axis {
                 }
             }
             Descendant => {
-                let n = context.node;
-
-                for child in n.children() {
-                    let child_context = context.new_context_for(child);
-                    node_test.test(&child_context, result);
-                    self.select_nodes(&child_context, node_test, result);
+                for child in context.node.children() {
+                    preorder_left_to_right(child, |descendant| {
+                        let descendant_context = context.new_context_for(descendant);
+                        node_test.test(&descendant_context, result);
+                    });
                 }
             }
             DescendantOrSelf => {
-                node_test.test(context, result);
-                Descendant.select_nodes(context, node_test, result);
+                preorder_left_to_right(context.node, |descendant| {
+                    let descendant_context = context.new_context_for(descendant);
+                    node_test.test(&descendant_context, result);
+                });
             }
             Parent => {
                 if let Some(p) = context.node.parent() {
@@ -282,6 +283,40 @@ mod test {
         let result = execute(AncestorOrSelf, level2);
 
         assert_eq!(result, ordered_nodes![level2, level1, level0]);
+    }
+
+    #[test]
+    fn descendant_includes_parents() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let level0 = doc.root();
+        let level1 = doc.create_element("b");
+        let level2 = doc.create_text("c");
+
+        level0.append_child(level1);
+        level1.append_child(level2);
+
+        let result = execute(Descendant, level0);
+
+        assert_eq!(result, ordered_nodes![level1, level2]);
+    }
+
+    #[test]
+    fn descendant_or_self_also_includes_self() {
+        let package = Package::new();
+        let doc = package.as_document();
+
+        let level0 = doc.root();
+        let level1 = doc.create_element("b");
+        let level2 = doc.create_text("c");
+
+        level0.append_child(level1);
+        level1.append_child(level2);
+
+        let result = execute(DescendantOrSelf, level0);
+
+        assert_eq!(result, ordered_nodes![level0, level1, level2]);
     }
 
     #[test]
