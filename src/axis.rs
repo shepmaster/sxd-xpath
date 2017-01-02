@@ -19,8 +19,7 @@ pub trait AxisLike: fmt::Debug {
     /// adding matching nodes to the nodeset.
     fn select_nodes<'c, 'd>(&self,
                             context:   &context::Evaluation<'c, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut OrderedNodes<'d>);
+                            node_test: &NodeTest) -> OrderedNodes<'d>;
 
     /// Describes what node type is naturally selected by this axis.
     fn principal_node_type(&self) -> PrincipalNodeType {
@@ -45,26 +44,43 @@ pub enum Axis {
     SelfAxis,
 }
 
+struct CompleteNodeTest<'c, 'd: 'c> {
+    context: &'c context::Evaluation<'c, 'd>,
+    node_test: &'c NodeTest,
+    result: OrderedNodes<'d>,
+}
+
+impl<'c, 'd> CompleteNodeTest<'c, 'd> {
+    fn new(context: &'c context::Evaluation<'c, 'd>, node_test: &'c NodeTest) -> Self {
+        CompleteNodeTest {
+            context: context,
+            node_test: node_test,
+            result: OrderedNodes::new(),
+        }
+    }
+
+    fn run(&mut self, node: Node<'d>) {
+        let new_context = self.context.new_context_for(node);
+        self.node_test.test(&new_context, &mut self.result);
+    }
+}
+
 impl AxisLike for Axis {
     fn select_nodes<'c, 'd>(&self,
                             context:   &context::Evaluation<'c, 'd>,
-                            node_test: &NodeTest,
-                            result:    &mut OrderedNodes<'d>)
+                            node_test: &NodeTest) -> OrderedNodes<'d>
     {
         use self::Axis::*;
 
-        let mut run_node_test = |node| {
-            let new_context = context.new_context_for(node);
-            node_test.test(&new_context, result);
-        };
+        let mut node_test = CompleteNodeTest::new(context, node_test);
 
         match *self {
-            Ancestor => each_parent(context.node, run_node_test),
-            AncestorOrSelf => node_and_each_parent(context.node, run_node_test),
+            Ancestor => each_parent(context.node, |n| node_test.run(n)),
+            AncestorOrSelf => node_and_each_parent(context.node, |n| node_test.run(n)),
             Attribute => {
                 if let Node::Element(ref e) = context.node {
                     for attr in e.attributes() {
-                        run_node_test(Node::Attribute(attr));
+                        node_test.run(Node::Attribute(attr));
                     }
                 }
             }
@@ -77,52 +93,54 @@ impl AxisLike for Axis {
                             uri: ns.uri(),
                         });
 
-                        run_node_test(ns);
+                        node_test.run(ns);
                     }
                 }
             }
             Child => {
                 for child in context.node.children() {
-                    run_node_test(child);
+                    node_test.run(child);
                 }
             }
             Descendant => {
                 for child in context.node.children() {
-                    preorder_left_to_right(child, &mut run_node_test);
+                    preorder_left_to_right(child, |n| node_test.run(n));
                 }
             }
-            DescendantOrSelf => preorder_left_to_right(context.node, run_node_test),
+            DescendantOrSelf => preorder_left_to_right(context.node, |n| node_test.run(n)),
             Parent => {
                 if let Some(parent) = context.node.parent() {
-                    run_node_test(parent);
+                    node_test.run(parent);
                 }
             }
             PrecedingSibling => {
                 for sibling in context.node.preceding_siblings() {
-                    run_node_test(sibling)
+                    node_test.run(sibling)
                 }
             }
             FollowingSibling => {
                 for sibling in context.node.following_siblings() {
-                    run_node_test(sibling)
+                    node_test.run(sibling)
                 }
             }
             Preceding => {
                 node_and_each_parent(context.node, |node| {
                     for sibling in node.preceding_siblings() {
-                        postorder_right_to_left(sibling, &mut run_node_test);
+                        postorder_right_to_left(sibling, |n| node_test.run(n));
                     }
                 })
             }
             Following => {
                 node_and_each_parent(context.node, |node| {
                     for sibling in node.following_siblings() {
-                        preorder_left_to_right(sibling, &mut run_node_test);
+                        preorder_left_to_right(sibling, |n| node_test.run(n));
                     }
                 })
             }
-            SelfAxis => run_node_test(context.node),
+            SelfAxis => node_test.run(context.node),
         }
+
+        node_test.result
     }
 
     fn principal_node_type(&self) -> PrincipalNodeType {
@@ -211,11 +229,8 @@ mod test {
         let context = Context::without_core_functions();
         let context = context::Evaluation::new(&context, node.into());
         let node_test = &DummyNodeTest;
-        let mut result = OrderedNodes::new();
 
-        axis.select_nodes(&context, node_test, &mut result);
-
-        result
+        axis.select_nodes(&context, node_test)
     }
 
     #[test]

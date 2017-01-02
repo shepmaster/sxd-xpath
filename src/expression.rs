@@ -461,10 +461,8 @@ impl<A> ParameterizedStep<A>
         let mut unique = Nodeset::new();
 
         for node in starting_nodes.iter() {
-            let mut nodes = OrderedNodes::new();
-
             let child_context = context.new_context_for(node);
-            self.axis.select_nodes(&child_context, &self.node_test, &mut nodes);
+            let mut nodes = self.axis.select_nodes(&child_context, &self.node_test);
 
             for predicate in &self.predicates {
                 nodes = try!(predicate.select(context, nodes));
@@ -883,12 +881,12 @@ mod test {
     }
 
     impl AxisLike for MockAxis {
-        fn select_nodes(&self,
-                        _context:   &context::Evaluation,
-                        _node_test: &NodeTest,
-                        _result:    &mut OrderedNodes)
+        fn select_nodes<'c, 'd>(&self,
+                                _context:   &context::Evaluation<'c, 'd>,
+                                _node_test: &NodeTest) -> OrderedNodes<'d>
         {
             *self.calls.borrow_mut() += 1;
+            OrderedNodes::new()
         }
     }
 
