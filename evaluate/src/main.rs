@@ -44,7 +44,13 @@ fn load_xml<R>(input: R) -> sxd_document::Package
 
     match parse(&data) {
         Ok(d) => d,
-        Err((point, _)) => panic!("Unable to parse: {}", pretty_error(&data, point)),
+        Err((point, e)) => {
+            println!("Unable to parse input XML");
+            for e in e {
+                println!(" -> {:?}", e);
+            }
+            panic!("At:\n{}", pretty_error(&data, point));
+        }
     }
 }
 
