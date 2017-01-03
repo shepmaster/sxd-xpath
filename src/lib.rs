@@ -347,11 +347,11 @@ impl XPath {
     ///
     /// [`Context`]: context/struct.Context.html
     pub fn evaluate<'d, N>(&self, context: &Context<'d>, node: N)
-                           -> Result<Value<'d>, expression::Error>
+                           -> Result<Value<'d>, ExecutionError>
         where N: Into<nodeset::Node<'d>>,
     {
         let context = context::Evaluation::new(context, node.into());
-        self.0.evaluate(&context)
+        self.0.evaluate(&context).map_err(ExecutionError)
     }
 }
 
@@ -367,11 +367,11 @@ impl Factory {
     }
 
     /// Compiles the given string into an XPath structure.
-    pub fn build(&self, xpath: &str) -> Result<Option<XPath>, parser::Error> {
+    pub fn build(&self, xpath: &str) -> Result<Option<XPath>, ParserError> {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
-        self.parser.parse(deabbreviator).map(|x| x.map(XPath))
+        self.parser.parse(deabbreviator).map(|x| x.map(XPath)).map_err(ParserError)
     }
 }
 
@@ -381,12 +381,55 @@ impl Default for Factory {
     }
 }
 
+macro_rules! opaque_error {
+    (
+        $(#[$attr:meta])+
+        $name:ident($inner:ty)
+    ) => {
+        #[derive(Debug, Clone, PartialEq)]
+        $(#[$attr])+
+        pub struct $name($inner);
+
+        impl std::error::Error for $name {
+            fn description(&self) -> &str {
+                self.0.description()
+            }
+
+            fn cause(&self) -> Option<&std::error::Error> {
+                self.0.cause()
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl From<$inner> for $name {
+            fn from(other: $inner) -> $name {
+                $name(other)
+            }
+        }
+    }
+}
+
+opaque_error!(
+    /// Errors that may occur when parsing an XPath
+    ParserError(parser::Error)
+);
+
+opaque_error!(
+    /// Errors that may occur when executing an XPath
+    ExecutionError(expression::Error)
+);
+
 quick_error! {
     /// The failure modes of executing an XPath.
     #[derive(Debug, Clone, PartialEq)]
     pub enum Error {
         /// The XPath was syntactically invalid
-        Parsing(err: parser::Error) {
+        Parsing(err: ParserError) {
             from()
             cause(err)
             description("Unable to parse XPath")
@@ -397,7 +440,7 @@ quick_error! {
             description("XPath was empty")
         }
         /// The XPath could not be executed
-        Executing(err: expression::Error) {
+        Executing(err: ExecutionError) {
             from()
             cause(err)
             description("Unable to execute XPath")
@@ -591,7 +634,7 @@ mod test {
 
             let result = evaluate_xpath(&doc, "/root/child/");
 
-            assert_eq!(Err(Parsing(TrailingSlash)), result);
+            assert_eq!(Err(Parsing(ParserError(TrailingSlash))), result);
         });
     }
 
@@ -603,7 +646,7 @@ mod test {
 
             let result = evaluate_xpath(&doc, "$foo");
 
-            assert_eq!(Err(Executing(UnknownVariable("foo".into()))), result);
+            assert_eq!(Err(Executing(ExecutionError(UnknownVariable("foo".into())))), result);
         });
     }
 
