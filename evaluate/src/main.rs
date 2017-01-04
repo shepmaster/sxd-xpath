@@ -26,7 +26,7 @@ fn build_xpath(xpath_str: &str) -> XPath {
     let factory = Factory::new();
 
     match factory.build(xpath_str) {
-        Err(x) => panic!("Unable to compile XPath {:?}: {:?}", xpath_str, x),
+        Err(x) => panic!("Unable to compile XPath {:?}: {}", xpath_str, x),
         Ok(None) => panic!("Unable to compile XPath"),
         Ok(Some(x)) => x,
     }
