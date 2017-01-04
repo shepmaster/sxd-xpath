@@ -1,6 +1,6 @@
 [package]
 name = "sxd-xpath"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 
 description = "A Rust XML XPath library"
