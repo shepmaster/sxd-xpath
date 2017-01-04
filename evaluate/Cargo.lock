@@ -4,7 +4,7 @@ version = "0.1.0"
 dependencies = [
  "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "sxd-document 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sxd-xpath 0.3.0",
+ "sxd-xpath 0.4.0",
 ]
 
 [[package]]
@@ -33,7 +33,7 @@ dependencies = [
 
 [[package]]
 name = "sxd-xpath"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "peresil 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
