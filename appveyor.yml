@@ -1,0 +1,22 @@
+image: Visual Studio 2015
+version: "{build}"
+environment:
+  matrix:
+    - RUST_CHANNEL: stable
+    - RUST_CHANNEL: beta
+    - RUST_CHANNEL: nightly
+cache:
+  - 'target'
+  - '%USERPROFILE%\.cargo'
+install:
+  - ps: Start-FileDownload 'https://static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe'
+  - cmd: rustup-init.exe -y --default-toolchain="%RUST_CHANNEL%"
+  - ps: $env:Path += ";$env:USERPROFILE\.cargo\bin"
+  - cmd: rustc --version
+  - cmd: cargo --version
+build_script:
+  - cmd: cargo build --verbose --features "%FEATURES%"
+  - cmd: cargo build --verbose --manifest-path=evaluate/Cargo.toml
+test_script:
+  - cmd: cargo test --verbose --features "%FEATURES%"
+deploy: off
