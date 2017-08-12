@@ -12,6 +12,7 @@ macro_rules! nodeset(
 
 
 /// Convenience constructor for an OrderedNodes
+#[cfg(test)]
 macro_rules! ordered_nodes {
     ( $($val:expr,)* ) => {
         $crate::nodeset::OrderedNodes::from(vec![
