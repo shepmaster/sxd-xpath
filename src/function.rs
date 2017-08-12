@@ -56,9 +56,9 @@ quick_error! {
         ArgumentMissing {
             description("attempted to use an argument that was not present")
         }
-        WrongType { expected: ArgumentType, actual: ArgumentType } {
-            description("argument of wrong type")
-            display("argument was the wrong type, expected {:?} but had {:?}", expected, actual)
+        ArgumentNotANodeset { actual: ArgumentType } {
+            description("argument was not a nodeset")
+            display("argument was expected to be a nodeset but was a {:?}", actual)
         }
         Other(what: String) {
             description("an error occurred while evaluating a function")
@@ -68,8 +68,8 @@ quick_error! {
 }
 
 impl Error {
-    fn wrong_type(actual: &Value, expected: ArgumentType) -> Error {
-        Error::WrongType { expected: expected, actual: actual.into() }
+    fn not_a_nodeset(actual: &Value) -> Error {
+        Error::ArgumentNotANodeset { actual: actual.into() }
     }
 }
 
@@ -113,50 +113,30 @@ impl<'d> Args<'d> {
         }
     }
 
-    /// Converts all the arguments into strings. Any arguments that
-    /// were not already strings cause a type mismatch error.
-    fn into_strings(self) -> Result<Vec<String>, Error> {
-        fn string_arg(v: Value) -> Result<String, Error> {
-            match v {
-                Value::String(s) => Ok(s),
-                _ => Err(Error::wrong_type(&v, ArgumentType::String)),
-            }
-        }
-
-        self.0.into_iter().map(string_arg).collect()
+    /// Converts all the arguments into strings.
+    fn into_strings(self) -> Vec<String> {
+        self.0.into_iter().map(Value::into_string).collect()
     }
 
     /// Removes the **last** argument and ensures it is a boolean. If
-    /// the argument is not a boolean, a type mismatch error is
-    /// returned.
+    /// the argument is not a boolean, it is converted to one.
     pub fn pop_boolean(&mut self) -> Result<bool, Error> {
         let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
-        match v {
-            Value::Boolean(v) => Ok(v),
-            a => Err(Error::wrong_type(&a, ArgumentType::Boolean)),
-        }
+        Ok(v.into_boolean())
     }
 
     /// Removes the **last** argument and ensures it is a number. If
-    /// the argument is not a number, a type mismatch error is
-    /// returned.
+    /// the argument is not a number, it is converted to one.
     pub fn pop_number(&mut self) -> Result<f64, Error> {
         let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
-        match v {
-            Value::Number(v) => Ok(v),
-            a => Err(Error::wrong_type(&a, ArgumentType::Number)),
-        }
+        Ok(v.into_number())
     }
 
     /// Removes the **last** argument and ensures it is a string. If
-    /// the argument is not a string, a type mismatch error is
-    /// returned.
+    /// the argument is not a string, it is converted to one.
     pub fn pop_string(&mut self) -> Result<String, Error> {
         let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
-        match v {
-            Value::String(v) => Ok(v),
-            a => Err(Error::wrong_type(&a, ArgumentType::String)),
-        }
+        Ok(v.into_string())
     }
 
     /// Removes the **last** argument and ensures it is a nodeset. If
@@ -166,7 +146,7 @@ impl<'d> Args<'d> {
         let v = self.0.pop().ok_or(Error::ArgumentMissing)?;
         match v {
             Value::Nodeset(v) => Ok(v),
-            a => Err(Error::wrong_type(&a, ArgumentType::Nodeset)),
+            a => Err(Error::not_a_nodeset(&a)),
         }
     }
 
@@ -180,13 +160,11 @@ impl<'d> Args<'d> {
     /// Removes the **last** argument if it is a string. If no
     /// argument is present, the context node is converted to a string
     /// and returned. If there is an argument but it is not a string,
-    /// a type mismatch error is returned.
-    fn pop_string_value_or_context_node(&mut self, context: &context::Evaluation) -> Result<String, Error> {
-        match self.0.pop() {
-            Some(Value::String(s)) => Ok(s),
-            Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::String)),
-            None => Ok(context.node.string_value()),
-        }
+    /// it is converted to one.
+    fn pop_string_value_or_context_node(&mut self, context: &context::Evaluation) -> String {
+        self.0.pop()
+            .map(Value::into_string)
+            .unwrap_or_else(|| context.node.string_value())
     }
 
     /// Removes the **last** argument if it is a nodeset. If no
@@ -198,7 +176,7 @@ impl<'d> Args<'d> {
     {
         match self.0.pop() {
             Some(Value::Nodeset(ns)) => Ok(ns),
-            Some(arg) => Err(Error::wrong_type(&arg, ArgumentType::Nodeset)),
+            Some(arg) => Err(Error::not_a_nodeset(&arg)),
             None => Ok(nodeset![context.node]),
         }
     }
@@ -329,7 +307,7 @@ impl Function for Concat {
     {
         let args = Args(args);
         try!(args.at_least(2));
-        let args = try!(args.into_strings());
+        let args = args.into_strings();
         Ok(Value::String(args.concat()))
     }
 }
@@ -343,7 +321,7 @@ impl Function for TwoStringPredicate {
     {
         let args = Args(args);
         try!(args.exactly(2));
-        let args = try!(args.into_strings());
+        let args = args.into_strings();
         let v = self.0(&args[0], &args[1]);
         Ok(Value::Boolean(v))
     }
@@ -367,7 +345,7 @@ impl Function for SubstringCommon {
     {
         let args = Args(args);
         try!(args.exactly(2));
-        let args = try!(args.into_strings());
+        let args = args.into_strings();
         let s = self.0(&args[0], &args[1]);
         Ok(Value::String(s.to_owned()))
     }
@@ -438,7 +416,7 @@ impl Function for StringLength {
     {
         let mut args = Args(args);
         try!(args.at_most(1));
-        let arg = try!(args.pop_string_value_or_context_node(context));
+        let arg = args.pop_string_value_or_context_node(context);
         Ok(Value::Number(arg.chars().count() as f64))
     }
 }
@@ -452,7 +430,7 @@ impl Function for NormalizeSpace {
     {
         let mut args = Args(args);
         try!(args.at_most(1));
-        let arg = try!(args.pop_string_value_or_context_node(context));
+        let arg = args.pop_string_value_or_context_node(context);
         // TODO: research itertools or another pure-iterator solution
         let s: Vec<_> = arg.split(XmlChar::is_space_char).filter(|s| !s.is_empty()).collect();
         let s = s.join(" ");
