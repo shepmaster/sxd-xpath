@@ -234,6 +234,10 @@ impl<'d> Value<'d> {
         }
     }
 
+    pub fn into_boolean(self) -> bool {
+        self.boolean()
+    }
+
     pub fn number(&self) -> f64 {
         use Value::*;
         match *self {
@@ -242,6 +246,10 @@ impl<'d> Value<'d> {
             String(ref s) => str_to_num(s),
             Nodeset(..) => str_to_num(&self.string()),
         }
+    }
+
+    pub fn into_number(self) -> f64 {
+        self.number()
     }
 
     pub fn string(&self) -> string::String {
@@ -264,6 +272,14 @@ impl<'d> Value<'d> {
                 Some(n) => n.string_value(),
                 None => "".to_owned(),
             },
+        }
+    }
+
+    pub fn into_string(self) -> string::String {
+        use Value::*;
+        match self {
+            String(val) => val,
+            other => other.string(),
         }
     }
 }

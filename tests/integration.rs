@@ -17,6 +17,17 @@ fn functions_accept_arguments() {
 }
 
 #[test]
+fn functions_implicitly_coerce_argument_types() {
+    with_document("<a>true</a>", |doc| {
+        // We are searching a nodeset for a boolean. Both should be
+        // converted to strings by `contains`.
+        let result = evaluate_xpath(&doc, "count(//*[contains(., true)])");
+
+        assert_eq!(Ok(Value::Number(1.0)), result);
+    });
+}
+
+#[test]
 fn axis_predicate_order() {
     with_document("<a><b><c/></b><b><c/></b></a>", |doc| {
         // All the `c` elements that are the first child
