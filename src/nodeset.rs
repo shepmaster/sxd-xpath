@@ -303,10 +303,12 @@ impl<'d> Nodeset<'d> {
         self.nodes.insert(node.into());
     }
 
+    /// An iterator visiting all the nodes in arbitrary order.
     pub fn iter<'a>(&'a self) -> Iter<'a, 'd> {
         IntoIterator::into_iter(self)
     }
 
+    /// Returns the number of nodes belonging to the nodeset.
     pub fn size(&self) -> usize {
         self.nodes.len()
     }
@@ -325,6 +327,9 @@ impl<'d> Nodeset<'d> {
         self.nodes.iter().min_by_key(|&&n| order.order_of(n)).cloned()
     }
 
+    /// Returns all the underlying nodes in [document order]
+    ///
+    /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order(&self) -> Vec<Node<'d>> {
         let mut nodes: Vec<_> = self.iter().collect();
         let doc = match nodes.first().map(Node::document) {
@@ -410,6 +415,7 @@ impl<'d> FromIterator<Node<'d>> for Nodeset<'d> {
     }
 }
 
+/// An iterator visiting all the nodes in arbitrary order.
 pub struct Iter<'a, 'd: 'a> {
     iter: hash_set::Iter<'a, Node<'d>>,
 }
@@ -419,6 +425,7 @@ impl<'a, 'd: 'a> Iterator for Iter<'a, 'd> {
     fn next(&mut self) -> Option<Node<'d>> { self.iter.next().cloned() }
 }
 
+/// An iterator visiting all the nodes in arbitrary order.
 pub struct IntoIter<'d> {
     iter: hash_set::IntoIter<Node<'d>>,
 }
@@ -429,12 +436,19 @@ impl<'d> Iterator for IntoIter<'d> {
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
+/// A vector containing nodes in [document order].
+///
+/// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
 pub struct OrderedNodes<'d>(Vec<Node<'d>>);
 
 impl<'d> OrderedNodes<'d> {
+    /// Creates an empty OrderedNodes vector.
     pub fn new() -> Self { Default::default() }
+
+    /// Returns the length of the underlying vector.
     pub fn size(&self) -> usize { self.0.len() }
 
+    /// Adds a `node` to the end of the underlying vector.
     pub fn add(&mut self, node: Node<'d>) {
         self.0.push(node.into())
     }
