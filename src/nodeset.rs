@@ -315,18 +315,26 @@ impl<'d> Nodeset<'d> {
     ///
     /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order_first(&self) -> Option<Node<'d>> {
-        let doc = match self.nodes.iter().next() {
-            Some(n) => n.document(),
+        let node = match self.nodes.iter().next() {
+            Some(n) => n,
             None => return None,
         };
 
-        let order = DocOrder::new(doc);
+        if self.nodes.len() == 1 {
+            return Some(node.clone());
+        }
+
+        let order = DocOrder::new(node.document());
 
         self.nodes.iter().min_by_key(|&&n| order.order_of(n)).cloned()
     }
 
     pub fn document_order(&self) -> Vec<Node<'d>> {
         let mut nodes: Vec<_> = self.iter().collect();
+        if nodes.len() == 1 {
+            return nodes;
+        }
+
         let doc = match nodes.first().map(Node::document) {
             Some(doc) => doc,
             None => return nodes,
