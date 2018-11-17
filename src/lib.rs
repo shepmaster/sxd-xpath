@@ -137,6 +137,7 @@ mod tokenizer;
 
 // These belong in the the document
 
+/// An owned prefixed name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedPrefixedName {
     prefix: Option<String>,
@@ -170,6 +171,7 @@ impl<'a> From<PrefixedName<'a>> for OwnedPrefixedName {
     }
 }
 
+/// An owned qualified name.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedQName {
     namespace_uri: Option<String>,
@@ -224,6 +226,7 @@ fn str_to_num(s: &str) -> f64 {
 }
 
 impl<'d> Value<'d> {
+    /// Returns a boolean based on the value.
     pub fn boolean(&self) -> bool {
         use Value::*;
         match *self {
@@ -234,10 +237,12 @@ impl<'d> Value<'d> {
         }
     }
 
+    /// Converts the value into a boolean.
     pub fn into_boolean(self) -> bool {
         self.boolean()
     }
 
+    /// Returns a number based on the value.
     pub fn number(&self) -> f64 {
         use Value::*;
         match *self {
@@ -248,10 +253,12 @@ impl<'d> Value<'d> {
         }
     }
 
+    /// Converts the value into a number.
     pub fn into_number(self) -> f64 {
         self.number()
     }
 
+    /// Returns a string based on the value.
     pub fn string(&self) -> string::String {
         use Value::*;
         match *self {
@@ -275,6 +282,7 @@ impl<'d> Value<'d> {
         }
     }
 
+    /// Converts the value into a string.
     pub fn into_string(self) -> string::String {
         use Value::*;
         match self {
@@ -378,6 +386,7 @@ pub struct Factory {
 }
 
 impl Factory {
+    /// Creates a new XPath factory.
     pub fn new() -> Factory {
         Factory { parser: Parser::new() }
     }
