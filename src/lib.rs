@@ -52,7 +52,6 @@
 //!
 //!     let factory = Factory::new();
 //!     let xpath = factory.build("/root").expect("Could not compile XPath");
-//!     let xpath = xpath.expect("No XPath was compiled");
 //!
 //!     let context = Context::new();
 //!
@@ -100,7 +99,7 @@
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
 
-use snafu::{OptionExt, ResultExt, Snafu};
+use snafu::{ResultExt, Snafu};
 use std::borrow::ToOwned;
 use std::string;
 use sxd_document::dom::Document;
@@ -389,14 +388,14 @@ impl Factory {
     }
 
     /// Compiles the given string into an XPath structure.
-    pub fn build(&self, xpath: &str) -> Result<Option<XPath>, ParserError> {
+    pub fn build(&self, xpath: &str) -> Result<XPath, ParserError> {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
         self.parser
             .parse(deabbreviator)
-            .map(|x| x.map(XPath))
-            .map_err(ParserError)
+            .map(XPath)
+            .map_err(Into::into)
     }
 }
 
@@ -420,9 +419,6 @@ pub enum Error {
     /// The XPath was syntactically invalid
     #[snafu(display("Unable to parse XPath: {}", source))]
     Parsing { source: ParserError },
-    /// The XPath did not construct an expression
-    #[snafu(display("XPath was empty"))]
-    NoXPath,
     /// The XPath could not be executed
     #[snafu(display("Unable to execute XPath: {}", source))]
     Executing { source: ExecutionError },
@@ -453,7 +449,6 @@ pub enum Error {
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
     let expression = factory.build(xpath).context(Parsing)?;
-    let expression = expression.context(NoXPath)?;
 
     let context = Context::new();
 
@@ -628,15 +623,6 @@ mod test {
                 .map_err(ExecutionError::from)
                 .context(Executing);
             assert_eq!(expected_error, result);
-        });
-    }
-
-    #[test]
-    fn xpath_evaluation_no_xpath_error() {
-        with_document("<root><child>content</child></root>", |doc| {
-            let result = evaluate_xpath(&doc, "");
-
-            assert_eq!(Err(Error::NoXPath), result);
         });
     }
 }

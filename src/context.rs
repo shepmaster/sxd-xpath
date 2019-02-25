@@ -62,7 +62,6 @@ type Namespaces = HashMap<String, String>;
 ///
 ///     let factory = Factory::new();
 ///     let xpath = factory.build(xpath).expect("Could not compile XPath");
-///     let xpath = xpath.expect("No XPath was compiled");
 ///
 ///     let value = xpath.evaluate(&context, node).expect("XPath evaluation failed");
 ///

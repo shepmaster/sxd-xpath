@@ -20,6 +20,8 @@ impl Parser {
 #[derive(Debug, Snafu, Clone, PartialEq)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
 pub enum Error {
+    /// XPath was empty
+    NoXPath,
     /// empty predicate
     EmptyPredicate,
     /// extra unparsed tokens
@@ -38,7 +40,7 @@ pub enum Error {
     UnexpectedToken { token: Token },
 }
 
-pub type ParseResult = Result<Option<SubExpression>, Error>;
+pub type ParseResult<T = Option<SubExpression>> = Result<T, Error>;
 
 type BinaryExpressionBuilder = fn(SubExpression, SubExpression) -> SubExpression;
 
@@ -665,7 +667,7 @@ impl Parser {
         self.parse_or_expression(source)
     }
 
-    pub fn parse<I>(&self, source: I) -> ParseResult
+    pub fn parse<I>(&self, source: I) -> ParseResult<SubExpression>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -674,6 +676,8 @@ impl Parser {
         let expr = self.parse_or_expression(&mut source)?;
 
         ensure!(!source.has_more_tokens(), ExtraUnparsedTokens);
+
+        let expr = expr.context(NoXPath)?;
 
         Ok(expr)
     }
@@ -817,14 +821,12 @@ mod test {
             }
         }
 
-        fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult {
+        fn parse_raw(&self, tokens: Vec<TokenResult>) -> ParseResult<SubExpression> {
             self.parser.parse(tokens.into_iter())
         }
 
         fn parse(&self, tokens: Vec<TokenResult>) -> SubExpression {
-            self.parse_raw(tokens)
-                .expect("Unable to parse expression")
-                .expect("Expression missing")
+            self.parse_raw(tokens).expect("Unable to parse expression")
         }
 
         fn evaluate<E>(&self, expr: E) -> Value<'d>
@@ -1701,6 +1703,18 @@ mod test {
             }),
             res.err()
         );
+    }
+
+    #[test]
+    fn no_xpath_error() {
+        let tokens = tokens![];
+
+        let package = Package::new();
+        let doc = TestDoc(package.as_document());
+
+        let ex = Exercise::new(&doc);
+        let res = ex.parse_raw(tokens);
+        assert_eq!(Some(Error::NoXPath), res.err());
     }
 
     #[test]
