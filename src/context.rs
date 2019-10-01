@@ -25,9 +25,6 @@ type Namespaces = HashMap<String, String>;
 /// A complete example showing all optional settings.
 ///
 /// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
 /// use std::collections::HashMap;
 /// use sxd_document::parser;
 /// use sxd_xpath::{Factory, Context, Value};

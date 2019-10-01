@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate sxd_xpath;
-
 use std::borrow::ToOwned;
 use sxd_document::{dom, parser};
-use sxd_xpath::{context, function};
+use sxd_xpath::{context, function, nodeset};
 use sxd_xpath::{evaluate_xpath, Context, Factory, Value};
 
 #[test]

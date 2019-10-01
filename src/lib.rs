@@ -16,9 +16,6 @@
 //! to use [`evaluate_xpath`][evaluate_xpath].
 //!
 //! ```
-//! extern crate sxd_document;
-//! extern crate sxd_xpath;
-//!
 //! use sxd_document::parser;
 //! use sxd_xpath::{evaluate_xpath, Value};
 //!
@@ -45,9 +42,6 @@
 //! accomplished:
 //!
 //! ```
-//! extern crate sxd_document;
-//! extern crate sxd_xpath;
-//!
 //! use sxd_document::parser;
 //! use sxd_xpath::{Factory, Context, Value};
 //!
@@ -105,9 +99,6 @@
 //! document, but the relative order of the nodes is undefined.
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
-
-#[macro_use]
-extern crate peresil;
 
 #[macro_use]
 extern crate quick_error;
@@ -352,9 +343,6 @@ impl XPath {
     /// The most common case is to pass in a reference to a [`Context`][]:
     ///
     /// ```rust,no-run
-    /// extern crate sxd_document;
-    /// extern crate sxd_xpath;
-    ///
     /// use sxd_document::dom::Document;
     /// use sxd_xpath::{XPath, Context};
     ///
@@ -492,9 +480,6 @@ quick_error! {
 /// # Examples
 ///
 /// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
 /// use sxd_document::parser;
 /// use sxd_xpath::{evaluate_xpath, Value};
 ///

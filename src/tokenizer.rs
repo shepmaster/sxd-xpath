@@ -2,7 +2,7 @@ use std::borrow::ToOwned;
 use std::collections::VecDeque;
 use std::string;
 
-use peresil::{self, Identifier, ParseMaster, Recoverable, StringPoint};
+use peresil::{self, try_parse, Identifier, ParseMaster, Recoverable, StringPoint};
 use sxd_document::parser::XmlParseExt;
 
 use crate::node_test;
