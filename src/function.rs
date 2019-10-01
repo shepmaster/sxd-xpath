@@ -84,7 +84,7 @@ impl<'d> Args<'d> {
         if actual < minimum {
             Err(Error::NotEnoughArguments {
                 expected: minimum,
-                actual: actual,
+                actual,
             })
         } else {
             Ok(())
@@ -97,7 +97,7 @@ impl<'d> Args<'d> {
         if actual > maximum {
             Err(Error::TooManyArguments {
                 expected: maximum,
-                actual: actual,
+                actual,
             })
         } else {
             Ok(())
@@ -108,15 +108,9 @@ impl<'d> Args<'d> {
     pub fn exactly(&self, expected: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < expected {
-            Err(Error::NotEnoughArguments {
-                expected: expected,
-                actual: actual,
-            })
+            Err(Error::NotEnoughArguments { expected, actual })
         } else if actual > expected {
-            Err(Error::TooManyArguments {
-                expected: expected,
-                actual: actual,
-            })
+            Err(Error::TooManyArguments { expected, actual })
         } else {
             Ok(())
         }

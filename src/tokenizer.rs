@@ -449,7 +449,7 @@ macro_rules! deabbrev {
 impl<I> TokenDeabbreviator<I> {
     pub fn new(source: I) -> TokenDeabbreviator<I> {
         TokenDeabbreviator {
-            source: source,
+            source,
             buffer: Default::default(),
         }
     }

@@ -164,10 +164,7 @@ pub struct NotEqual {
 impl NotEqual {
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(NotEqual {
-            equal: Equal {
-                left: left,
-                right: right,
-            },
+            equal: Equal { left, right },
         })
     }
 }
@@ -243,40 +240,40 @@ fn modulus(a: f64, b: f64) -> f64 {
 impl Math {
     pub fn addition(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Math {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: add,
         })
     }
 
     pub fn subtraction(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Math {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: subtract,
         })
     }
 
     pub fn multiplication(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Math {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: multiply,
         })
     }
 
     pub fn division(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Math {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: divide,
         })
     }
 
     pub fn remainder(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Math {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: modulus,
         })
     }
@@ -338,10 +335,7 @@ pub struct Path {
 
 impl Path {
     pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
-        Box::new(Path {
-            start_point: start_point,
-            steps: steps,
-        })
+        Box::new(Path { start_point, steps })
     }
 }
 
@@ -370,8 +364,8 @@ impl Filter {
             expression: predicate,
         };
         Box::new(Filter {
-            node_selector: node_selector,
-            predicate: predicate,
+            node_selector,
+            predicate,
         })
     }
 }
@@ -408,32 +402,32 @@ fn greater_than_or_equal(left: f64, right: f64) -> bool {
 impl Relational {
     pub fn less_than(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Relational {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: less_than,
         })
     }
 
     pub fn less_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Relational {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: less_than_or_equal,
         })
     }
 
     pub fn greater_than(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Relational {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: greater_than,
         })
     }
 
     pub fn greater_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(Relational {
-            left: left,
-            right: right,
+            left,
+            right,
             operation: greater_than_or_equal,
         })
     }
@@ -525,8 +519,8 @@ where
             .map(|p| Predicate { expression: p })
             .collect();
         ParameterizedStep {
-            axis: axis,
-            node_test: node_test,
+            axis,
+            node_test,
             predicates: preds,
         }
     }
@@ -668,10 +662,7 @@ mod test {
             value: Value::Boolean(true),
         });
 
-        let expr = And {
-            left: left,
-            right: right,
-        };
+        let expr = And { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -689,10 +680,7 @@ mod test {
         });
         let right = Box::new(FailExpression);
 
-        let expr = And {
-            left: left,
-            right: right,
-        };
+        let expr = And { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -720,10 +708,7 @@ mod test {
             name: "right".into(),
         });
 
-        let expr = Equal {
-            left: left,
-            right: right,
-        };
+        let expr = Equal { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -746,10 +731,7 @@ mod test {
             value: Value::Number(6.28),
         });
 
-        let expr = Equal {
-            left: left,
-            right: right,
-        };
+        let expr = Equal { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -775,10 +757,7 @@ mod test {
             value: Value::String("boat".to_owned()),
         });
 
-        let expr = Equal {
-            left: left,
-            right: right,
-        };
+        let expr = Equal { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -1110,10 +1089,7 @@ mod test {
             name: "right".into(),
         });
 
-        let expr = Union {
-            left: left,
-            right: right,
-        };
+        let expr = Union { left, right };
 
         let context = setup.context();
         let res = expr.evaluate(&context);

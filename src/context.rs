@@ -155,7 +155,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     /// Prepares the context used while evaluating the XPath expression
     pub fn new(context: &'c Context<'d>, node: Node<'d>) -> Evaluation<'c, 'd> {
         Evaluation {
-            node: node,
+            node,
             functions: &context.functions,
             variables: &context.variables,
             namespaces: &context.namespaces,
@@ -217,7 +217,7 @@ impl<'c, 'd> Iterator for EvaluationNodesetIter<'c, 'd> {
 
     fn next(&mut self) -> Option<Evaluation<'c, 'd>> {
         self.nodes.next().map(|(idx, node)| Evaluation {
-            node: node,
+            node,
             position: idx + 1,
             size: self.size,
             ..self.parent

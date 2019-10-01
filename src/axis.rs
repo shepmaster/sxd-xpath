@@ -53,8 +53,8 @@ struct CompleteNodeTest<'c, 'd> {
 impl<'c, 'd> CompleteNodeTest<'c, 'd> {
     fn new(context: &'c context::Evaluation<'c, 'd>, node_test: &'c dyn NodeTest) -> Self {
         CompleteNodeTest {
-            context: context,
-            node_test: node_test,
+            context,
+            node_test,
             result: OrderedNodes::new(),
         }
     }

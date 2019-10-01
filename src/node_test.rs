@@ -147,7 +147,7 @@ pub struct ProcessingInstruction {
 
 impl ProcessingInstruction {
     pub fn new(target: Option<String>) -> ProcessingInstruction {
-        ProcessingInstruction { target: target }
+        ProcessingInstruction { target }
     }
 }
 

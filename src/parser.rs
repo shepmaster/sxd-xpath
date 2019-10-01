@@ -107,7 +107,7 @@ macro_rules! next_token_is(
 
 impl LeftAssociativeBinaryParser {
     fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser {
-        LeftAssociativeBinaryParser { rules: rules }
+        LeftAssociativeBinaryParser { rules }
     }
 
     fn parse<F, I>(&self, source: TokenSource<'_, I>, child_parse: F) -> ParseResult
@@ -253,7 +253,7 @@ impl Parser {
     {
         if next_token_is!(source, Token::Variable) {
             let name = consume_value!(source, Token::Variable);
-            Ok(Some(Box::new(expression::Variable { name: name })))
+            Ok(Some(Box::new(expression::Variable { name })))
         } else {
             Ok(None)
         }
@@ -333,10 +333,7 @@ impl Parser {
             let arguments = self.parse_function_args(source)?;
             source.consume(&Token::RightParen)?;
 
-            Ok(Some(Box::new(expression::Function {
-                name: name,
-                arguments: arguments,
-            })))
+            Ok(Some(Box::new(expression::Function { name, arguments })))
         } else {
             Ok(None)
         }
@@ -814,7 +811,7 @@ mod test {
     impl<'d> Exercise<'d> {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
             Exercise {
-                doc: doc,
+                doc,
                 context: Context::new(),
                 parser: Parser::new(),
             }
