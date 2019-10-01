@@ -138,7 +138,7 @@ impl LeftAssociativeBinaryParser {
         F: Fn(TokenSource<I>) -> ParseResult,
         I: Iterator<Item = TokenResult>,
     {
-        let left = try!(child_parse(source));
+        let left = child_parse(source)?;
 
         let mut left = match left {
             None => return Ok(None),
@@ -150,9 +150,9 @@ impl LeftAssociativeBinaryParser {
 
             for rule in &self.rules {
                 if source.next_token_is(&rule.token) {
-                    try!(source.consume(&rule.token));
+                    source.consume(&rule.token)?;
 
-                    let right = try!(child_parse(source));
+                    let right = child_parse(source)?;
 
                     let right = match right {
                         None => return Err(RightHandSideExpressionMissing),
@@ -181,7 +181,7 @@ where
     I: Iterator<Item = TokenResult>,
 {
     for child_parse in child_parses.iter() {
-        let expr = try!((*child_parse)(source));
+        let expr = (*child_parse)(source)?;
         if expr.is_some() {
             return Ok(expr);
         }
@@ -266,9 +266,9 @@ impl Parser {
         I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::LeftParen) {
-            try!(source.consume(&Token::LeftParen));
-            let result = try!(self.parse_expression(source));
-            try!(source.consume(&Token::RightParen));
+            source.consume(&Token::LeftParen)?;
+            let result = self.parse_expression(source)?;
+            source.consume(&Token::RightParen)?;
             Ok(result)
         } else {
             Ok(None)
@@ -324,9 +324,9 @@ impl Parser {
         I: Iterator<Item = TokenResult>,
     {
         while source.next_token_is(&Token::Comma) {
-            try!(source.consume(&Token::Comma));
+            source.consume(&Token::Comma)?;
 
-            match try!(self.parse_expression(source)) {
+            match self.parse_expression(source)? {
                 Some(arg) => arguments.push(arg),
                 None => return Err(ArgumentMissing),
             }
@@ -341,7 +341,7 @@ impl Parser {
     {
         let mut arguments = Vec::new();
 
-        match try!(self.parse_expression(source)) {
+        match self.parse_expression(source)? {
             Some(arg) => arguments.push(arg),
             None => return Ok(arguments),
         }
@@ -356,9 +356,9 @@ impl Parser {
         if next_token_is!(source, Token::Function) {
             let name = consume_value!(source, Token::Function);
 
-            try!(source.consume(&Token::LeftParen));
-            let arguments = try!(self.parse_function_args(source));
-            try!(source.consume(&Token::RightParen));
+            source.consume(&Token::LeftParen)?;
+            let arguments = self.parse_function_args(source)?;
+            source.consume(&Token::RightParen)?;
 
             Ok(Some(Box::new(expression::Function {
                 name: name,
@@ -389,11 +389,11 @@ impl Parser {
         I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::LeftBracket) {
-            try!(source.consume(&Token::LeftBracket));
+            source.consume(&Token::LeftBracket)?;
 
-            match try!(self.parse_expression(source)) {
+            match self.parse_expression(source)? {
                 Some(predicate) => {
-                    try!(source.consume(&Token::RightBracket));
+                    source.consume(&Token::RightBracket)?;
                     Ok(Some(predicate))
                 }
                 None => Err(EmptyPredicate),
@@ -409,7 +409,7 @@ impl Parser {
     {
         let mut predicates = Vec::new();
 
-        while let Some(predicate) = try!(self.parse_predicate_expression(source)) {
+        while let Some(predicate) = self.parse_predicate_expression(source)? {
             predicates.push(predicate)
         }
 
@@ -420,11 +420,11 @@ impl Parser {
     where
         I: Iterator<Item = TokenResult>,
     {
-        let axis = try!(self.parse_axis(source));
+        let axis = self.parse_axis(source)?;
 
-        let node_test = match try!(self.parse_node_test(source)) {
+        let node_test = match self.parse_node_test(source)? {
             Some(test) => Some(test),
-            None => try!(self.default_node_test(source, axis)),
+            None => self.default_node_test(source, axis)?,
         };
 
         let node_test = match node_test {
@@ -432,7 +432,7 @@ impl Parser {
             None => return Ok(None),
         };
 
-        let predicates = try!(self.parse_predicates(source));
+        let predicates = self.parse_predicates(source)?;
 
         Ok(Some(expression::Step::new(axis, node_test, predicates)))
     }
@@ -445,14 +445,14 @@ impl Parser {
     where
         I: Iterator<Item = TokenResult>,
     {
-        match try!(self.parse_step(source)) {
+        match self.parse_step(source)? {
             Some(step) => {
                 let mut steps = vec![step];
 
                 while source.next_token_is(&Token::Slash) {
-                    try!(source.consume(&Token::Slash));
+                    source.consume(&Token::Slash)?;
 
-                    match try!(self.parse_step(source)) {
+                    match self.parse_step(source)? {
                         Some(next) => steps.push(next),
                         None => return Err(TrailingSlash),
                     }
@@ -477,10 +477,10 @@ impl Parser {
         I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::Slash) {
-            try!(source.consume(&Token::Slash));
+            source.consume(&Token::Slash)?;
 
             let start_point = Box::new(expression::RootNode);
-            match try!(self.parse_relative_location_path_raw(source, start_point)) {
+            match self.parse_relative_location_path_raw(source, start_point)? {
                 Some(expr) => Ok(Some(expr)),
                 None => Ok(Some(Box::new(expression::RootNode))),
             }
@@ -505,9 +505,9 @@ impl Parser {
     where
         I: Iterator<Item = TokenResult>,
     {
-        match try!(self.parse_primary_expression(source)) {
+        match self.parse_primary_expression(source)? {
             Some(expr) => {
-                let predicates = try!(self.parse_predicates(source));
+                let predicates = self.parse_predicates(source)?;
 
                 Ok(Some(predicates.into_iter().fold(expr, |expr, pred| {
                     expression::Filter::new(expr, pred)
@@ -521,17 +521,17 @@ impl Parser {
     where
         I: Iterator<Item = TokenResult>,
     {
-        let expr = try!(self.parse_location_path(source));
+        let expr = self.parse_location_path(source)?;
         if expr.is_some() {
             return Ok(expr);
         } // TODO: investigate if this is a pattern
 
-        match try!(self.parse_filter_expression(source)) {
+        match self.parse_filter_expression(source)? {
             Some(expr) => {
                 if source.next_token_is(&Token::Slash) {
-                    try!(source.consume(&Token::Slash));
+                    source.consume(&Token::Slash)?;
 
-                    match try!(self.parse_relative_location_path_raw(source, expr)) {
+                    match self.parse_relative_location_path_raw(source, expr)? {
                         Some(expr) => Ok(Some(expr)),
                         None => Err(TrailingSlash),
                     }
@@ -560,15 +560,15 @@ impl Parser {
     where
         I: Iterator<Item = TokenResult>,
     {
-        let expr = try!(self.parse_union_expression(source));
+        let expr = self.parse_union_expression(source)?;
         if expr.is_some() {
             return Ok(expr);
         }
 
         if source.next_token_is(&Token::MinusSign) {
-            try!(source.consume(&Token::MinusSign));
+            source.consume(&Token::MinusSign)?;
 
-            let expr = try!(self.parse_unary_expression(source));
+            let expr = self.parse_unary_expression(source)?;
 
             match expr {
                 Some(expr) => {
@@ -711,7 +711,7 @@ impl Parser {
     {
         let mut source = source.peekable();
 
-        let expr = try!(self.parse_or_expression(&mut source));
+        let expr = self.parse_or_expression(&mut source)?;
 
         if source.has_more_tokens() {
             return Err(ExtraUnparsedTokens);

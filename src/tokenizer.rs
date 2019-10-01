@@ -409,7 +409,7 @@ impl Tokenizer {
     }
 
     fn next_token(&mut self) -> TokenResult {
-        let token = try!(self.raw_next_token());
+        let token = self.raw_next_token()?;
 
         if !(token.precedes_node_test() || token.precedes_expression() || token.is_operator()) {
             // See http://www.w3.org/TR/xpath/#exprlex

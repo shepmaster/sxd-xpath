@@ -93,8 +93,8 @@ binary_constructor!(And);
 
 impl Expression for And {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        let left = try!(self.left.evaluate(context)).boolean();
-        let v = left && try!(self.right.evaluate(context)).boolean();
+        let left = self.left.evaluate(context)?.boolean();
+        let v = left && self.right.evaluate(context)?.boolean();
         Ok(Boolean(v))
     }
 }
@@ -122,8 +122,8 @@ impl Equal {
         &self,
         context: &context::Evaluation<'c, 'd>,
     ) -> Result<bool, Error> {
-        let left_val = try!(self.left.evaluate(context));
-        let right_val = try!(self.right.evaluate(context));
+        let left_val = self.left.evaluate(context)?;
+        let right_val = self.right.evaluate(context)?;
 
         fn str_vals(nodes: &Nodeset) -> HashSet<String> {
             nodes.iter().map(|n| n.string_value()).collect()
@@ -203,11 +203,11 @@ impl Expression for Function {
             .function_for_name(name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
             .and_then(|fun| {
-                let args = try!(self
+                let args = self
                     .arguments
                     .iter()
                     .map(|arg| arg.evaluate(context))
-                    .collect());
+                    .collect::<Result<_, _>>()?;
                 fun.evaluate(context, args)
                     .map_err(Error::FunctionEvaluation)
             })
@@ -297,8 +297,8 @@ impl Math {
 
 impl Expression for Math {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        let left = try!(self.left.evaluate(context));
-        let right = try!(self.right.evaluate(context));
+        let left = self.left.evaluate(context)?;
+        let right = self.right.evaluate(context)?;
         let op = self.operation;
         Ok(Number(op(left.number(), right.number())))
     }
@@ -337,8 +337,8 @@ binary_constructor!(Or);
 
 impl Expression for Or {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        let left = try!(self.left.evaluate(context)).boolean();
-        let v = left || try!(self.right.evaluate(context)).boolean();
+        let left = self.left.evaluate(context)?.boolean();
+        let v = left || self.right.evaluate(context)?.boolean();
         Ok(Boolean(v))
     }
 }
@@ -360,11 +360,11 @@ impl Path {
 
 impl Expression for Path {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        let result = try!(self.start_point.evaluate(context));
-        let mut result = try!(value_into_nodeset(result));
+        let result = self.start_point.evaluate(context)?;
+        let mut result = value_into_nodeset(result)?;
 
         for step in &self.steps {
-            result = try!(step.evaluate(context, result));
+            result = step.evaluate(context, result)?;
         }
 
         Ok(Value::Nodeset(result))
@@ -454,8 +454,8 @@ impl Relational {
 
 impl Expression for Relational {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        let left_val = try!(self.left.evaluate(context));
-        let right_val = try!(self.right.evaluate(context));
+        let left_val = self.left.evaluate(context)?;
+        let right_val = self.right.evaluate(context)?;
         let op = self.operation;
         Ok(Boolean(op(left_val.number(), right_val.number())))
     }
@@ -503,7 +503,7 @@ impl Predicate {
     }
 
     fn matches(&self, context: &context::Evaluation) -> Result<bool, Error> {
-        let value = try!(self.expression.evaluate(context));
+        let value = self.expression.evaluate(context)?;
 
         let v = match value {
             Number(v) => context.position == v as usize,
@@ -562,7 +562,7 @@ where
             let mut nodes = self.axis.select_nodes(&child_context, &self.node_test);
 
             for predicate in &self.predicates {
-                nodes = try!(predicate.select(context, nodes));
+                nodes = predicate.select(context, nodes)?;
             }
 
             unique.extend(Vec::from(nodes));
@@ -584,8 +584,8 @@ impl Expression for Union {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(value_into_nodeset);
 
-        let mut left_nodes = try!(as_nodes(&self.left));
-        let right_nodes = try!(as_nodes(&self.right));
+        let mut left_nodes = as_nodes(&self.left)?;
+        let right_nodes = as_nodes(&self.right)?;
 
         left_nodes.extend(right_nodes);
         Ok(Value::Nodeset(left_nodes))

@@ -225,7 +225,7 @@ impl Function for Last {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(0));
+        args.exactly(0)?;
         Ok(Value::Number(context.size as f64))
     }
 }
@@ -239,7 +239,7 @@ impl Function for Position {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(0));
+        args.exactly(0)?;
         Ok(Value::Number(context.position as f64))
     }
 }
@@ -253,8 +253,8 @@ impl Function for Count {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.exactly(1));
-        let arg = try!(args.pop_nodeset());
+        args.exactly(1)?;
+        let arg = args.pop_nodeset()?;
         Ok(Value::Number(arg.size() as f64))
     }
 }
@@ -268,8 +268,8 @@ impl Function for LocalName {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
-        let arg = try!(args.pop_nodeset_or_context_node(context));
+        args.at_most(1)?;
+        let arg = args.pop_nodeset_or_context_node(context)?;
         let name = arg
             .document_order_first()
             .and_then(|n| n.expanded_name())
@@ -288,8 +288,8 @@ impl Function for NamespaceUri {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
-        let arg = try!(args.pop_nodeset_or_context_node(context));
+        args.at_most(1)?;
+        let arg = args.pop_nodeset_or_context_node(context)?;
         let name = arg
             .document_order_first()
             .and_then(|n| n.expanded_name())
@@ -308,8 +308,8 @@ impl Function for Name {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
-        let arg = try!(args.pop_nodeset_or_context_node(context));
+        args.at_most(1)?;
+        let arg = args.pop_nodeset_or_context_node(context)?;
         let name = arg
             .document_order_first()
             .and_then(|n| n.prefixed_name())
@@ -327,7 +327,7 @@ impl Function for StringFn {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
+        args.at_most(1)?;
         let arg = args.pop_value_or_context_node(context);
         Ok(Value::String(arg.string()))
     }
@@ -342,7 +342,7 @@ impl Function for Concat {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.at_least(2));
+        args.at_least(2)?;
         let args = args.into_strings();
         Ok(Value::String(args.concat()))
     }
@@ -357,7 +357,7 @@ impl Function for TwoStringPredicate {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(2));
+        args.exactly(2)?;
         let args = args.into_strings();
         let v = self.0(&args[0], &args[1]);
         Ok(Value::Boolean(v))
@@ -386,7 +386,7 @@ impl Function for SubstringCommon {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(2));
+        args.exactly(2)?;
         let args = args.into_strings();
         let s = self.0(&args[0], &args[1]);
         Ok(Value::String(s.to_owned()))
@@ -422,19 +422,19 @@ impl Function for Substring {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_least(2));
-        try!(args.at_most(3));
+        args.at_least(2)?;
+        args.at_most(3)?;
 
         let len = if args.len() == 3 {
-            let len = try!(args.pop_number());
+            let len = args.pop_number()?;
             round_ties_to_positive_infinity(len)
         } else {
             ::std::f64::INFINITY
         };
 
-        let start = try!(args.pop_number());
+        let start = args.pop_number()?;
         let start = round_ties_to_positive_infinity(start);
-        let s = try!(args.pop_string());
+        let s = args.pop_string()?;
 
         let chars = s.chars().enumerate();
         let selected_chars = chars
@@ -461,7 +461,7 @@ impl Function for StringLength {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
+        args.at_most(1)?;
         let arg = args.pop_string_value_or_context_node(context);
         Ok(Value::Number(arg.chars().count() as f64))
     }
@@ -476,7 +476,7 @@ impl Function for NormalizeSpace {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
+        args.at_most(1)?;
         let arg = args.pop_string_value_or_context_node(context);
         // TODO: research itertools or another pure-iterator solution
         let s: Vec<_> = arg
@@ -497,11 +497,11 @@ impl Function for Translate {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.exactly(3));
+        args.exactly(3)?;
 
-        let to = try!(args.pop_string());
-        let from = try!(args.pop_string());
-        let s = try!(args.pop_string());
+        let to = args.pop_string()?;
+        let from = args.pop_string()?;
+        let s = args.pop_string()?;
 
         let mut replacements = HashMap::new();
         let pairs = from
@@ -531,7 +531,7 @@ impl Function for BooleanFn {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(1));
+        args.exactly(1)?;
         Ok(Value::Boolean(args[0].boolean()))
     }
 }
@@ -545,8 +545,8 @@ impl Function for Not {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.exactly(1));
-        let arg = try!(args.pop_boolean());
+        args.exactly(1)?;
+        let arg = args.pop_boolean()?;
         Ok(Value::Boolean(!arg))
     }
 }
@@ -560,7 +560,7 @@ impl Function for BooleanLiteral {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
-        try!(args.exactly(0));
+        args.exactly(0)?;
         Ok(Value::Boolean(self.0))
     }
 }
@@ -581,7 +581,7 @@ impl Function for NumberFn {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.at_most(1));
+        args.at_most(1)?;
         let arg = args.pop_value_or_context_node(context);
         Ok(Value::Number(arg.number()))
     }
@@ -596,8 +596,8 @@ impl Function for Sum {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.exactly(1));
-        let arg = try!(args.pop_nodeset());
+        args.exactly(1)?;
+        let arg = args.pop_nodeset()?;
         let r = arg
             .iter()
             .map(|n| str_to_num(&n.string_value()))
@@ -615,8 +615,8 @@ impl Function for NumberConvert {
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
-        try!(args.exactly(1));
-        let arg = try!(args.pop_number());
+        args.exactly(1)?;
+        let arg = args.pop_number()?;
         Ok(Value::Number(self.0(arg)))
     }
 }
