@@ -2,9 +2,9 @@ extern crate sxd_document;
 
 use std::fmt;
 
-use ::context;
-use ::node_test::NodeTest;
-use ::nodeset::{self, OrderedNodes, Node};
+use context;
+use node_test::NodeTest;
+use nodeset::{self, Node, OrderedNodes};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PrincipalNodeType {
@@ -17,9 +17,11 @@ pub enum PrincipalNodeType {
 pub trait AxisLike: fmt::Debug {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
-    fn select_nodes<'c, 'd>(&self,
-                            context:   &context::Evaluation<'c, 'd>,
-                            node_test: &NodeTest) -> OrderedNodes<'d>;
+    fn select_nodes<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        node_test: &NodeTest,
+    ) -> OrderedNodes<'d>;
 
     /// Describes what node type is naturally selected by this axis.
     fn principal_node_type(&self) -> PrincipalNodeType {
@@ -66,10 +68,11 @@ impl<'c, 'd> CompleteNodeTest<'c, 'd> {
 }
 
 impl AxisLike for Axis {
-    fn select_nodes<'c, 'd>(&self,
-                            context:   &context::Evaluation<'c, 'd>,
-                            node_test: &NodeTest) -> OrderedNodes<'d>
-    {
+    fn select_nodes<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        node_test: &NodeTest,
+    ) -> OrderedNodes<'d> {
         use self::Axis::*;
 
         let mut node_test = CompleteNodeTest::new(context, node_test);
@@ -123,20 +126,16 @@ impl AxisLike for Axis {
                     node_test.run(sibling)
                 }
             }
-            Preceding => {
-                node_and_each_parent(context.node, |node| {
-                    for sibling in node.preceding_siblings() {
-                        postorder_right_to_left(sibling, |n| node_test.run(n));
-                    }
-                })
-            }
-            Following => {
-                node_and_each_parent(context.node, |node| {
-                    for sibling in node.following_siblings() {
-                        preorder_left_to_right(sibling, |n| node_test.run(n));
-                    }
-                })
-            }
+            Preceding => node_and_each_parent(context.node, |node| {
+                for sibling in node.preceding_siblings() {
+                    postorder_right_to_left(sibling, |n| node_test.run(n));
+                }
+            }),
+            Following => node_and_each_parent(context.node, |node| {
+                for sibling in node.following_siblings() {
+                    preorder_left_to_right(sibling, |n| node_test.run(n));
+                }
+            }),
             SelfAxis => node_test.run(context.node),
         }
 
@@ -154,7 +153,8 @@ impl AxisLike for Axis {
 }
 
 fn preorder_left_to_right<'d, F>(node: Node<'d>, mut f: F)
-    where F: FnMut(Node<'d>),
+where
+    F: FnMut(Node<'d>),
 {
     let mut stack = vec![node];
 
@@ -170,7 +170,8 @@ fn preorder_left_to_right<'d, F>(node: Node<'d>, mut f: F)
 // There's other implementations that only require a single stack; are
 // those applicable? Are they better?
 fn postorder_right_to_left<'d, F>(node: Node<'d>, mut f: F)
-    where F: FnMut(Node<'d>),
+where
+    F: FnMut(Node<'d>),
 {
     let mut stack = vec![node];
     let mut stack2 = vec![];
@@ -188,14 +189,16 @@ fn postorder_right_to_left<'d, F>(node: Node<'d>, mut f: F)
 }
 
 fn node_and_each_parent<'d, F>(node: Node<'d>, mut f: F)
-    where F: FnMut(Node<'d>)
+where
+    F: FnMut(Node<'d>),
 {
     f(node);
     each_parent(node, f);
 }
 
 fn each_parent<'d, F>(mut node: Node<'d>, mut f: F)
-    where F: FnMut(Node<'d>)
+where
+    F: FnMut(Node<'d>),
 {
     while let Some(parent) = node.parent() {
         f(parent);
@@ -205,26 +208,31 @@ fn each_parent<'d, F>(mut node: Node<'d>, mut f: F)
 
 #[cfg(test)]
 mod test {
-    use sxd_document::Package;
     use sxd_document::dom;
+    use sxd_document::Package;
 
-    use ::context::{self, Context};
-    use ::node_test::NodeTest;
-    use ::nodeset::{OrderedNodes, Node};
+    use context::{self, Context};
+    use node_test::NodeTest;
+    use nodeset::{Node, OrderedNodes};
 
-    use super::*;
     use super::Axis::*;
+    use super::*;
 
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+        fn test<'c, 'd>(
+            &self,
+            context: &context::Evaluation<'c, 'd>,
+            result: &mut OrderedNodes<'d>,
+        ) {
             result.add(context.node)
         }
     }
 
     fn execute<'n, N>(axis: Axis, node: N) -> OrderedNodes<'n>
-        where N: Into<Node<'n>>,
+    where
+        N: Into<Node<'n>>,
     {
         let context = Context::without_core_functions();
         let context = context::Evaluation::new(&context, node.into());

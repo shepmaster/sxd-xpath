@@ -3,13 +3,13 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use ::{LiteralValue, Value, OwnedPrefixedName};
-use ::Value::{Boolean, Number};
-use ::axis::{Axis, AxisLike};
-use ::context;
-use ::function;
-use ::node_test::NodeTest;
-use ::nodeset::{Nodeset, OrderedNodes};
+use axis::{Axis, AxisLike};
+use context;
+use function;
+use node_test::NodeTest;
+use nodeset::{Nodeset, OrderedNodes};
+use Value::{Boolean, Number};
+use {LiteralValue, OwnedPrefixedName, Value};
 
 quick_error! {
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -63,7 +63,8 @@ pub trait Expression: fmt::Debug {
 }
 
 impl<T: ?Sized> Expression for Box<T>
-    where T: Expression
+where
+    T: Expression,
 {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         (**self).evaluate(context)
@@ -84,7 +85,7 @@ macro_rules! binary_constructor(
 
 #[derive(Debug)]
 pub struct And {
-    pub left:  SubExpression,
+    pub left: SubExpression,
     pub right: SubExpression,
 }
 
@@ -110,14 +111,17 @@ impl Expression for ContextNode {
 
 #[derive(Debug)]
 pub struct Equal {
-    pub left:  SubExpression,
+    pub left: SubExpression,
     pub right: SubExpression,
 }
 
 binary_constructor!(Equal);
 
 impl Equal {
-    fn boolean_evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<bool, Error> {
+    fn boolean_evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+    ) -> Result<bool, Error> {
         let left_val = try!(self.left.evaluate(context));
         let right_val = try!(self.right.evaluate(context));
 
@@ -138,22 +142,20 @@ impl Equal {
                 let left_strings = str_vals(left_nodes);
                 let right_strings = str_vals(right_nodes);
                 !left_strings.is_disjoint(&right_strings)
-            },
-            (&Value::Nodeset(ref nodes), &Number(val)) |
-            (&Number(val), &Value::Nodeset(ref nodes)) => {
+            }
+            (&Value::Nodeset(ref nodes), &Number(val))
+            | (&Number(val), &Value::Nodeset(ref nodes)) => {
                 let numbers = num_vals(nodes);
                 numbers.iter().any(|n| *n == val)
-            },
-            (&Value::Nodeset(ref nodes), &Value::String(ref val)) |
-            (&Value::String(ref val), &Value::Nodeset(ref nodes)) => {
+            }
+            (&Value::Nodeset(ref nodes), &Value::String(ref val))
+            | (&Value::String(ref val), &Value::Nodeset(ref nodes)) => {
                 let strings = str_vals(nodes);
                 strings.contains(val)
-            },
-            (&Boolean(_), _) |
-            (_, &Boolean(_)) => left_val.boolean() == right_val.boolean(),
-            (&Number(_), _) |
-            (_, &Number(_)) => left_val.number() == right_val.number(),
-            _ => left_val.string() == right_val.string()
+            }
+            (&Boolean(_), _) | (_, &Boolean(_)) => left_val.boolean() == right_val.boolean(),
+            (&Number(_), _) | (_, &Number(_)) => left_val.number() == right_val.number(),
+            _ => left_val.string() == right_val.string(),
         };
 
         Ok(v)
@@ -174,7 +176,10 @@ pub struct NotEqual {
 impl NotEqual {
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(NotEqual {
-            equal: Equal{left: left, right: right}
+            equal: Equal {
+                left: left,
+                right: right,
+            },
         })
     }
 }
@@ -194,11 +199,17 @@ pub struct Function {
 impl Expression for Function {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let name = resolve_prefixed_name(context, &self.name)?;
-        context.function_for_name(name)
+        context
+            .function_for_name(name)
             .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
             .and_then(|fun| {
-                let args = try!(self.arguments.iter().map(|arg| arg.evaluate(context)).collect());
-                fun.evaluate(context, args).map_err(Error::FunctionEvaluation)
+                let args = try!(self
+                    .arguments
+                    .iter()
+                    .map(|arg| arg.evaluate(context))
+                    .collect());
+                fun.evaluate(context, args)
+                    .map_err(Error::FunctionEvaluation)
             })
     }
 }
@@ -221,36 +232,66 @@ impl Expression for Literal {
 }
 
 pub struct Math {
-    left:  SubExpression,
+    left: SubExpression,
     right: SubExpression,
     operation: fn(f64, f64) -> f64,
 }
 
-fn      add(a: f64, b: f64) -> f64 {a + b}
-fn subtract(a: f64, b: f64) -> f64 {a - b}
-fn multiply(a: f64, b: f64) -> f64 {a * b}
-fn   divide(a: f64, b: f64) -> f64 {a / b}
-fn  modulus(a: f64, b: f64) -> f64 {a % b}
+fn add(a: f64, b: f64) -> f64 {
+    a + b
+}
+fn subtract(a: f64, b: f64) -> f64 {
+    a - b
+}
+fn multiply(a: f64, b: f64) -> f64 {
+    a * b
+}
+fn divide(a: f64, b: f64) -> f64 {
+    a / b
+}
+fn modulus(a: f64, b: f64) -> f64 {
+    a % b
+}
 
 impl Math {
     pub fn addition(left: SubExpression, right: SubExpression) -> SubExpression {
-        Box::new(Math{left: left, right: right, operation: add})
+        Box::new(Math {
+            left: left,
+            right: right,
+            operation: add,
+        })
     }
 
     pub fn subtraction(left: SubExpression, right: SubExpression) -> SubExpression {
-        Box::new(Math{left: left, right: right, operation: subtract})
+        Box::new(Math {
+            left: left,
+            right: right,
+            operation: subtract,
+        })
     }
 
     pub fn multiplication(left: SubExpression, right: SubExpression) -> SubExpression {
-        Box::new(Math{left: left, right: right, operation: multiply})
+        Box::new(Math {
+            left: left,
+            right: right,
+            operation: multiply,
+        })
     }
 
     pub fn division(left: SubExpression, right: SubExpression) -> SubExpression {
-        Box::new(Math{left: left, right: right, operation: divide})
+        Box::new(Math {
+            left: left,
+            right: right,
+            operation: divide,
+        })
     }
 
     pub fn remainder(left: SubExpression, right: SubExpression) -> SubExpression {
-        Box::new(Math{left: left, right: right, operation: modulus})
+        Box::new(Math {
+            left: left,
+            right: right,
+            operation: modulus,
+        })
     }
 }
 
@@ -265,7 +306,11 @@ impl Expression for Math {
 
 impl fmt::Debug for Math {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Math {{ left: {:?}, right: {:?} }}", self.left, self.right)
+        write!(
+            f,
+            "Math {{ left: {:?}, right: {:?} }}",
+            self.left, self.right
+        )
     }
 }
 
@@ -276,13 +321,15 @@ pub struct Negation {
 
 impl Expression for Negation {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        self.expression.evaluate(context).map(|r| Number(-r.number()))
+        self.expression
+            .evaluate(context)
+            .map(|r| Number(-r.number()))
     }
 }
 
 #[derive(Debug)]
 pub struct Or {
-    left:  SubExpression,
+    left: SubExpression,
     right: SubExpression,
 }
 
@@ -304,7 +351,10 @@ pub struct Path {
 
 impl Path {
     pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
-        Box::new(Path {start_point: start_point, steps: steps})
+        Box::new(Path {
+            start_point: start_point,
+            steps: steps,
+        })
     }
 }
 
@@ -329,14 +379,20 @@ pub struct Filter {
 
 impl Filter {
     pub fn new(node_selector: SubExpression, predicate: SubExpression) -> SubExpression {
-        let predicate = Predicate { expression: predicate };
-        Box::new(Filter { node_selector: node_selector, predicate: predicate })
+        let predicate = Predicate {
+            expression: predicate,
+        };
+        Box::new(Filter {
+            node_selector: node_selector,
+            predicate: predicate,
+        })
     }
 }
 
 impl Expression for Filter {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
-        self.node_selector.evaluate(context)
+        self.node_selector
+            .evaluate(context)
             .and_then(value_into_ordered_nodes)
             .and_then(|nodes| self.predicate.select(context, nodes))
             .map(|nodes| Value::Nodeset(nodes.into()))
@@ -344,35 +400,55 @@ impl Expression for Filter {
 }
 
 pub struct Relational {
-    pub  left: SubExpression,
+    pub left: SubExpression,
     pub right: SubExpression,
     pub operation: fn(f64, f64) -> bool,
 }
 
-fn             less_than(left: f64, right: f64) -> bool { left <  right }
-fn    less_than_or_equal(left: f64, right: f64) -> bool { left <= right }
-fn          greater_than(left: f64, right: f64) -> bool { left >  right }
-fn greater_than_or_equal(left: f64, right: f64) -> bool { left >= right }
+fn less_than(left: f64, right: f64) -> bool {
+    left < right
+}
+fn less_than_or_equal(left: f64, right: f64) -> bool {
+    left <= right
+}
+fn greater_than(left: f64, right: f64) -> bool {
+    left > right
+}
+fn greater_than_or_equal(left: f64, right: f64) -> bool {
+    left >= right
+}
 
 impl Relational {
-    pub fn less_than(left: SubExpression, right: SubExpression) -> SubExpression
-    {
-        Box::new(Relational{left: left, right: right, operation: less_than})
+    pub fn less_than(left: SubExpression, right: SubExpression) -> SubExpression {
+        Box::new(Relational {
+            left: left,
+            right: right,
+            operation: less_than,
+        })
     }
 
-    pub fn less_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
-    {
-        Box::new(Relational{left: left, right: right, operation: less_than_or_equal})
+    pub fn less_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression {
+        Box::new(Relational {
+            left: left,
+            right: right,
+            operation: less_than_or_equal,
+        })
     }
 
-    pub fn greater_than(left: SubExpression, right: SubExpression) -> SubExpression
-    {
-        Box::new(Relational{left: left, right: right, operation: greater_than})
+    pub fn greater_than(left: SubExpression, right: SubExpression) -> SubExpression {
+        Box::new(Relational {
+            left: left,
+            right: right,
+            operation: greater_than,
+        })
     }
 
-    pub fn greater_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression
-    {
-        Box::new(Relational{left: left, right: right, operation: greater_than_or_equal})
+    pub fn greater_than_or_equal(left: SubExpression, right: SubExpression) -> SubExpression {
+        Box::new(Relational {
+            left: left,
+            right: right,
+            operation: greater_than_or_equal,
+        })
     }
 }
 
@@ -387,7 +463,11 @@ impl Expression for Relational {
 
 impl fmt::Debug for Relational {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Relational {{ left: {:?}, right: {:?} }}", self.left, self.right)
+        write!(
+            f,
+            "Relational {{ left: {:?}, right: {:?} }}",
+            self.left, self.right
+        )
     }
 }
 
@@ -403,20 +483,23 @@ impl Expression for RootNode {
 
 #[derive(Debug)]
 struct Predicate {
-    pub expression: SubExpression
+    pub expression: SubExpression,
 }
 
 impl Predicate {
-    fn select<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, nodes: OrderedNodes<'d>)
-                      -> Result<OrderedNodes<'d>, Error>
-    {
-        context.new_contexts_for(nodes).filter_map(|ctx| {
-            match self.matches(&ctx) {
+    fn select<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        nodes: OrderedNodes<'d>,
+    ) -> Result<OrderedNodes<'d>, Error> {
+        context
+            .new_contexts_for(nodes)
+            .filter_map(|ctx| match self.matches(&ctx) {
                 Ok(true) => Some(Ok(ctx.node)),
                 Ok(false) => None,
                 Err(e) => Some(Err(e)),
-            }
-        }).collect()
+            })
+            .collect()
     }
 
     fn matches(&self, context: &context::Evaluation) -> Result<bool, Error> {
@@ -424,7 +507,7 @@ impl Predicate {
 
         let v = match value {
             Number(v) => context.position == v as usize,
-            _ => value.boolean()
+            _ => value.boolean(),
         };
 
         Ok(v)
@@ -442,16 +525,30 @@ pub struct ParameterizedStep<A> {
 }
 
 impl<A> ParameterizedStep<A>
-    where A: AxisLike,
+where
+    A: AxisLike,
 {
-    pub fn new(axis: A, node_test: StepTest, predicates: Vec<SubExpression>) -> ParameterizedStep<A> {
-        let preds = predicates.into_iter().map(|p| Predicate { expression: p }).collect();
-        ParameterizedStep { axis: axis, node_test: node_test, predicates: preds }
+    pub fn new(
+        axis: A,
+        node_test: StepTest,
+        predicates: Vec<SubExpression>,
+    ) -> ParameterizedStep<A> {
+        let preds = predicates
+            .into_iter()
+            .map(|p| Predicate { expression: p })
+            .collect();
+        ParameterizedStep {
+            axis: axis,
+            node_test: node_test,
+            predicates: preds,
+        }
     }
 
-    fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, starting_nodes: Nodeset<'d>)
-                        -> Result<Nodeset<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        starting_nodes: Nodeset<'d>,
+    ) -> Result<Nodeset<'d>, Error> {
         // For every starting node, we collect new nodes based on the
         // axis and node-test. We evaluate the predicates on each node.
 
@@ -477,7 +574,7 @@ impl<A> ParameterizedStep<A>
 
 #[derive(Debug)]
 pub struct Union {
-    pub left:  SubExpression,
+    pub left: SubExpression,
     pub right: SubExpression,
 }
 
@@ -495,18 +592,17 @@ impl Expression for Union {
     }
 }
 
-fn resolve_prefixed_name<'a>(context: &'a context::Evaluation, name: &'a OwnedPrefixedName)
-                             -> Result<QName<'a>, Error>
-{
+fn resolve_prefixed_name<'a>(
+    context: &'a context::Evaluation,
+    name: &'a OwnedPrefixedName,
+) -> Result<QName<'a>, Error> {
     // What about a "default" namespace?
     let ns_uri = match name.prefix {
         None => None,
-        Some(ref prefix) => {
-            match context.namespace_for(prefix) {
-                None => return Err(Error::UnknownNamespace(prefix.clone())),
-                Some(uri) => Some(uri),
-            }
-        }
+        Some(ref prefix) => match context.namespace_for(prefix) {
+            None => return Err(Error::UnknownNamespace(prefix.clone())),
+            Some(uri) => Some(uri),
+        },
     };
 
     Ok(QName::with_namespace_uri(ns_uri, name.local_part.as_str()))
@@ -521,7 +617,8 @@ impl Expression for Variable {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let name = resolve_prefixed_name(context, &self.name)?;
 
-        context.value_of(name)
+        context
+            .value_of(name)
             .cloned()
             .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
     }
@@ -533,15 +630,15 @@ mod test {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use sxd_document::Package;
     use sxd_document::dom::Document;
+    use sxd_document::Package;
 
-    use ::Value::{self, Boolean, Number, String};
-    use ::axis::AxisLike;
-    use ::context::{self, Context};
-    use ::function;
-    use ::node_test::NodeTest;
-    use ::nodeset::OrderedNodes;
+    use axis::AxisLike;
+    use context::{self, Context};
+    use function;
+    use node_test::NodeTest;
+    use nodeset::OrderedNodes;
+    use Value::{self, Boolean, Number, String};
 
     use super::*;
 
@@ -577,10 +674,17 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = Box::new(Literal{value: Value::Boolean(true)});
-        let right = Box::new(Literal{value: Value::Boolean(true)});
+        let left = Box::new(Literal {
+            value: Value::Boolean(true),
+        });
+        let right = Box::new(Literal {
+            value: Value::Boolean(true),
+        });
 
-        let expr = And{left: left, right: right};
+        let expr = And {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -593,10 +697,15 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = Box::new(Literal{value: Value::Boolean(false)});
+        let left = Box::new(Literal {
+            value: Value::Boolean(false),
+        });
         let right = Box::new(FailExpression);
 
-        let expr = And{left: left, right: right};
+        let expr = And {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -613,12 +722,21 @@ mod test {
         let string_value_2 = setup.doc.create_text("same");
 
         setup.context.set_variable("left", nodeset![string_value_1]);
-        setup.context.set_variable("right", nodeset![string_value_2]);
+        setup
+            .context
+            .set_variable("right", nodeset![string_value_2]);
 
-        let left  = Box::new(Variable { name: "left".into() });
-        let right = Box::new(Variable { name: "right".into() });
+        let left = Box::new(Variable {
+            name: "left".into(),
+        });
+        let right = Box::new(Variable {
+            name: "right".into(),
+        });
 
-        let expr = Equal{left: left, right: right};
+        let expr = Equal {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -634,10 +752,17 @@ mod test {
         let string_value = setup.doc.create_text("3.14");
         setup.context.set_variable("left", nodeset![string_value]);
 
-        let left  = Box::new(Variable { name: "left".into() });
-        let right = Box::new(Literal{value: Value::Number(6.28)});
+        let left = Box::new(Variable {
+            name: "left".into(),
+        });
+        let right = Box::new(Literal {
+            value: Value::Number(6.28),
+        });
 
-        let expr = Equal{left: left, right: right};
+        let expr = Equal {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -652,12 +777,21 @@ mod test {
 
         let string_value_1 = setup.doc.create_text("gravy");
         let string_value_2 = setup.doc.create_text("boat");
-        setup.context.set_variable("left", nodeset![string_value_1, string_value_2]);
+        setup
+            .context
+            .set_variable("left", nodeset![string_value_1, string_value_2]);
 
-        let left  = Box::new(Variable { name: "left".into() });
-        let right = Box::new(Literal{value: Value::String("boat".to_owned())});
+        let left = Box::new(Variable {
+            name: "left".into(),
+        });
+        let right = Box::new(Literal {
+            value: Value::String("boat".to_owned()),
+        });
 
-        let expr = Equal{left: left, right: right};
+        let expr = Equal {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -670,10 +804,17 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_bool = Box::new(Literal{value: Value::Boolean(false)});
-        let truthy_str = Box::new(Literal{value: Value::String("hello".to_owned())});
+        let actual_bool = Box::new(Literal {
+            value: Value::Boolean(false),
+        });
+        let truthy_str = Box::new(Literal {
+            value: Value::String("hello".to_owned()),
+        });
 
-        let expr = Equal{left: actual_bool, right: truthy_str};
+        let expr = Equal {
+            left: actual_bool,
+            right: truthy_str,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -686,10 +827,17 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let actual_number = Box::new(Literal{value: Value::Number(-42.0)});
-        let number_str = Box::new(Literal{value: Value::String("-42.0".to_owned())});
+        let actual_number = Box::new(Literal {
+            value: Value::Number(-42.0),
+        });
+        let number_str = Box::new(Literal {
+            value: Value::String("-42.0".to_owned()),
+        });
 
-        let expr = Equal{left: number_str, right: actual_number};
+        let expr = Equal {
+            left: number_str,
+            right: actual_number,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -702,10 +850,17 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = Box::new(Literal{value: Value::String("hello".to_owned())});
-        let b_str = Box::new(Literal{value: Value::String("World".to_owned())});
+        let a_str = Box::new(Literal {
+            value: Value::String("hello".to_owned()),
+        });
+        let b_str = Box::new(Literal {
+            value: Value::String("World".to_owned()),
+        });
 
-        let expr = Equal{left: a_str, right: b_str};
+        let expr = Equal {
+            left: a_str,
+            right: b_str,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -718,8 +873,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let a_str = Box::new(Literal{value: Value::Boolean(true)});
-        let b_str = Box::new(Literal{value: Value::Boolean(false)});
+        let a_str = Box::new(Literal {
+            value: Value::Boolean(true),
+        });
+        let b_str = Box::new(Literal {
+            value: Value::Boolean(false),
+        });
 
         let expr = NotEqual::new(a_str, b_str);
 
@@ -734,10 +893,11 @@ mod test {
     }
 
     impl function::Function for StubFunction {
-        fn evaluate<'c, 'd>(&self,
-                            _: &context::Evaluation<'c, 'd>,
-                            _: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
-        {
+        fn evaluate<'c, 'd>(
+            &self,
+            _: &context::Evaluation<'c, 'd>,
+            _: Vec<Value<'d>>,
+        ) -> Result<Value<'d>, function::Error> {
             Ok(String(self.value.to_owned()))
         }
     }
@@ -747,10 +907,20 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
-        let arg_expr: Box<Expression> = Box::new(Literal{value: Value::Boolean(true)});
-        setup.context.set_function("test-fn", StubFunction { value: "the function ran" });
+        let arg_expr: Box<Expression> = Box::new(Literal {
+            value: Value::Boolean(true),
+        });
+        setup.context.set_function(
+            "test-fn",
+            StubFunction {
+                value: "the function ran",
+            },
+        );
 
-        let expr = Function { name: "test-fn".into(), arguments: vec![arg_expr] };
+        let expr = Function {
+            name: "test-fn".into(),
+            arguments: vec![arg_expr],
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -763,7 +933,10 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let expr = Function { name: "unknown-fn".into(), arguments: vec![] };
+        let expr = Function {
+            name: "unknown-fn".into(),
+            arguments: vec![],
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);
@@ -776,8 +949,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = Box::new(Literal{value: Value::Number(10.0)});
-        let right = Box::new(Literal{value: Value::Number(5.0)});
+        let left = Box::new(Literal {
+            value: Value::Number(10.0),
+        });
+        let right = Box::new(Literal {
+            value: Value::Number(5.0),
+        });
 
         let expr = Math::multiplication(left, right);
 
@@ -804,8 +981,12 @@ mod test {
         parent.append_child(input_node_1);
         parent.append_child(input_node_2);
 
-        let selected_nodes = Box::new(Variable { name: "nodes".into() });
-        let predicate = Box::new(Literal{value: Value::Number(1.0)});
+        let selected_nodes = Box::new(Variable {
+            name: "nodes".into(),
+        });
+        let predicate = Box::new(Literal {
+            value: Value::Number(1.0),
+        });
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -826,8 +1007,12 @@ mod test {
 
         setup.context.set_variable("nodes", input_nodeset);
 
-        let selected_nodes = Box::new(Variable { name: "nodes".into() });
-        let predicate = Box::new(Literal{value: Value::Boolean(false)});
+        let selected_nodes = Box::new(Variable {
+            name: "nodes".into(),
+        });
+        let predicate = Box::new(Literal {
+            value: Value::Boolean(false),
+        });
 
         let expr = Filter::new(selected_nodes, predicate);
 
@@ -842,8 +1027,12 @@ mod test {
         let package = Package::new();
         let setup = Setup::new(&package);
 
-        let left  = Box::new(Literal{value: Value::Number(10.0)});
-        let right = Box::new(Literal{value: Value::Number(5.0)});
+        let left = Box::new(Literal {
+            value: Value::Number(10.0),
+        });
+        let right = Box::new(Literal {
+            value: Value::Number(5.0),
+        });
 
         let expr = Relational::less_than(left, right);
 
@@ -872,7 +1061,9 @@ mod test {
 
     impl MockAxis {
         fn new() -> MockAxis {
-            MockAxis{ calls: Rc::new(RefCell::new(0)) }
+            MockAxis {
+                calls: Rc::new(RefCell::new(0)),
+            }
         }
 
         fn calls(&self) -> usize {
@@ -881,10 +1072,11 @@ mod test {
     }
 
     impl AxisLike for MockAxis {
-        fn select_nodes<'c, 'd>(&self,
-                                _context:   &context::Evaluation<'c, 'd>,
-                                _node_test: &NodeTest) -> OrderedNodes<'d>
-        {
+        fn select_nodes<'c, 'd>(
+            &self,
+            _context: &context::Evaluation<'c, 'd>,
+            _node_test: &NodeTest,
+        ) -> OrderedNodes<'d> {
             *self.calls.borrow_mut() += 1;
             OrderedNodes::new()
         }
@@ -920,14 +1112,21 @@ mod test {
         let left_node = setup.doc.create_element("left");
         let nodes = nodeset![left_node];
         setup.context.set_variable("left", nodes);
-        let left = Box::new(Variable { name: "left".into() });
+        let left = Box::new(Variable {
+            name: "left".into(),
+        });
 
         let right_node = setup.doc.create_element("right");
         let nodes = nodeset![right_node];
         setup.context.set_variable("right", nodes);
-        let right = Box::new(Variable { name: "right".into() });
+        let right = Box::new(Variable {
+            name: "right".into(),
+        });
 
-        let expr = Union{left: left, right: right};
+        let expr = Union {
+            left: left,
+            right: right,
+        };
 
         let context = setup.context();
         let res = expr.evaluate(&context);

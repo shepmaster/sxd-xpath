@@ -115,22 +115,22 @@ extern crate quick_error;
 use std::borrow::ToOwned;
 use std::string;
 
-use sxd_document::{PrefixedName, QName};
 use sxd_document::dom::Document;
+use sxd_document::{PrefixedName, QName};
 
 use parser::Parser;
-use tokenizer::{Tokenizer, TokenDeabbreviator};
+use tokenizer::{TokenDeabbreviator, Tokenizer};
 
 pub use context::Context;
 
 #[macro_use]
 pub mod macros;
-pub mod nodeset;
-pub mod context;
 mod axis;
+pub mod context;
 mod expression;
 pub mod function;
 mod node_test;
+pub mod nodeset;
 mod parser;
 mod token;
 mod tokenizer;
@@ -228,8 +228,8 @@ impl<'d> Value<'d> {
         use Value::*;
         match *self {
             Boolean(val) => val,
-            Number(n) => n != 0.0 && ! n.is_nan(),
-            String(ref s) => ! s.is_empty(),
+            Number(n) => n != 0.0 && !n.is_nan(),
+            String(ref s) => !s.is_empty(),
             Nodeset(ref nodeset) => nodeset.size() > 0,
         }
     }
@@ -241,7 +241,13 @@ impl<'d> Value<'d> {
     pub fn number(&self) -> f64 {
         use Value::*;
         match *self {
-            Boolean(val) => if val { 1.0 } else { 0.0 },
+            Boolean(val) => {
+                if val {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             Number(val) => val,
             String(ref s) => str_to_num(s),
             Nodeset(..) => str_to_num(&self.string()),
@@ -266,7 +272,7 @@ impl<'d> Value<'d> {
                 } else {
                     n.to_string()
                 }
-            },
+            }
             String(ref val) => val.clone(),
             Nodeset(ref ns) => match ns.document_order_first() {
                 Some(n) => n.string_value(),
@@ -291,7 +297,7 @@ macro_rules! from_impl {
                 $variant(other)
             }
         }
-    }
+    };
 }
 
 from_impl!(bool, Value::Boolean);
@@ -315,7 +321,7 @@ macro_rules! partial_eq_impl {
             }
         }
 
-        impl<'d> PartialEq<Value<'d>> for $raw  {
+        impl<'d> PartialEq<Value<'d>> for $raw {
             fn eq(&self, other: &Value<'d>) -> bool {
                 match *other {
                     $variant => $b == self,
@@ -323,7 +329,7 @@ macro_rules! partial_eq_impl {
                 }
             }
         }
-    }
+    };
 }
 
 partial_eq_impl!(bool, Value::Boolean(ref v) => v);
@@ -362,9 +368,13 @@ impl XPath {
     /// ```
     ///
     /// [`Context`]: context/struct.Context.html
-    pub fn evaluate<'d, N>(&self, context: &Context<'d>, node: N)
-                           -> Result<Value<'d>, ExecutionError>
-        where N: Into<nodeset::Node<'d>>,
+    pub fn evaluate<'d, N>(
+        &self,
+        context: &Context<'d>,
+        node: N,
+    ) -> Result<Value<'d>, ExecutionError>
+    where
+        N: Into<nodeset::Node<'d>>,
     {
         let context = context::Evaluation::new(context, node.into());
         self.0.evaluate(&context).map_err(ExecutionError)
@@ -379,7 +389,9 @@ pub struct Factory {
 
 impl Factory {
     pub fn new() -> Factory {
-        Factory { parser: Parser::new() }
+        Factory {
+            parser: Parser::new(),
+        }
     }
 
     /// Compiles the given string into an XPath structure.
@@ -387,7 +399,10 @@ impl Factory {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
-        self.parser.parse(deabbreviator).map(|x| x.map(XPath)).map_err(ParserError)
+        self.parser
+            .parse(deabbreviator)
+            .map(|x| x.map(XPath))
+            .map_err(ParserError)
     }
 }
 
@@ -497,7 +512,9 @@ pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Val
 
     let context = Context::new();
 
-    expression.evaluate(&context, document.root()).map_err(Into::into)
+    expression
+        .evaluate(&context, document.root())
+        .map_err(Into::into)
 }
 
 #[cfg(test)]
@@ -627,7 +644,8 @@ mod test {
     }
 
     fn with_document<F>(xml: &str, f: F)
-        where F: FnOnce(dom::Document),
+    where
+        F: FnOnce(dom::Document),
     {
         let package = sxd_document::parser::parse(xml).expect("Unable to parse test XML");
         f(package.as_document());
@@ -645,8 +663,8 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use Error::*;
             use parser::Error::*;
+            use Error::*;
 
             let result = evaluate_xpath(&doc, "/root/child/");
 
@@ -657,12 +675,15 @@ mod test {
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use Error::*;
             use expression::Error::*;
+            use Error::*;
 
             let result = evaluate_xpath(&doc, "$foo");
 
-            assert_eq!(Err(Executing(ExecutionError(UnknownVariable("foo".into())))), result);
+            assert_eq!(
+                Err(Executing(ExecutionError(UnknownVariable("foo".into())))),
+                result
+            );
         });
     }
 

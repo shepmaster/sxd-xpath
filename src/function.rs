@@ -1,24 +1,26 @@
 //! Support for registering and creating XPath functions.
 
 use std::borrow::ToOwned;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::ops::Index;
+use std::collections::HashMap;
 use std::iter;
+use std::ops::Index;
 
 use sxd_document::XmlChar;
 
-use ::{Value, str_to_num};
-use ::context;
-use ::nodeset::Nodeset;
+use context;
+use nodeset::Nodeset;
+use {str_to_num, Value};
 
 /// Types that can be used as XPath functions.
 pub trait Function {
     /// Evaluate this function in a specific context with a specific
     /// set of arguments.
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>;
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error>;
 }
 
 /// Represents the kind of an XPath value without carrying a value.
@@ -34,8 +36,8 @@ impl<'a> From<&'a Value<'a>> for ArgumentType {
     fn from(other: &'a Value<'a>) -> ArgumentType {
         match *other {
             Value::Boolean(..) => ArgumentType::Boolean,
-            Value::Number(..)  => ArgumentType::Number,
-            Value::String(..)  => ArgumentType::String,
+            Value::Number(..) => ArgumentType::Number,
+            Value::String(..) => ArgumentType::String,
             Value::Nodeset(..) => ArgumentType::Nodeset,
         }
     }
@@ -69,7 +71,9 @@ quick_error! {
 
 impl Error {
     fn not_a_nodeset(actual: &Value) -> Error {
-        Error::ArgumentNotANodeset { actual: actual.into() }
+        Error::ArgumentNotANodeset {
+            actual: actual.into(),
+        }
     }
 }
 
@@ -78,14 +82,21 @@ impl Error {
 pub struct Args<'d>(pub Vec<Value<'d>>);
 
 impl<'d> Args<'d> {
-    pub fn len(&self) -> usize { self.0.len() }
-    pub fn is_empty(&self) -> bool { self.0.is_empty() }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 
     /// Ensures that there are at least the requested number of arguments.
     pub fn at_least(&self, minimum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < minimum {
-            Err(Error::NotEnoughArguments { expected: minimum, actual: actual })
+            Err(Error::NotEnoughArguments {
+                expected: minimum,
+                actual: actual,
+            })
         } else {
             Ok(())
         }
@@ -95,7 +106,10 @@ impl<'d> Args<'d> {
     pub fn at_most(&self, maximum: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual > maximum {
-            Err(Error::TooManyArguments { expected: maximum, actual: actual })
+            Err(Error::TooManyArguments {
+                expected: maximum,
+                actual: actual,
+            })
         } else {
             Ok(())
         }
@@ -105,9 +119,15 @@ impl<'d> Args<'d> {
     pub fn exactly(&self, expected: usize) -> Result<(), Error> {
         let actual = self.0.len();
         if actual < expected {
-            Err(Error::NotEnoughArguments { expected: expected, actual: actual })
+            Err(Error::NotEnoughArguments {
+                expected: expected,
+                actual: actual,
+            })
         } else if actual > expected {
-            Err(Error::TooManyArguments { expected: expected, actual: actual })
+            Err(Error::TooManyArguments {
+                expected: expected,
+                actual: actual,
+            })
         } else {
             Ok(())
         }
@@ -152,8 +172,12 @@ impl<'d> Args<'d> {
 
     /// Removes the **last** argument. If no argument is present, the
     /// context node is returned as a nodeset.
-    fn pop_value_or_context_node<'c>(&mut self, context: &context::Evaluation<'c, 'd>) -> Value<'d> {
-        self.0.pop()
+    fn pop_value_or_context_node<'c>(
+        &mut self,
+        context: &context::Evaluation<'c, 'd>,
+    ) -> Value<'d> {
+        self.0
+            .pop()
             .unwrap_or_else(|| Value::Nodeset(nodeset![context.node]))
     }
 
@@ -162,7 +186,8 @@ impl<'d> Args<'d> {
     /// and returned. If there is an argument but it is not a string,
     /// it is converted to one.
     fn pop_string_value_or_context_node(&mut self, context: &context::Evaluation) -> String {
-        self.0.pop()
+        self.0
+            .pop()
             .map(Value::into_string)
             .unwrap_or_else(|| context.node.string_value())
     }
@@ -171,9 +196,10 @@ impl<'d> Args<'d> {
     /// argument is present, the context node is added to a nodeset
     /// and returned. If there is an argument but it is not a nodeset,
     /// a type mismatch error is returned.
-    fn pop_nodeset_or_context_node<'c>(&mut self, context: &context::Evaluation<'c, 'd>)
-                                       -> Result<Nodeset<'d>, Error>
-    {
+    fn pop_nodeset_or_context_node<'c>(
+        &mut self,
+        context: &context::Evaluation<'c, 'd>,
+    ) -> Result<Nodeset<'d>, Error> {
         match self.0.pop() {
             Some(Value::Nodeset(ns)) => Ok(ns),
             Some(arg) => Err(Error::not_a_nodeset(&arg)),
@@ -185,16 +211,19 @@ impl<'d> Args<'d> {
 impl<'d> Index<usize> for Args<'d> {
     type Output = Value<'d>;
 
-    fn index(&self, index: usize) -> &Value<'d> { self.0.index(index) }
+    fn index(&self, index: usize) -> &Value<'d> {
+        self.0.index(index)
+    }
 }
 
 struct Last;
 
 impl Function for Last {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(0));
         Ok(Value::Number(context.size as f64))
@@ -204,10 +233,11 @@ impl Function for Last {
 struct Position;
 
 impl Function for Position {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(0));
         Ok(Value::Number(context.position as f64))
@@ -217,10 +247,11 @@ impl Function for Position {
 struct Count;
 
 impl Function for Count {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
@@ -231,15 +262,16 @@ impl Function for Count {
 struct LocalName;
 
 impl Function for LocalName {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = try!(args.pop_nodeset_or_context_node(context));
-        let name =
-            arg.document_order_first()
+        let name = arg
+            .document_order_first()
             .and_then(|n| n.expanded_name())
             .map(|q| q.local_part())
             .unwrap_or("");
@@ -250,15 +282,16 @@ impl Function for LocalName {
 struct NamespaceUri;
 
 impl Function for NamespaceUri {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = try!(args.pop_nodeset_or_context_node(context));
-        let name =
-            arg.document_order_first()
+        let name = arg
+            .document_order_first()
             .and_then(|n| n.expanded_name())
             .and_then(|q| q.namespace_uri())
             .unwrap_or("");
@@ -269,15 +302,16 @@ impl Function for NamespaceUri {
 struct Name;
 
 impl Function for Name {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = try!(args.pop_nodeset_or_context_node(context));
-        let name =
-            arg.document_order_first()
+        let name = arg
+            .document_order_first()
             .and_then(|n| n.prefixed_name())
             .unwrap_or_else(String::new);
         Ok(Value::String(name))
@@ -287,10 +321,11 @@ impl Function for Name {
 struct StringFn;
 
 impl Function for StringFn {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = args.pop_value_or_context_node(context);
@@ -301,10 +336,11 @@ impl Function for StringFn {
 struct Concat;
 
 impl Function for Concat {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.at_least(2));
         let args = args.into_strings();
@@ -315,10 +351,11 @@ impl Function for Concat {
 struct TwoStringPredicate(fn(&str, &str) -> bool);
 
 impl Function for TwoStringPredicate {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(2));
         let args = args.into_strings();
@@ -328,21 +365,26 @@ impl Function for TwoStringPredicate {
 }
 
 fn starts_with() -> TwoStringPredicate {
-    fn imp(a: &str, b: &str) -> bool { str::starts_with(a, b) };
+    fn imp(a: &str, b: &str) -> bool {
+        str::starts_with(a, b)
+    };
     TwoStringPredicate(imp)
 }
 fn contains() -> TwoStringPredicate {
-    fn imp(a: &str, b: &str) -> bool { str::contains(a, b) };
+    fn imp(a: &str, b: &str) -> bool {
+        str::contains(a, b)
+    };
     TwoStringPredicate(imp)
 }
 
 struct SubstringCommon(for<'s> fn(&'s str, &'s str) -> &'s str);
 
 impl Function for SubstringCommon {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(2));
         let args = args.into_strings();
@@ -374,10 +416,11 @@ fn substring_after() -> SubstringCommon {
 struct Substring;
 
 impl Function for Substring {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_least(2));
         try!(args.at_most(3));
@@ -394,14 +437,16 @@ impl Function for Substring {
         let s = try!(args.pop_string());
 
         let chars = s.chars().enumerate();
-        let selected_chars = chars.filter_map(|(p, s)| {
-            let p = (p+1) as f64; // 1-based indexing
-            if p >= start && p < start + len {
-                Some(s)
-            } else {
-                None
-            }
-        }).collect() ;
+        let selected_chars = chars
+            .filter_map(|(p, s)| {
+                let p = (p + 1) as f64; // 1-based indexing
+                if p >= start && p < start + len {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         Ok(Value::String(selected_chars))
     }
@@ -410,10 +455,11 @@ impl Function for Substring {
 struct StringLength;
 
 impl Function for StringLength {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = args.pop_string_value_or_context_node(context);
@@ -424,15 +470,19 @@ impl Function for StringLength {
 struct NormalizeSpace;
 
 impl Function for NormalizeSpace {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = args.pop_string_value_or_context_node(context);
         // TODO: research itertools or another pure-iterator solution
-        let s: Vec<_> = arg.split(XmlChar::is_space_char).filter(|s| !s.is_empty()).collect();
+        let s: Vec<_> = arg
+            .split(XmlChar::is_space_char)
+            .filter(|s| !s.is_empty())
+            .collect();
         let s = s.join(" ");
         Ok(Value::String(s))
     }
@@ -441,10 +491,11 @@ impl Function for NormalizeSpace {
 struct Translate;
 
 impl Function for Translate {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.exactly(3));
 
@@ -453,16 +504,19 @@ impl Function for Translate {
         let s = try!(args.pop_string());
 
         let mut replacements = HashMap::new();
-        let pairs = from.chars().zip(to.chars().map(Some).chain(iter::repeat(None)));
+        let pairs = from
+            .chars()
+            .zip(to.chars().map(Some).chain(iter::repeat(None)));
         for (from, to) in pairs {
             if let Entry::Vacant(entry) = replacements.entry(from) {
                 entry.insert(to);
             }
         }
 
-        let s = s.chars().filter_map(|c| {
-            replacements.get(&c).cloned().unwrap_or_else(|| Some(c))
-        }).collect();
+        let s = s
+            .chars()
+            .filter_map(|c| replacements.get(&c).cloned().unwrap_or_else(|| Some(c)))
+            .collect();
 
         Ok(Value::String(s))
     }
@@ -471,10 +525,11 @@ impl Function for Translate {
 struct BooleanFn;
 
 impl Function for BooleanFn {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(1));
         Ok(Value::Boolean(args[0].boolean()))
@@ -484,10 +539,11 @@ impl Function for BooleanFn {
 struct Not;
 
 impl Function for Not {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_boolean());
@@ -498,26 +554,32 @@ impl Function for Not {
 struct BooleanLiteral(bool);
 
 impl Function for BooleanLiteral {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let args = Args(args);
         try!(args.exactly(0));
         Ok(Value::Boolean(self.0))
     }
 }
 
-fn true_fn() -> BooleanLiteral { BooleanLiteral(true) }
-fn false_fn() -> BooleanLiteral { BooleanLiteral(false) }
+fn true_fn() -> BooleanLiteral {
+    BooleanLiteral(true)
+}
+fn false_fn() -> BooleanLiteral {
+    BooleanLiteral(false)
+}
 
 struct NumberFn;
 
 impl Function for NumberFn {
-    fn evaluate<'c, 'd>(&self,
-                        context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.at_most(1));
         let arg = args.pop_value_or_context_node(context);
@@ -528,14 +590,18 @@ impl Function for NumberFn {
 struct Sum;
 
 impl Function for Sum {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_nodeset());
-        let r = arg.iter().map(|n| str_to_num(&n.string_value())).fold(0.0, |acc, i| acc + i);
+        let r = arg
+            .iter()
+            .map(|n| str_to_num(&n.string_value()))
+            .fold(0.0, |acc, i| acc + i);
         Ok(Value::Number(r))
     }
 }
@@ -543,10 +609,11 @@ impl Function for Sum {
 struct NumberConvert(fn(f64) -> f64);
 
 impl Function for NumberConvert {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
         try!(args.exactly(1));
         let arg = try!(args.pop_number());
@@ -554,8 +621,12 @@ impl Function for NumberConvert {
     }
 }
 
-fn floor() -> NumberConvert { NumberConvert(f64::floor) }
-fn ceiling() -> NumberConvert { NumberConvert(f64::ceil) }
+fn floor() -> NumberConvert {
+    NumberConvert(f64::floor)
+}
+fn ceiling() -> NumberConvert {
+    NumberConvert(f64::ceil)
+}
 
 // http://stackoverflow.com/a/28124775/155423
 fn round_ties_to_positive_infinity(x: f64) -> f64 {
@@ -573,7 +644,9 @@ fn round_ties_to_positive_infinity(x: f64) -> f64 {
     }
 }
 
-fn round() -> NumberConvert { NumberConvert(round_ties_to_positive_infinity) }
+fn round() -> NumberConvert {
+    NumberConvert(round_ties_to_positive_infinity)
+}
 
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
@@ -609,39 +682,18 @@ pub fn register_core_functions(context: &mut context::Context) {
 #[cfg(test)]
 mod test {
     use std::borrow::ToOwned;
-    use std::{fmt, f64};
+    use std::{f64, fmt};
 
     use sxd_document::Package;
 
-    use ::{LiteralValue, Value};
-    use ::context;
-    use ::nodeset::Node;
+    use context;
+    use nodeset::Node;
+    use {LiteralValue, Value};
 
     use super::{
-        Function,
-        Error,
-        Last,
-        Position,
-        Count,
-        LocalName,
-        NamespaceUri,
-        Name,
-        StringFn,
-        Concat,
-        Substring,
-        StringLength,
-        NormalizeSpace,
-        Translate,
-        BooleanFn,
-        NumberFn,
-        Sum,
-        starts_with,
-        contains,
-        substring_before,
-        substring_after,
-        floor,
-        ceiling,
-        round,
+        ceiling, contains, floor, round, starts_with, substring_after, substring_before, BooleanFn,
+        Concat, Count, Error, Function, Last, LocalName, Name, NamespaceUri, NormalizeSpace,
+        NumberFn, Position, StringFn, StringLength, Substring, Sum, Translate,
     };
 
     /// Converts each argument into a `Value` and packs them into a
@@ -668,10 +720,10 @@ mod test {
             }
         }
 
-        fn evaluate<N, F>(&self, node: N, f: F, args: Vec<Value<'d>>)
-            -> Result<Value<'d>, Error>
-            where N: Into<Node<'d>>,
-                  F: Function
+        fn evaluate<N, F>(&self, node: N, f: F, args: Vec<Value<'d>>) -> Result<Value<'d>, Error>
+        where
+            N: Into<Node<'d>>,
+            F: Function,
         {
             let context = context::Evaluation::new(&self.context, node.into());
             f.evaluate(&context, args)
@@ -679,8 +731,9 @@ mod test {
     }
 
     fn evaluate_literal<F, F2, T>(f: F, args: Vec<LiteralValue>, rf: F2) -> T
-        where F: Function,
-              F2: FnOnce(Result<Value, Error>) -> T,
+    where
+        F: Function,
+        F2: FnOnce(Result<Value, Error>) -> T,
     {
         let package = Package::new();
         let doc = package.as_document();
@@ -821,11 +874,9 @@ mod test {
     }
 
     fn substring_test(s: &str, start: f64, len: f64) -> String {
-        evaluate_literal(Substring, args![s, start, len], |r| {
-            match r {
-                Ok(Value::String(s)) => s,
-                r => panic!("substring failed: {:?}", r),
-            }
+        evaluate_literal(Substring, args![s, start, len], |r| match r {
+            Ok(Value::String(s)) => s,
+            r => panic!("substring failed: {:?}", r),
         })
     }
 
@@ -851,12 +902,18 @@ mod test {
 
     #[test]
     fn substring_with_infinite_len_goes_to_end_of_string() {
-        assert_eq!("あいうえお", substring_test("あいうえお", -42.0, f64::INFINITY));
+        assert_eq!(
+            "あいうえお",
+            substring_test("あいうえお", -42.0, f64::INFINITY)
+        );
     }
 
     #[test]
     fn substring_with_negative_infinity_start_is_empty() {
-        assert_eq!("", substring_test("あいうえお", f64::NEG_INFINITY, f64::INFINITY));
+        assert_eq!(
+            "",
+            substring_test("あいうえお", f64::NEG_INFINITY, f64::INFINITY)
+        );
     }
 
     #[test]
@@ -888,11 +945,9 @@ mod test {
     }
 
     fn translate_test(s: &str, from: &str, to: &str) -> String {
-        evaluate_literal(Translate, args![s, from, to], |r| {
-            match r {
-                Ok(Value::String(s)) => s,
-                r => panic!("translate failed: {:?}", r)
-            }
+        evaluate_literal(Translate, args![s, from, to], |r| match r {
+            Ok(Value::String(s)) => s,
+            r => panic!("translate failed: {:?}", r),
         })
     }
 
@@ -976,11 +1031,14 @@ mod test {
 
     impl fmt::Debug for PedanticNumber {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "{{ {}, NaN: {}, finite: {}, positive: {} }}",
-                   self.0,
-                   self.0.is_nan(),
-                   self.0.is_finite(),
-                   self.0.is_sign_positive())
+            write!(
+                f,
+                "{{ {}, NaN: {}, finite: {}, positive: {} }}",
+                self.0,
+                self.0.is_nan(),
+                self.0.is_finite(),
+                self.0.is_sign_positive()
+            )
         }
     }
 

@@ -6,9 +6,9 @@ use sxd_document::QName;
 use std::collections::HashMap;
 use std::iter;
 
-use ::{Value, OwnedQName};
-use ::nodeset::{Node, OrderedNodes};
-use ::function;
+use function;
+use nodeset::{Node, OrderedNodes};
+use {OwnedQName, Value};
 
 /// A mapping of names to XPath functions.
 type Functions = HashMap<OwnedQName, Box<function::Function + 'static>>;
@@ -103,16 +103,18 @@ impl<'d> Context<'d> {
 
     /// Register a function within the context
     pub fn set_function<N, F>(&mut self, name: N, function: F)
-        where N: Into<OwnedQName>,
-              F: function::Function + 'static,
+    where
+        N: Into<OwnedQName>,
+        F: function::Function + 'static,
     {
         self.functions.insert(name.into(), Box::new(function));
     }
 
     /// Register a variable within the context
     pub fn set_variable<N, V>(&mut self, name: N, value: V)
-        where N: Into<OwnedQName>,
-              V: Into<Value<'d>>,
+    where
+        N: Into<OwnedQName>,
+        V: Into<Value<'d>>,
     {
         self.variables.insert(name.into(), value.into());
     }
@@ -167,11 +169,12 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 
     /// Creates a new context node using the provided node
     pub fn new_context_for<N>(&self, node: N) -> Evaluation<'c, 'd>
-        where N: Into<Node<'d>>
+    where
+        N: Into<Node<'d>>,
     {
         Evaluation {
             node: node.into(),
-            .. *self
+            ..*self
         }
     }
 
@@ -216,13 +219,11 @@ impl<'c, 'd> Iterator for EvaluationNodesetIter<'c, 'd> {
     type Item = Evaluation<'c, 'd>;
 
     fn next(&mut self) -> Option<Evaluation<'c, 'd>> {
-        self.nodes.next().map(|(idx, node)| {
-            Evaluation {
-                node: node,
-                position: idx + 1,
-                size: self.size,
-                .. self.parent
-            }
+        self.nodes.next().map(|(idx, node)| Evaluation {
+            node: node,
+            position: idx + 1,
+            size: self.size,
+            ..self.parent
         })
     }
 }

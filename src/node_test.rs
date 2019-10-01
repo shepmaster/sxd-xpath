@@ -2,15 +2,16 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use ::context;
-use ::nodeset::{self, OrderedNodes};
+use context;
+use nodeset::{self, OrderedNodes};
 
 pub trait NodeTest: fmt::Debug {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>);
 }
 
 impl<T: ?Sized> NodeTest for Box<T>
-    where T: NodeTest,
+where
+    T: NodeTest,
 {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         (**self).test(context, result)
@@ -31,17 +32,13 @@ impl NameTest {
 
         let test_uri = self.prefix.as_ref().map(|p| {
             // TODO: Error for undefined prefix
-            context.namespace_for(p)
-                .expect("No namespace for prefix")
+            context.namespace_for(p).expect("No namespace for prefix")
         });
 
         match (is_wildcard, test_uri) {
             (true, None) => true,
             (true, Some(..)) => test_uri == node_name.namespace_uri(),
-            _ => {
-                test_uri == node_name.namespace_uri() &&
-                    self.local_part == node_name.local_part()
-            },
+            _ => test_uri == node_name.namespace_uri() && self.local_part == node_name.local_part(),
         }
     }
 }
@@ -53,9 +50,7 @@ pub struct Attribute {
 
 impl Attribute {
     pub fn new(name: NameTest) -> Attribute {
-        Attribute {
-            name_test: name,
-        }
+        Attribute { name_test: name }
     }
 }
 
@@ -76,9 +71,7 @@ pub struct Namespace {
 
 impl Namespace {
     pub fn new(name: NameTest) -> Namespace {
-        Namespace {
-            name_test: name,
-        }
+        Namespace { name_test: name }
     }
 }
 
@@ -99,9 +92,7 @@ pub struct Element {
 
 impl Element {
     pub fn new(name: NameTest) -> Element {
-        Element {
-            name_test: name,
-        }
+        Element { name_test: name }
     }
 }
 
@@ -165,8 +156,8 @@ impl NodeTest for ProcessingInstruction {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
             match self.target {
                 Some(ref name) if name == &pi.target() => result.add(context.node),
-                Some(_)                                => {},
-                None                                   => result.add(context.node),
+                Some(_) => {}
+                None => result.add(context.node),
             }
         }
     }
@@ -176,11 +167,11 @@ impl NodeTest for ProcessingInstruction {
 mod test {
     use std::borrow::ToOwned;
 
-    use sxd_document::{Package, QName};
     use sxd_document::dom::{self, Document};
+    use sxd_document::{Package, QName};
 
-    use ::context::{self, Context};
-    use ::nodeset::OrderedNodes;
+    use context::{self, Context};
+    use nodeset::OrderedNodes;
 
     use super::*;
 
@@ -201,9 +192,13 @@ mod test {
             self.context.set_namespace(prefix, namespace_uri);
         }
 
-        fn context_for_attribute<'n, N>(&'d self, name: N, val: &str)
-                                        -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
-            where N: Into<QName<'n>>
+        fn context_for_attribute<'n, N>(
+            &'d self,
+            name: N,
+            val: &str,
+        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
+        where
+            N: Into<QName<'n>>,
         {
             let e = self.doc.create_element("element");
             let a = e.set_attribute_value(name, val);
@@ -211,37 +206,49 @@ mod test {
             (a, c)
         }
 
-        fn context_for_ns_attribute(&'d mut self, prefix: &str, nsuri: &str, local: &str, value: &str)
-                                    -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
-        {
+        fn context_for_ns_attribute(
+            &'d mut self,
+            prefix: &str,
+            nsuri: &str,
+            local: &str,
+            value: &str,
+        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>) {
             self.register_prefix(prefix, nsuri);
             self.context_for_attribute((nsuri, local), value)
         }
 
-        fn context_for_element<'n, N>(&'d self, name: N)
-                                  -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
-            where N: Into<QName<'n>>
+        fn context_for_element<'n, N>(
+            &'d self,
+            name: N,
+        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
+        where
+            N: Into<QName<'n>>,
         {
             let e = self.doc.create_element(name);
             let c = context::Evaluation::new(&self.context, e.into());
             (e, c)
         }
 
-        fn context_for_ns_element(&'d mut self, prefix: &str, nsuri: &str, local: &str)
-                                  -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
-        {
+        fn context_for_ns_element(
+            &'d mut self,
+            prefix: &str,
+            nsuri: &str,
+            local: &str,
+        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd>) {
             self.register_prefix(prefix, nsuri);
             self.context_for_element((nsuri, local))
         }
     }
 
-    fn run_attribute<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
-                       -> OrderedNodes<'d>
-    {
+    fn run_attribute<'d>(
+        context: &context::Evaluation<'d, 'd>,
+        prefix: Option<&str>,
+        local: &str,
+    ) -> OrderedNodes<'d> {
         let mut result = OrderedNodes::new();
         let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
-            local_part: local.to_owned()
+            local_part: local.to_owned(),
         };
         let test = Attribute::new(name);
         test.test(context, &mut result);
@@ -283,7 +290,8 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
         setup.register_prefix("another", "different-uri");
-        let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
+        let (attribute, context) =
+            setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, Some("prefix"), "name");
         assert_eq!(ordered_nodes![attribute], result);
@@ -300,7 +308,8 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
         setup.register_prefix("another", "different-uri");
-        let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
+        let (attribute, context) =
+            setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, Some("prefix"), "*");
         assert_eq!(ordered_nodes![attribute], result);
@@ -313,7 +322,8 @@ mod test {
     fn attribute_test_ignores_namespace_when_wildcard_without_prefix() {
         let package = Package::new();
         let mut setup = Setup::new(&package);
-        let (attribute, context) = setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
+        let (attribute, context) =
+            setup.context_for_ns_attribute("prefix", "namespace", "name", "value");
 
         let result = run_attribute(&context, None, "*");
         assert_eq!(ordered_nodes![attribute], result);
@@ -329,13 +339,15 @@ mod test {
         assert_eq!(ordered_nodes![], result);
     }
 
-    fn run_element<'d>(context: &context::Evaluation<'d, 'd>, prefix: Option<&str>, local: &str)
-                       -> OrderedNodes<'d>
-    {
+    fn run_element<'d>(
+        context: &context::Evaluation<'d, 'd>,
+        prefix: Option<&str>,
+        local: &str,
+    ) -> OrderedNodes<'d> {
         let mut result = OrderedNodes::new();
         let name = NameTest {
             prefix: prefix.map(|p| p.to_owned()),
-            local_part: local.to_owned()
+            local_part: local.to_owned(),
         };
         let test = Element::new(name);
         test.test(context, &mut result);
