@@ -18,7 +18,7 @@ where
     }
 }
 
-pub type SubNodeTest = Box<NodeTest + 'static>;
+pub type SubNodeTest = Box<dyn NodeTest + 'static>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NameTest {

@@ -20,7 +20,7 @@ pub trait AxisLike: fmt::Debug {
     fn select_nodes<'c, 'd>(
         &self,
         context: &context::Evaluation<'c, 'd>,
-        node_test: &NodeTest,
+        node_test: &dyn NodeTest,
     ) -> OrderedNodes<'d>;
 
     /// Describes what node type is naturally selected by this axis.
@@ -48,12 +48,12 @@ pub enum Axis {
 
 struct CompleteNodeTest<'c, 'd: 'c> {
     context: &'c context::Evaluation<'c, 'd>,
-    node_test: &'c NodeTest,
+    node_test: &'c dyn NodeTest,
     result: OrderedNodes<'d>,
 }
 
 impl<'c, 'd> CompleteNodeTest<'c, 'd> {
-    fn new(context: &'c context::Evaluation<'c, 'd>, node_test: &'c NodeTest) -> Self {
+    fn new(context: &'c context::Evaluation<'c, 'd>, node_test: &'c dyn NodeTest) -> Self {
         CompleteNodeTest {
             context: context,
             node_test: node_test,
@@ -71,7 +71,7 @@ impl AxisLike for Axis {
     fn select_nodes<'c, 'd>(
         &self,
         context: &context::Evaluation<'c, 'd>,
-        node_test: &NodeTest,
+        node_test: &dyn NodeTest,
     ) -> OrderedNodes<'d> {
         use self::Axis::*;
 

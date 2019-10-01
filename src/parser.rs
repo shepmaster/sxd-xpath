@@ -175,7 +175,7 @@ impl LeftAssociativeBinaryParser {
     }
 }
 
-type Rule<'a, I> = Fn(TokenSource<I>) -> ParseResult + 'a;
+type Rule<'a, I> = dyn Fn(TokenSource<I>) -> ParseResult + 'a;
 fn first_matching_rule<I>(child_parses: &[&Rule<I>], source: TokenSource<I>) -> ParseResult
 where
     I: Iterator<Item = TokenResult>,

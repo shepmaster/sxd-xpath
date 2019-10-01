@@ -71,7 +71,7 @@ where
     }
 }
 
-pub type SubExpression = Box<Expression + 'static>;
+pub type SubExpression = Box<dyn Expression + 'static>;
 
 macro_rules! binary_constructor(
     ($t:ident) => (
@@ -515,7 +515,7 @@ impl Predicate {
 }
 
 pub type Step = ParameterizedStep<Axis>;
-pub type StepTest = Box<NodeTest + 'static>;
+pub type StepTest = Box<dyn NodeTest + 'static>;
 
 #[derive(Debug)]
 pub struct ParameterizedStep<A> {
@@ -907,7 +907,7 @@ mod test {
         let package = Package::new();
         let mut setup = Setup::new(&package);
 
-        let arg_expr: Box<Expression> = Box::new(Literal {
+        let arg_expr: Box<dyn Expression> = Box::new(Literal {
             value: Value::Boolean(true),
         });
         setup.context.set_function(
@@ -1075,7 +1075,7 @@ mod test {
         fn select_nodes<'c, 'd>(
             &self,
             _context: &context::Evaluation<'c, 'd>,
-            _node_test: &NodeTest,
+            _node_test: &dyn NodeTest,
         ) -> OrderedNodes<'d> {
             *self.calls.borrow_mut() += 1;
             OrderedNodes::new()

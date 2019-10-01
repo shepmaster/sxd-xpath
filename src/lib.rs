@@ -342,7 +342,7 @@ partial_eq_impl!(nodeset::Nodeset<'d>, Value::Nodeset(ref v) => v);
 ///
 /// [`Factory`]: struct.Factory.html
 #[derive(Debug)]
-pub struct XPath(Box<expression::Expression + 'static>);
+pub struct XPath(Box<dyn expression::Expression + 'static>);
 
 impl XPath {
     /// Evaluate this expression in the given context.
@@ -426,7 +426,7 @@ macro_rules! opaque_error {
                 self.0.description()
             }
 
-            fn cause(&self) -> Option<&std::error::Error> {
+            fn cause(&self) -> Option<&dyn std::error::Error> {
                 self.0.cause()
             }
         }

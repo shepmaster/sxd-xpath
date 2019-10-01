@@ -11,7 +11,7 @@ use nodeset::{Node, OrderedNodes};
 use {OwnedQName, Value};
 
 /// A mapping of names to XPath functions.
-type Functions = HashMap<OwnedQName, Box<function::Function + 'static>>;
+type Functions = HashMap<OwnedQName, Box<dyn function::Function + 'static>>;
 /// A mapping of names to XPath variables.
 type Variables<'d> = HashMap<OwnedQName, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
@@ -179,7 +179,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     }
 
     /// Looks up the function with the given name
-    pub fn function_for_name(&self, name: QName) -> Option<&'c function::Function> {
+    pub fn function_for_name(&self, name: QName) -> Option<&'c dyn function::Function> {
         // FIXME: remove allocation
         let name = name.into();
         self.functions.get(&name).map(AsRef::as_ref)
