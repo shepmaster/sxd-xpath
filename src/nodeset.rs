@@ -357,7 +357,7 @@ impl<'d> Nodeset<'d> {
         };
 
         if self.nodes.len() == 1 {
-            return Some(node.clone());
+            return Some(*node);
         }
 
         let order = DocOrder::new(node.document());
@@ -499,7 +499,7 @@ impl<'d> OrderedNodes<'d> {
     }
 
     pub fn add(&mut self, node: Node<'d>) {
-        self.0.push(node.into())
+        self.0.push(node)
     }
 }
 

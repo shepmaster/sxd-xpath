@@ -155,7 +155,7 @@ impl NodeTest for ProcessingInstruction {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
             match self.target {
-                Some(ref name) if name == &pi.target() => result.add(context.node),
+                Some(ref name) if name == pi.target() => result.add(context.node),
                 Some(_) => {}
                 None => result.add(context.node),
             }
