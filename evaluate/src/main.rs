@@ -1,6 +1,5 @@
-extern crate getopts;
-extern crate sxd_document;
-extern crate sxd_xpath;
+use getopts;
+use sxd_document;
 
 use std::env;
 use std::fs::File;
@@ -55,7 +54,7 @@ fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
     }
 }
 
-fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
+fn build_variables(arguments: &getopts::Matches, context: &mut Context<'_>) {
     for boolean in arguments.opt_strs("boolean") {
         match argument_name_value(&boolean, '=') {
             Some((name, "true")) => context.set_variable(name, true),
@@ -83,7 +82,7 @@ fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
     }
 }
 
-fn build_namespaces(arguments: &getopts::Matches, context: &mut Context) {
+fn build_namespaces(arguments: &getopts::Matches, context: &mut Context<'_>) {
     for ns_defn in arguments.opt_strs("namespace") {
         match argument_name_value(&ns_defn, ':') {
             Some((prefix, uri)) => context.set_namespace(prefix, uri),
