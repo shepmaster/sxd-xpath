@@ -2,6 +2,7 @@
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
 name = "evaluate"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 getopts = "0.2.4"
