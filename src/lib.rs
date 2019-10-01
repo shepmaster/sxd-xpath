@@ -100,12 +100,9 @@
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
 
-#[macro_use]
-extern crate quick_error;
-
+use snafu::{OptionExt, ResultExt, Snafu};
 use std::borrow::ToOwned;
 use std::string;
-
 use sxd_document::dom::Document;
 use sxd_document::{PrefixedName, QName};
 
@@ -157,6 +154,15 @@ impl<'a> From<PrefixedName<'a>> for OwnedPrefixedName {
         OwnedPrefixedName {
             prefix: name.prefix().map(Into::into),
             local_part: name.local_part().into(),
+        }
+    }
+}
+
+impl<'a> From<&'a OwnedPrefixedName> for OwnedPrefixedName {
+    fn from(name: &'a OwnedPrefixedName) -> Self {
+        OwnedPrefixedName {
+            prefix: name.prefix.to_owned(),
+            local_part: name.local_part.to_owned(),
         }
     }
 }
@@ -400,72 +406,26 @@ impl Default for Factory {
     }
 }
 
-macro_rules! opaque_error {
-    (
-        $(#[$attr:meta])+
-        $name:ident($inner:ty)
-    ) => {
-        #[derive(Debug, Clone, PartialEq)]
-        $(#[$attr])+
-        pub struct $name($inner);
+/// Errors that may occur when parsing an XPath
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub struct ParserError(parser::Error);
 
-        impl std::error::Error for $name {
-            fn description(&self) -> &str {
-                self.0.description()
-            }
+/// Errors that may occur when executing an XPath
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub struct ExecutionError(expression::Error);
 
-            fn cause(&self) -> Option<&dyn std::error::Error> {
-                self.0.cause()
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                self.0.fmt(f)
-            }
-        }
-
-        impl From<$inner> for $name {
-            fn from(other: $inner) -> $name {
-                $name(other)
-            }
-        }
-    }
-}
-
-opaque_error!(
-    /// Errors that may occur when parsing an XPath
-    ParserError(parser::Error)
-);
-
-opaque_error!(
-    /// Errors that may occur when executing an XPath
-    ExecutionError(expression::Error)
-);
-
-quick_error! {
-    /// The failure modes of executing an XPath.
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum Error {
-        /// The XPath was syntactically invalid
-        Parsing(err: ParserError) {
-            from()
-            cause(err)
-            description("Unable to parse XPath")
-            display("Unable to parse XPath: {}", err)
-        }
-        /// The XPath did not construct an expression
-        NoXPath {
-            description("XPath was empty")
-        }
-        /// The XPath could not be executed
-        Executing(err: ExecutionError) {
-            from()
-            cause(err)
-            description("Unable to execute XPath")
-            display("Unable to execute XPath: {}", err)
-        }
-    }
+/// The failure modes of executing an XPath.
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub enum Error {
+    /// The XPath was syntactically invalid
+    #[snafu(display("Unable to parse XPath: {}", source))]
+    Parsing { source: ParserError },
+    /// The XPath did not construct an expression
+    #[snafu(display("XPath was empty"))]
+    NoXPath,
+    /// The XPath could not be executed
+    #[snafu(display("Unable to execute XPath: {}", source))]
+    Executing { source: ExecutionError },
 }
 
 /// Easily evaluate an XPath expression
@@ -492,14 +452,14 @@ quick_error! {
 /// ```
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
-    let expression = factory.build(xpath)?;
-    let expression = expression.ok_or(Error::NoXPath)?;
+    let expression = factory.build(xpath).context(Parsing)?;
+    let expression = expression.context(NoXPath)?;
 
     let context = Context::new();
 
     expression
         .evaluate(&context, document.root())
-        .map_err(Into::into)
+        .context(Executing)
 }
 
 #[cfg(test)]
@@ -648,27 +608,26 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use crate::parser::Error::*;
-            use crate::Error::*;
-
             let result = evaluate_xpath(&doc, "/root/child/");
 
-            assert_eq!(Err(Parsing(ParserError(TrailingSlash))), result);
+            let expected_error = crate::parser::TrailingSlash
+                .fail()
+                .map_err(ParserError::from)
+                .context(Parsing);
+            assert_eq!(expected_error, result);
         });
     }
 
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use crate::expression::Error::*;
-            use crate::Error::*;
-
             let result = evaluate_xpath(&doc, "$foo");
 
-            assert_eq!(
-                Err(Executing(ExecutionError(UnknownVariable("foo".into())))),
-                result
-            );
+            let expected_error = crate::expression::UnknownVariable { name: "foo" }
+                .fail()
+                .map_err(ExecutionError::from)
+                .context(Executing);
+            assert_eq!(expected_error, result);
         });
     }
 

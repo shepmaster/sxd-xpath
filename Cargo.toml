@@ -23,4 +23,4 @@ unstable = []
 [dependencies]
 peresil = "0.3.0"
 sxd-document = ">= 0.2, < 0.4"
-quick-error = "1.1.0"
+snafu = "0.5.0"

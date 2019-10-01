@@ -1,6 +1,6 @@
+use snafu::{OptionExt, ResultExt, Snafu};
 use std::collections::HashSet;
 use std::fmt;
-
 use sxd_document::QName;
 
 use crate::axis::{Axis, AxisLike};
@@ -11,31 +11,19 @@ use crate::nodeset::{Nodeset, OrderedNodes};
 use crate::Value::{Boolean, Number};
 use crate::{LiteralValue, OwnedPrefixedName, Value};
 
-quick_error! {
-    #[derive(Debug, Clone, PartialEq, Hash)]
-    pub enum Error {
-        NotANodeset {
-            description("expression did not evaluate to a nodeset")
-        }
-        UnknownFunction(name: OwnedPrefixedName) {
-            description("unknown function")
-            display("unknown function {:?}", name)
-        }
-        UnknownVariable(name: OwnedPrefixedName) {
-            description("unknown variable")
-            display("unknown variable {:?}", name)
-        }
-        UnknownNamespace(prefix: String) {
-            description("unknown namespace prefix")
-            display("unknown namespace prefix {}", prefix)
-        }
-        FunctionEvaluation(err: function::Error) {
-            from()
-            cause(err)
-            description(err.description())
-            display("error while evaluating function: {}", err)
-        }
-    }
+#[derive(Debug, Snafu, Clone, PartialEq, Hash)]
+#[cfg_attr(test, snafu(visibility(pub(crate))))]
+pub enum Error {
+    /// expression did not evaluate to a nodeset
+    NotANodeset,
+    #[snafu(display("unknown function {:?}", name))]
+    UnknownFunction { name: OwnedPrefixedName },
+    #[snafu(display("unknown variable {:?}", name))]
+    UnknownVariable { name: OwnedPrefixedName },
+    #[snafu(display("unknown namespace prefix {}", prefix))]
+    UnknownNamespace { prefix: String },
+    #[snafu(display("error while evaluating function: {}", source))]
+    FunctionEvaluation { source: function::Error },
 }
 
 fn value_into_nodeset(v: Value<'_>) -> Result<Nodeset<'_>, Error> {
@@ -201,15 +189,14 @@ impl Expression for Function {
         let name = resolve_prefixed_name(context, &self.name)?;
         context
             .function_for_name(name)
-            .ok_or_else(|| Error::UnknownFunction(self.name.clone()))
+            .context(UnknownFunction { name: &self.name })
             .and_then(|fun| {
                 let args = self
                     .arguments
                     .iter()
                     .map(|arg| arg.evaluate(context))
                     .collect::<Result<_, _>>()?;
-                fun.evaluate(context, args)
-                    .map_err(Error::FunctionEvaluation)
+                fun.evaluate(context, args).context(FunctionEvaluation)
             })
     }
 }
@@ -600,7 +587,7 @@ fn resolve_prefixed_name<'a>(
     let ns_uri = match name.prefix {
         None => None,
         Some(ref prefix) => match context.namespace_for(prefix) {
-            None => return Err(Error::UnknownNamespace(prefix.clone())),
+            None => return UnknownNamespace { prefix }.fail(),
             Some(uri) => Some(uri),
         },
     };
@@ -620,7 +607,7 @@ impl Expression for Variable {
         context
             .value_of(name)
             .cloned()
-            .ok_or_else(|| Error::UnknownVariable(self.name.clone()))
+            .context(UnknownVariable { name: &self.name })
     }
 }
 
@@ -941,7 +928,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, Err(Error::UnknownFunction("unknown-fn".into())));
+        assert_eq!(res, UnknownFunction { name: "unknown-fn" }.fail());
     }
 
     #[test]

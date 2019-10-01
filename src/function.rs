@@ -1,11 +1,11 @@
 //! Support for registering and creating XPath functions.
 
+use snafu::Snafu;
 use std::borrow::ToOwned;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter;
 use std::ops::Index;
-
 use sxd_document::XmlChar;
 
 use crate::context;
@@ -43,30 +43,19 @@ impl<'a> From<&'a Value<'a>> for ArgumentType {
     }
 }
 
-quick_error! {
-    /// The errors that may occur while evaluating a function
-    #[derive(Debug, Clone, PartialEq, Hash)]
-    pub enum Error {
-        TooManyArguments { expected: usize, actual: usize } {
-            description("too many arguments")
-            display("too many arguments, expected {} but had {}", expected, actual)
-        }
-        NotEnoughArguments { expected: usize, actual: usize } {
-            description("not enough arguments")
-            display("not enough arguments, expected {} but had {}", expected, actual)
-        }
-        ArgumentMissing {
-            description("attempted to use an argument that was not present")
-        }
-        ArgumentNotANodeset { actual: ArgumentType } {
-            description("argument was not a nodeset")
-            display("argument was expected to be a nodeset but was a {:?}", actual)
-        }
-        Other(what: String) {
-            description("an error occurred while evaluating a function")
-            display("could not evaluate function: {}", what)
-        }
-    }
+/// The errors that may occur while evaluating a function
+#[derive(Debug, Snafu, Clone, PartialEq, Hash)]
+pub enum Error {
+    #[snafu(display("too many arguments, expected {} but had {}", expected, actual))]
+    TooManyArguments { expected: usize, actual: usize },
+    #[snafu(display("not enough arguments, expected {} but had {}", expected, actual))]
+    NotEnoughArguments { expected: usize, actual: usize },
+    #[snafu(display("attempted to use an argument that was not present"))]
+    ArgumentMissing,
+    #[snafu(display("argument was expected to be a nodeset but was a {:?}", actual))]
+    ArgumentNotANodeset { actual: ArgumentType },
+    #[snafu(display("could not evaluate function: {}", what))]
+    Other { what: String },
 }
 
 impl Error {

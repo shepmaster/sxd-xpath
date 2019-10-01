@@ -1,6 +1,5 @@
+use snafu::{ensure, OptionExt, ResultExt, Snafu};
 use std::iter::Peekable;
-
-use self::Error::*;
 
 use crate::axis::{Axis, AxisLike, PrincipalNodeType};
 use crate::expression::{self, SubExpression};
@@ -18,39 +17,25 @@ impl Parser {
     }
 }
 
-quick_error! {
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum Error {
-        EmptyPredicate {
-            description("empty predicate")
-        }
-        ExtraUnparsedTokens {
-            description("extra unparsed tokens")
-        }
-        RanOutOfInput {
-            description("ran out of input")
-        }
-        RightHandSideExpressionMissing {
-            description("right hand side of expression is missing")
-        }
-        ArgumentMissing {
-            description("function argument is missing")
-        }
-        Tokenizer(err: tokenizer::Error) {
-            from()
-            cause(err)
-            description(err.description())
-            display("tokenizer error: {}", err)
-        }
-        TrailingSlash {
-            description("trailing slash")
-        }
-        UnexpectedToken(token: Token) {
-            from()
-            description("unexpected token")
-            display("unexpected token: {:?}", token)
-        }
-    }
+#[derive(Debug, Snafu, Clone, PartialEq)]
+#[cfg_attr(test, snafu(visibility(pub(crate))))]
+pub enum Error {
+    /// empty predicate
+    EmptyPredicate,
+    /// extra unparsed tokens
+    ExtraUnparsedTokens,
+    /// ran out of input
+    RanOutOfInput,
+    /// right hand side of expression is missing
+    RightHandSideExpressionMissing,
+    /// function argument is missing
+    ArgumentMissing,
+    #[snafu(display("tokenizer error: {}", source))]
+    Tokenizer { source: tokenizer::Error },
+    /// trailing slash
+    TrailingSlash,
+    #[snafu(display("unexpected token: {:?}", token))]
+    UnexpectedToken { token: Token },
 }
 
 pub type ParseResult = Result<Option<SubExpression>, Error>;
@@ -90,31 +75,23 @@ where
     }
 
     fn consume(&mut self, token: &Token) -> Result<(), Error> {
-        match self.next() {
-            None => Err(RanOutOfInput),
-            Some(Err(x)) => Err(Tokenizer(x)),
-            Some(Ok(x)) => {
-                if &x == token {
-                    Ok(())
-                } else {
-                    Err(UnexpectedToken(x))
-                }
-            }
-        }
+        let x = self.next().context(RanOutOfInput)?.context(Tokenizer)?;
+        ensure!(&x == token, UnexpectedToken { token: x });
+        Ok(())
     }
 }
 
 /// Similar to `consume`, but can be used when the token carries a
 /// single value.
 macro_rules! consume_value(
-    ($source:expr, Token::$token:ident) => (
-        match $source.next() {
-            None => return Err(RanOutOfInput),
-            Some(Err(x)) => return Err(Tokenizer(x)),
-            Some(Ok(Token::$token(x))) => x,
-            Some(Ok(x)) => return Err(UnexpectedToken(x)),
+    ($source:expr, Token::$token:ident) => ({
+        let next = $source.next().context(RanOutOfInput)?.context(Tokenizer)?;
+
+        match next {
+            Token::$token(x) => x,
+            token => return UnexpectedToken { token }.fail(),
         }
-    );
+    });
 );
 
 /// Similar to `next_token_is`, but can be used when the token carries
@@ -152,12 +129,7 @@ impl LeftAssociativeBinaryParser {
                 if source.next_token_is(&rule.token) {
                     source.consume(&rule.token)?;
 
-                    let right = child_parse(source)?;
-
-                    let right = match right {
-                        None => return Err(RightHandSideExpressionMissing),
-                        Some(x) => x,
-                    };
+                    let right = child_parse(source)?.context(RightHandSideExpressionMissing)?;
 
                     left = (rule.builder)(left, right);
 
@@ -326,10 +298,8 @@ impl Parser {
         while source.next_token_is(&Token::Comma) {
             source.consume(&Token::Comma)?;
 
-            match self.parse_expression(source)? {
-                Some(arg) => arguments.push(arg),
-                None => return Err(ArgumentMissing),
-            }
+            let arg = self.parse_expression(source)?.context(ArgumentMissing)?;
+            arguments.push(arg);
         }
 
         Ok(arguments)
@@ -394,13 +364,9 @@ impl Parser {
         if source.next_token_is(&Token::LeftBracket) {
             source.consume(&Token::LeftBracket)?;
 
-            match self.parse_expression(source)? {
-                Some(predicate) => {
-                    source.consume(&Token::RightBracket)?;
-                    Ok(Some(predicate))
-                }
-                None => Err(EmptyPredicate),
-            }
+            let predicate = self.parse_expression(source)?.context(EmptyPredicate)?;
+            source.consume(&Token::RightBracket)?;
+            Ok(Some(predicate))
         } else {
             Ok(None)
         }
@@ -455,10 +421,8 @@ impl Parser {
                 while source.next_token_is(&Token::Slash) {
                     source.consume(&Token::Slash)?;
 
-                    match self.parse_step(source)? {
-                        Some(next) => steps.push(next),
-                        None => return Err(TrailingSlash),
-                    }
+                    let next = self.parse_step(source)?.context(TrailingSlash)?;
+                    steps.push(next);
                 }
 
                 Ok(Some(expression::Path::new(start_point, steps)))
@@ -534,10 +498,10 @@ impl Parser {
                 if source.next_token_is(&Token::Slash) {
                     source.consume(&Token::Slash)?;
 
-                    match self.parse_relative_location_path_raw(source, expr)? {
-                        Some(expr) => Ok(Some(expr)),
-                        None => Err(TrailingSlash),
-                    }
+                    let expr = self
+                        .parse_relative_location_path_raw(source, expr)?
+                        .context(TrailingSlash)?;
+                    Ok(Some(expr))
                 } else {
                     Ok(Some(expr))
                 }
@@ -571,15 +535,11 @@ impl Parser {
         if source.next_token_is(&Token::MinusSign) {
             source.consume(&Token::MinusSign)?;
 
-            let expr = self.parse_unary_expression(source)?;
-
-            match expr {
-                Some(expr) => {
-                    let expr: SubExpression = Box::new(expression::Negation { expression: expr });
-                    Ok(Some(expr))
-                }
-                None => Err(RightHandSideExpressionMissing),
-            }
+            let expression = self
+                .parse_unary_expression(source)?
+                .context(RightHandSideExpressionMissing)?;
+            let expression: SubExpression = Box::new(expression::Negation { expression });
+            Ok(Some(expression))
         } else {
             Ok(None)
         }
@@ -716,9 +676,7 @@ impl Parser {
 
         let expr = self.parse_or_expression(&mut source)?;
 
-        if source.has_more_tokens() {
-            return Err(ExtraUnparsedTokens);
-        }
+        ensure!(!source.has_more_tokens(), ExtraUnparsedTokens);
 
         Ok(expr)
     }
@@ -726,8 +684,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use snafu::ResultExt;
     use std::borrow::ToOwned;
-
     use sxd_document::dom::{self, Document, Element, Root, Text};
     use sxd_document::Package;
 
@@ -740,8 +698,7 @@ mod test {
     use crate::Value;
     use crate::Value::{Boolean, Number, String};
 
-    use super::Error::*;
-    use super::{ParseResult, Parser};
+    use super::*;
 
     macro_rules! tokens(
         ($($e:expr),*) => ({
@@ -1741,7 +1698,12 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parser.parse(tokens.into_iter());
-        assert_eq!(Some(UnexpectedToken(Token::RightParen)), res.err());
+        assert_eq!(
+            Some(Error::UnexpectedToken {
+                token: Token::RightParen
+            }),
+            res.err()
+        );
     }
 
     #[test]
@@ -1753,7 +1715,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(RightHandSideExpressionMissing), res.err());
+        assert_eq!(Some(Error::RightHandSideExpressionMissing), res.err());
     }
 
     #[test]
@@ -1765,7 +1727,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parser.parse(tokens.into_iter());
-        assert_eq!(Some(RightHandSideExpressionMissing), res.err());
+        assert_eq!(Some(Error::RightHandSideExpressionMissing), res.err());
     }
 
     #[test]
@@ -1777,7 +1739,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(EmptyPredicate), res.err());
+        assert_eq!(Some(Error::EmptyPredicate), res.err());
     }
 
     #[test]
@@ -1789,7 +1751,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TrailingSlash), res.err());
+        assert_eq!(Some(Error::TrailingSlash), res.err());
     }
 
     #[test]
@@ -1801,7 +1763,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TrailingSlash), res.err());
+        assert_eq!(Some(Error::TrailingSlash), res.err());
     }
 
     #[test]
@@ -1813,7 +1775,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(RanOutOfInput), res.err());
+        assert_eq!(Some(Error::RanOutOfInput), res.err());
     }
 
     #[test]
@@ -1825,7 +1787,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(ExtraUnparsedTokens), res.err());
+        assert_eq!(Some(Error::ExtraUnparsedTokens), res.err());
     }
 
     #[test]
@@ -1841,7 +1803,10 @@ mod test {
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
         assert_eq!(
-            Some(Tokenizer(tokenizer::Error::UnableToCreateToken)),
+            tokenizer::UnableToCreateToken
+                .fail::<()>()
+                .context(Tokenizer)
+                .err(),
             res.err()
         );
     }
