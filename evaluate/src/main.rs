@@ -17,11 +17,6 @@ fn print_usage(program: &str, opts: &Options) {
     print!("{}", opts.usage(&brief));
 }
 
-fn pretty_error(xml: &str, position: usize) -> String {
-    let s = &xml[position..];
-    s.chars().take(15).collect()
-}
-
 fn build_xpath(xpath_str: &str) -> XPath {
     let factory = Factory::new();
 
@@ -45,12 +40,8 @@ where
 
     match parse(&data) {
         Ok(d) => d,
-        Err((point, e)) => {
-            println!("Unable to parse input XML");
-            for e in e {
-                println!(" -> {:?}", e);
-            }
-            panic!("At:\n{}", pretty_error(&data, point));
+        Err(e) => {
+            panic!("Unable to parse input XML: {}", e);
         }
     }
 }
