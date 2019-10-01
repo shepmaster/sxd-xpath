@@ -108,7 +108,7 @@
 
 #[macro_use]
 extern crate peresil;
-extern crate sxd_document;
+
 #[macro_use]
 extern crate quick_error;
 
@@ -432,7 +432,7 @@ macro_rules! opaque_error {
         }
 
         impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 self.0.fmt(f)
             }
         }
@@ -645,7 +645,7 @@ mod test {
 
     fn with_document<F>(xml: &str, f: F)
     where
-        F: FnOnce(dom::Document),
+        F: FnOnce(dom::Document<'_>),
     {
         let package = sxd_document::parser::parse(xml).expect("Unable to parse test XML");
         f(package.as_document());

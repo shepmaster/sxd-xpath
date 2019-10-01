@@ -183,21 +183,21 @@ fn parse_number<'a>(
     pm: &mut XPathMaster<'a>,
     p: StringPoint<'a>,
 ) -> XPathProgress<'a, Token, Error> {
-    fn fractional_part(p: StringPoint) -> XPathProgress<(), ()> {
+    fn fractional_part(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_literal("."));
         let (p, _) = p.consume_decimal_chars().optional(p);
 
         peresil::Progress::success(p, ())
     }
 
-    fn with_integer(p: StringPoint) -> XPathProgress<(), ()> {
+    fn with_integer(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_decimal_chars());
         let (p, _) = fractional_part(p).optional(p);
 
         peresil::Progress::success(p, ())
     }
 
-    fn without_integer(p: StringPoint) -> XPathProgress<(), ()> {
+    fn without_integer(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_literal("."));
         let (p, _) = try_parse!(p.consume_decimal_chars());
 
@@ -220,13 +220,16 @@ fn parse_number<'a>(
     peresil::Progress::success(p, Token::Number(num))
 }
 
-fn parse_current_node(p: StringPoint) -> XPathProgress<Token, Error> {
+fn parse_current_node(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     let (p, _) = try_parse!(p.consume_literal(".").map_err(|_| ExpectedCurrentNode));
 
     peresil::Progress::success(p, Token::CurrentNode)
 }
 
-fn parse_named_operators(p: StringPoint, prefer_named_ops: bool) -> XPathProgress<Token, Error> {
+fn parse_named_operators(
+    p: StringPoint<'_>,
+    prefer_named_ops: bool,
+) -> XPathProgress<'_, Token, Error> {
     if prefer_named_ops {
         p.consume_identifier(&NAMED_OPERATORS)
             .map_err(|_| ExpectedNamedOperator)
@@ -236,7 +239,7 @@ fn parse_named_operators(p: StringPoint, prefer_named_ops: bool) -> XPathProgres
     }
 }
 
-fn parse_axis_specifier(p: StringPoint) -> XPathProgress<Token, Error> {
+fn parse_axis_specifier(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
     let (p, axis) = try_parse!(p.consume_identifier(&AXES).map_err(|_| ExpectedAxis));
@@ -249,7 +252,7 @@ fn parse_node_type<'a>(
     pm: &mut XPathMaster<'a>,
     p: StringPoint<'a>,
 ) -> XPathProgress<'a, Token, Error> {
-    fn without_arg(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn without_arg(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, node_type) = try_parse!(p.consume_identifier(&NODE_TESTS));
         let (p, _) = try_parse!(p.consume_literal("()"));
 
@@ -271,7 +274,7 @@ fn parse_node_type<'a>(
         .finish()
 }
 
-fn parse_function_call(p: StringPoint) -> XPathProgress<Token, Error> {
+fn parse_function_call(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
     // Do not advance the point here. We want to know if there *is* a
     // left-paren, but do not want to actually consume it here.
@@ -284,7 +287,7 @@ fn parse_name_test<'a>(
     pm: &mut XPathMaster<'a>,
     p: StringPoint<'a>,
 ) -> XPathProgress<'a, Token, Error> {
-    fn wildcard(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn wildcard(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, wc) = try_parse!(p.consume_literal("*"));
 
         let name = node_test::NameTest {
@@ -294,7 +297,7 @@ fn parse_name_test<'a>(
         peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_wildcard(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn prefixed_wildcard(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, prefix) = try_parse!(p.consume_ncname());
         let (p, _) = try_parse!(p.consume_literal(":"));
         let (p, wc) = try_parse!(p.consume_literal("*"));
@@ -306,7 +309,7 @@ fn parse_name_test<'a>(
         peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_name(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn prefixed_name(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
                 prefix: name.prefix().map(|p| p.to_owned()),
@@ -322,7 +325,7 @@ fn parse_name_test<'a>(
         .finish()
 }
 
-fn parse_variable_reference(p: StringPoint) -> XPathProgress<Token, Error> {
+fn parse_variable_reference(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     let (p, _) = try_parse!(p
         .consume_literal("$")
         .map_err(|_| ExpectedVariableReference));

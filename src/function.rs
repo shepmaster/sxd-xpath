@@ -70,7 +70,7 @@ quick_error! {
 }
 
 impl Error {
-    fn not_a_nodeset(actual: &Value) -> Error {
+    fn not_a_nodeset(actual: &Value<'_>) -> Error {
         Error::ArgumentNotANodeset {
             actual: actual.into(),
         }
@@ -185,7 +185,10 @@ impl<'d> Args<'d> {
     /// argument is present, the context node is converted to a string
     /// and returned. If there is an argument but it is not a string,
     /// it is converted to one.
-    fn pop_string_value_or_context_node(&mut self, context: &context::Evaluation) -> String {
+    fn pop_string_value_or_context_node(
+        &mut self,
+        context: &context::Evaluation<'_, '_>,
+    ) -> String {
         self.0
             .pop()
             .map(Value::into_string)
@@ -651,7 +654,7 @@ fn round() -> NumberConvert {
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
 /// [corelib]: https://www.w3.org/TR/xpath/#corelib
-pub fn register_core_functions(context: &mut context::Context) {
+pub fn register_core_functions(context: &mut context::Context<'_>) {
     context.set_function("last", Last);
     context.set_function("position", Position);
     context.set_function("count", Count);
@@ -733,7 +736,7 @@ mod test {
     fn evaluate_literal<F, F2, T>(f: F, args: Vec<LiteralValue>, rf: F2) -> T
     where
         F: Function,
-        F2: FnOnce(Result<Value, Error>) -> T,
+        F2: FnOnce(Result<Value<'_>, Error>) -> T,
     {
         let package = Package::new();
         let doc = package.as_document();
@@ -1030,7 +1033,7 @@ mod test {
     }
 
     impl fmt::Debug for PedanticNumber {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(
                 f,
                 "{{ {}, NaN: {}, finite: {}, positive: {} }}",
@@ -1042,7 +1045,7 @@ mod test {
         }
     }
 
-    fn assert_number(expected: f64, actual: Result<Value, Error>) {
+    fn assert_number(expected: f64, actual: Result<Value<'_>, Error>) {
         match actual {
             Ok(Value::Number(n)) => assert_eq!(PedanticNumber(n), PedanticNumber(expected)),
             _ => assert!(false, "{:?} did not evaluate correctly", actual),

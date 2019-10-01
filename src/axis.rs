@@ -1,5 +1,3 @@
-extern crate sxd_document;
-
 use std::fmt;
 
 use crate::context;
@@ -46,7 +44,7 @@ pub enum Axis {
     SelfAxis,
 }
 
-struct CompleteNodeTest<'c, 'd: 'c> {
+struct CompleteNodeTest<'c, 'd> {
     context: &'c context::Evaluation<'c, 'd>,
     node_test: &'c dyn NodeTest,
     result: OrderedNodes<'d>,

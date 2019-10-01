@@ -1,4 +1,3 @@
-extern crate sxd_document;
 #[macro_use]
 extern crate sxd_xpath;
 
@@ -90,7 +89,7 @@ fn nodesets_are_unique() {
 
 fn with_document<F>(xml: &str, f: F)
 where
-    F: FnOnce(dom::Document),
+    F: FnOnce(dom::Document<'_>),
 {
     let package = parser::parse(xml).expect("Unable to parse test XML");
     f(package.as_document());

@@ -97,8 +97,8 @@ impl<'d> Node<'d> {
         use self::Node::*;
 
         fn qname_prefixed_name(
-            element: dom::Element,
-            name: QName,
+            element: dom::Element<'_>,
+            name: QName<'_>,
             preferred_prefix: Option<&str>,
         ) -> String {
             if let Some(ns_uri) = name.namespace_uri() {
@@ -226,7 +226,7 @@ impl<'d> Node<'d> {
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
-        fn document_order_text_nodes(node: Node, result: &mut String) {
+        fn document_order_text_nodes(node: Node<'_>, result: &mut String) {
             for child in node.children() {
                 match child {
                     Node::Element(_) => document_order_text_nodes(child, result),
@@ -236,7 +236,7 @@ impl<'d> Node<'d> {
             }
         };
 
-        fn text_descendants_string_value(node: Node) -> String {
+        fn text_descendants_string_value(node: Node<'_>) -> String {
             let mut result = String::new();
             document_order_text_nodes(node, &mut result);
             result
@@ -402,7 +402,7 @@ struct DocOrder<'d>(HashMap<Node<'d>, usize>);
 impl<'d> DocOrder<'d> {
     fn new(doc: dom::Document<'d>) -> Self {
         let mut idx = 0;
-        let mut stack: Vec<Node> = vec![doc.root().into()];
+        let mut stack: Vec<Node<'_>> = vec![doc.root().into()];
         let mut order = HashMap::new();
 
         while let Some(n) = stack.pop() {
@@ -465,7 +465,7 @@ impl<'d> FromIterator<Node<'d>> for Nodeset<'d> {
     }
 }
 
-pub struct Iter<'a, 'd: 'a> {
+pub struct Iter<'a, 'd> {
     iter: hash_set::Iter<'a, Node<'d>>,
 }
 
@@ -629,7 +629,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         e.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -641,7 +641,7 @@ mod test {
 
         let e = doc.create_element(("uri", "wow"));
         e.register_prefix("prefix", "uri");
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -653,7 +653,7 @@ mod test {
         let doc = package.as_document();
 
         let e = doc.create_element(("uri", "wow"));
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("wow".to_owned()), node.prefixed_name());
     }
@@ -667,7 +667,7 @@ mod test {
         let a = e.set_attribute_value(("uri", "attr"), "value");
         a.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node: Node = a.into();
+        let node: Node<'_> = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -680,7 +680,7 @@ mod test {
         let e = doc.create_element("element");
         let a = e.set_attribute_value(("uri", "attr"), "value");
         e.register_prefix("prefix", "uri");
-        let node: Node = a.into();
+        let node: Node<'_> = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -691,7 +691,7 @@ mod test {
         let doc = package.as_document();
 
         let pi = doc.create_processing_instruction("target", Some("value"));
-        let node: Node = pi.into();
+        let node: Node<'_> = pi.into();
 
         assert_eq!(Some("target".to_owned()), node.prefixed_name());
     }
@@ -720,7 +720,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let element = doc.create_element("hello");
-        let attribute: Node = element.set_attribute_value("world", "Earth").into();
+        let attribute: Node<'_> = element.set_attribute_value("world", "Earth").into();
         assert_eq!("Earth", attribute.string_value());
     }
 
@@ -728,7 +728,7 @@ mod test {
     fn string_value_of_pi_node_is_empty_when_no_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi: Node = doc.create_processing_instruction("hello", None).into();
+        let pi: Node<'_> = doc.create_processing_instruction("hello", None).into();
         assert_eq!("", pi.string_value());
     }
 
@@ -736,7 +736,7 @@ mod test {
     fn string_value_of_pi_node_is_the_value_when_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi: Node = doc
+        let pi: Node<'_> = doc
             .create_processing_instruction("hello", Some("world"))
             .into();
         assert_eq!("world", pi.string_value());
@@ -746,7 +746,7 @@ mod test {
     fn string_value_of_comment_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let comment: Node = doc.create_comment("hello world").into();
+        let comment: Node<'_> = doc.create_comment("hello world").into();
         assert_eq!("hello world", comment.string_value());
     }
 
@@ -754,7 +754,7 @@ mod test {
     fn string_value_of_text_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let text: Node = doc.create_text("hello world").into();
+        let text: Node<'_> = doc.create_text("hello world").into();
         assert_eq!("hello world", text.string_value());
     }
 }

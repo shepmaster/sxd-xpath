@@ -27,7 +27,7 @@ pub struct NameTest {
 }
 
 impl NameTest {
-    fn matches(&self, context: &context::Evaluation, node_name: QName) -> bool {
+    fn matches(&self, context: &context::Evaluation<'_, '_>, node_name: QName<'_>) -> bool {
         let is_wildcard = self.local_part == "*";
 
         let test_uri = self.prefix.as_ref().map(|p| {
@@ -181,7 +181,7 @@ mod test {
     }
 
     impl<'d> Setup<'d> {
-        fn new(package: &'d Package) -> Setup {
+        fn new(package: &'d Package) -> Setup<'_> {
             Setup {
                 doc: package.as_document(),
                 context: Context::without_core_functions(),

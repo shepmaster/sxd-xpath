@@ -38,7 +38,7 @@ quick_error! {
     }
 }
 
-fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
+fn value_into_nodeset(v: Value<'_>) -> Result<Nodeset<'_>, Error> {
     match v {
         Value::Nodeset(ns) => Ok(ns),
         _ => Err(Error::NotANodeset),
@@ -51,7 +51,7 @@ fn value_into_nodeset(v: Value) -> Result<Nodeset, Error> {
 // > order, because the axis that applies to the `[1]` predicate is
 // > the child axis
 //
-fn value_into_ordered_nodes(v: Value) -> Result<OrderedNodes, Error> {
+fn value_into_ordered_nodes(v: Value<'_>) -> Result<OrderedNodes<'_>, Error> {
     match v {
         Value::Nodeset(ns) => Ok(ns.document_order().into()),
         _ => Err(Error::NotANodeset),
@@ -125,11 +125,11 @@ impl Equal {
         let left_val = self.left.evaluate(context)?;
         let right_val = self.right.evaluate(context)?;
 
-        fn str_vals(nodes: &Nodeset) -> HashSet<String> {
+        fn str_vals(nodes: &Nodeset<'_>) -> HashSet<String> {
             nodes.iter().map(|n| n.string_value()).collect()
         }
 
-        fn num_vals(nodes: &Nodeset) -> Vec<f64> {
+        fn num_vals(nodes: &Nodeset<'_>) -> Vec<f64> {
             // f64 isn't hashable...
             nodes
                 .iter()
@@ -305,7 +305,7 @@ impl Expression for Math {
 }
 
 impl fmt::Debug for Math {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Math {{ left: {:?}, right: {:?} }}",
@@ -462,7 +462,7 @@ impl Expression for Relational {
 }
 
 impl fmt::Debug for Relational {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Relational {{ left: {:?}, right: {:?} }}",
@@ -502,7 +502,7 @@ impl Predicate {
             .collect()
     }
 
-    fn matches(&self, context: &context::Evaluation) -> Result<bool, Error> {
+    fn matches(&self, context: &context::Evaluation<'_, '_>) -> Result<bool, Error> {
         let value = self.expression.evaluate(context)?;
 
         let v = match value {
@@ -593,7 +593,7 @@ impl Expression for Union {
 }
 
 fn resolve_prefixed_name<'a>(
-    context: &'a context::Evaluation,
+    context: &'a context::Evaluation<'_, '_>,
     name: &'a OwnedPrefixedName,
 ) -> Result<QName<'a>, Error> {
     // What about a "default" namespace?
@@ -1085,7 +1085,7 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test(&self, _context: &context::Evaluation, _result: &mut OrderedNodes) {}
+        fn test(&self, _context: &context::Evaluation<'_, '_>, _result: &mut OrderedNodes<'_>) {}
     }
 
     #[test]

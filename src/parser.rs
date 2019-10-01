@@ -133,9 +133,9 @@ impl LeftAssociativeBinaryParser {
         LeftAssociativeBinaryParser { rules: rules }
     }
 
-    fn parse<F, I>(&self, source: TokenSource<I>, child_parse: F) -> ParseResult
+    fn parse<F, I>(&self, source: TokenSource<'_, I>, child_parse: F) -> ParseResult
     where
-        F: Fn(TokenSource<I>) -> ParseResult,
+        F: Fn(TokenSource<'_, I>) -> ParseResult,
         I: Iterator<Item = TokenResult>,
     {
         let left = child_parse(source)?;
@@ -175,8 +175,8 @@ impl LeftAssociativeBinaryParser {
     }
 }
 
-type Rule<'a, I> = dyn Fn(TokenSource<I>) -> ParseResult + 'a;
-fn first_matching_rule<I>(child_parses: &[&Rule<I>], source: TokenSource<I>) -> ParseResult
+type Rule<'a, I> = dyn Fn(TokenSource<'_, I>) -> ParseResult + 'a;
+fn first_matching_rule<I>(child_parses: &[&Rule<'_, I>], source: TokenSource<'_, I>) -> ParseResult
 where
     I: Iterator<Item = TokenResult>,
 {
@@ -191,7 +191,7 @@ where
 }
 
 impl Parser {
-    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<Axis, Error>
+    fn parse_axis<I>(&self, source: TokenSource<'_, I>) -> Result<Axis, Error>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -218,7 +218,7 @@ impl Parser {
         }
     }
 
-    fn parse_node_test<I>(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, Error>
+    fn parse_node_test<I>(&self, source: TokenSource<'_, I>) -> Result<Option<SubNodeTest>, Error>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -240,7 +240,7 @@ impl Parser {
 
     fn default_node_test<I>(
         &self,
-        source: TokenSource<I>,
+        source: TokenSource<'_, I>,
         axis: Axis,
     ) -> Result<Option<SubNodeTest>, Error>
     where
@@ -261,7 +261,7 @@ impl Parser {
         }
     }
 
-    fn parse_nested_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_nested_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -275,7 +275,7 @@ impl Parser {
         }
     }
 
-    fn parse_variable_reference<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_variable_reference<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -287,7 +287,7 @@ impl Parser {
         }
     }
 
-    fn parse_string_literal<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_string_literal<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -301,7 +301,7 @@ impl Parser {
         }
     }
 
-    fn parse_numeric_literal<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_numeric_literal<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -317,7 +317,7 @@ impl Parser {
 
     fn parse_function_args_tail<I>(
         &self,
-        source: TokenSource<I>,
+        source: TokenSource<'_, I>,
         mut arguments: Vec<SubExpression>,
     ) -> Result<Vec<SubExpression>, Error>
     where
@@ -335,7 +335,10 @@ impl Parser {
         Ok(arguments)
     }
 
-    fn parse_function_args<I>(&self, source: TokenSource<I>) -> Result<Vec<SubExpression>, Error>
+    fn parse_function_args<I>(
+        &self,
+        source: TokenSource<'_, I>,
+    ) -> Result<Vec<SubExpression>, Error>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -349,7 +352,7 @@ impl Parser {
         self.parse_function_args_tail(source, arguments)
     }
 
-    fn parse_function_call<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_function_call<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -369,22 +372,22 @@ impl Parser {
         }
     }
 
-    fn parse_primary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_primary_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
-        let rules: &[&Rule<I>] = &[
-            &|src: TokenSource<I>| self.parse_variable_reference(src),
-            &|src: TokenSource<I>| self.parse_nested_expression(src),
-            &|src: TokenSource<I>| self.parse_string_literal(src),
-            &|src: TokenSource<I>| self.parse_numeric_literal(src),
-            &|src: TokenSource<I>| self.parse_function_call(src),
+        let rules: &[&Rule<'_, I>] = &[
+            &|src: TokenSource<'_, I>| self.parse_variable_reference(src),
+            &|src: TokenSource<'_, I>| self.parse_nested_expression(src),
+            &|src: TokenSource<'_, I>| self.parse_string_literal(src),
+            &|src: TokenSource<'_, I>| self.parse_numeric_literal(src),
+            &|src: TokenSource<'_, I>| self.parse_function_call(src),
         ];
 
         first_matching_rule(rules, source)
     }
 
-    fn parse_predicate_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_predicate_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -403,7 +406,7 @@ impl Parser {
         }
     }
 
-    fn parse_predicates<I>(&self, source: TokenSource<I>) -> Result<Vec<SubExpression>, Error>
+    fn parse_predicates<I>(&self, source: TokenSource<'_, I>) -> Result<Vec<SubExpression>, Error>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -416,7 +419,7 @@ impl Parser {
         Ok(predicates)
     }
 
-    fn parse_step<I>(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, Error>
+    fn parse_step<I>(&self, source: TokenSource<'_, I>) -> Result<Option<expression::Step>, Error>
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -439,7 +442,7 @@ impl Parser {
 
     fn parse_relative_location_path_raw<I>(
         &self,
-        source: TokenSource<I>,
+        source: TokenSource<'_, I>,
         start_point: SubExpression,
     ) -> ParseResult
     where
@@ -464,7 +467,7 @@ impl Parser {
         }
     }
 
-    fn parse_relative_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_relative_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -472,7 +475,7 @@ impl Parser {
         self.parse_relative_location_path_raw(source, start_point)
     }
 
-    fn parse_absolute_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_absolute_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -489,19 +492,19 @@ impl Parser {
         }
     }
 
-    fn parse_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
-        let rules: &[&Rule<I>] = &[
-            &|source: TokenSource<I>| self.parse_relative_location_path(source),
-            &|source: TokenSource<I>| self.parse_absolute_location_path(source),
+        let rules: &[&Rule<'_, I>] = &[
+            &|source: TokenSource<'_, I>| self.parse_relative_location_path(source),
+            &|source: TokenSource<'_, I>| self.parse_absolute_location_path(source),
         ];
 
         first_matching_rule(rules, source)
     }
 
-    fn parse_filter_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_filter_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -517,7 +520,7 @@ impl Parser {
         }
     }
 
-    fn parse_path_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_path_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -543,7 +546,7 @@ impl Parser {
         }
     }
 
-    fn parse_union_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_union_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -556,7 +559,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_path_expression(source))
     }
 
-    fn parse_unary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_unary_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -582,7 +585,7 @@ impl Parser {
         }
     }
 
-    fn parse_multiplicative_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_multiplicative_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -605,7 +608,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_unary_expression(source))
     }
 
-    fn parse_additive_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_additive_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -626,7 +629,7 @@ impl Parser {
         })
     }
 
-    fn parse_relational_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_relational_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -653,7 +656,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_additive_expression(source))
     }
 
-    fn parse_equality_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_equality_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -672,7 +675,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_relational_expression(source))
     }
 
-    fn parse_and_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_and_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -685,7 +688,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_equality_expression(source))
     }
 
-    fn parse_or_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_or_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {
@@ -698,7 +701,7 @@ impl Parser {
         parser.parse(source, |source| self.parse_and_expression(source))
     }
 
-    fn parse_expression<I>(&self, source: TokenSource<I>) -> ParseResult
+    fn parse_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
     where
         I: Iterator<Item = TokenResult>,
     {

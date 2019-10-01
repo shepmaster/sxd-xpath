@@ -142,7 +142,7 @@ impl<'d> Default for Context<'d> {
 /// (`'c`) and that of the document (`'d`). This allows the
 /// user-provided context to live shorter than the document.
 #[derive(Copy, Clone)]
-pub struct Evaluation<'c, 'd: 'c> {
+pub struct Evaluation<'c, 'd> {
     /// The context node
     pub node: Node<'d>,
     /// The context position
@@ -179,14 +179,14 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     }
 
     /// Looks up the function with the given name
-    pub fn function_for_name(&self, name: QName) -> Option<&'c dyn function::Function> {
+    pub fn function_for_name(&self, name: QName<'_>) -> Option<&'c dyn function::Function> {
         // FIXME: remove allocation
         let name = name.into();
         self.functions.get(&name).map(AsRef::as_ref)
     }
 
     /// Looks up the value of the variable
-    pub fn value_of(&self, name: QName) -> Option<&Value<'d>> {
+    pub fn value_of(&self, name: QName<'_>) -> Option<&Value<'d>> {
         // FIXME: remove allocation
         let name = name.into();
         self.variables.get(&name)
@@ -209,7 +209,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 }
 
 /// An iterator for the contexts of each node in a nodeset
-pub struct EvaluationNodesetIter<'c, 'd: 'c> {
+pub struct EvaluationNodesetIter<'c, 'd> {
     parent: Evaluation<'c, 'd>,
     nodes: iter::Enumerate<::std::vec::IntoIter<Node<'d>>>,
     size: usize,
