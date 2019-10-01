@@ -1,6 +1,6 @@
+extern crate getopts;
 extern crate sxd_document;
 extern crate sxd_xpath;
-extern crate getopts;
 
 use std::env;
 use std::fs::File;
@@ -8,7 +8,7 @@ use std::io::{self, Read};
 
 use sxd_document::parser::parse;
 
-use sxd_xpath::{Factory, Context, XPath, Value};
+use sxd_xpath::{Context, Factory, Value, XPath};
 
 use getopts::Options;
 
@@ -33,7 +33,8 @@ fn build_xpath(xpath_str: &str) -> XPath {
 }
 
 fn load_xml<R>(input: R) -> sxd_document::Package
-    where R: Read
+where
+    R: Read,
 {
     let mut input = input;
     let mut data = String::new();
@@ -75,11 +76,9 @@ fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
 
     for number in arguments.opt_strs("number") {
         match argument_name_value(&number, '=') {
-            Some((name, val)) => {
-                match val.parse() {
-                    Ok(val) => context.set_variable(name, Value::Number(val)),
-                    Err(e) => panic!("Unknown numeric value '{}': {}", val, e),
-                }
+            Some((name, val)) => match val.parse() {
+                Ok(val) => context.set_variable(name, Value::Number(val)),
+                Err(e) => panic!("Unknown numeric value '{}': {}", val, e),
             },
             None => panic!("number argument '{}' is malformed", number),
         }
@@ -121,7 +120,7 @@ fn main() {
             println!("{}", x);
             print_usage(program_name, &opts);
             return;
-        },
+        }
     };
 
     let xpath_str = arguments.opt_str("xpath").expect("No XPath provided");
