@@ -2,6 +2,7 @@
 name = "sxd-xpath"
 version = "0.4.2"
 authors = ["Jake Goulding <jake.goulding@gmail.com>"]
+edition = "2018"
 
 description = "A Rust XML XPath library"
 readme = "README.md"
