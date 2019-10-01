@@ -2,9 +2,9 @@ extern crate sxd_document;
 
 use std::fmt;
 
-use context;
-use node_test::NodeTest;
-use nodeset::{self, Node, OrderedNodes};
+use crate::context;
+use crate::node_test::NodeTest;
+use crate::nodeset::{self, Node, OrderedNodes};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum PrincipalNodeType {
@@ -211,9 +211,9 @@ mod test {
     use sxd_document::dom;
     use sxd_document::Package;
 
-    use context::{self, Context};
-    use node_test::NodeTest;
-    use nodeset::{Node, OrderedNodes};
+    use crate::context::{self, Context};
+    use crate::node_test::NodeTest;
+    use crate::nodeset::{Node, OrderedNodes};
 
     use super::Axis::*;
     use super::*;

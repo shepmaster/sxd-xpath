@@ -8,9 +8,9 @@ use std::ops::Index;
 
 use sxd_document::XmlChar;
 
-use context;
-use nodeset::Nodeset;
-use {str_to_num, Value};
+use crate::context;
+use crate::nodeset::Nodeset;
+use crate::{str_to_num, Value};
 
 /// Types that can be used as XPath functions.
 pub trait Function {
@@ -686,9 +686,9 @@ mod test {
 
     use sxd_document::Package;
 
-    use context;
-    use nodeset::Node;
-    use {LiteralValue, Value};
+    use crate::context;
+    use crate::nodeset::Node;
+    use crate::{LiteralValue, Value};
 
     use super::{
         ceiling, contains, floor, round, starts_with, substring_after, substring_before, BooleanFn,

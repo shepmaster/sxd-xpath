@@ -3,13 +3,13 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use axis::{Axis, AxisLike};
-use context;
-use function;
-use node_test::NodeTest;
-use nodeset::{Nodeset, OrderedNodes};
-use Value::{Boolean, Number};
-use {LiteralValue, OwnedPrefixedName, Value};
+use crate::axis::{Axis, AxisLike};
+use crate::context;
+use crate::function;
+use crate::node_test::NodeTest;
+use crate::nodeset::{Nodeset, OrderedNodes};
+use crate::Value::{Boolean, Number};
+use crate::{LiteralValue, OwnedPrefixedName, Value};
 
 quick_error! {
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -633,12 +633,12 @@ mod test {
     use sxd_document::dom::Document;
     use sxd_document::Package;
 
-    use axis::AxisLike;
-    use context::{self, Context};
-    use function;
-    use node_test::NodeTest;
-    use nodeset::OrderedNodes;
-    use Value::{self, Boolean, Number, String};
+    use crate::axis::AxisLike;
+    use crate::context::{self, Context};
+    use crate::function;
+    use crate::node_test::NodeTest;
+    use crate::nodeset::OrderedNodes;
+    use crate::Value::{self, Boolean, Number, String};
 
     use super::*;
 

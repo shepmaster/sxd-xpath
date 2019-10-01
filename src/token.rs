@@ -1,7 +1,7 @@
 use std::string;
 
-use node_test;
-use OwnedPrefixedName;
+use crate::node_test;
+use crate::OwnedPrefixedName;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum AxisName {

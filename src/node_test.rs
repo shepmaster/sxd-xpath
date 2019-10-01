@@ -2,8 +2,8 @@ use std::fmt;
 
 use sxd_document::QName;
 
-use context;
-use nodeset::{self, OrderedNodes};
+use crate::context;
+use crate::nodeset::{self, OrderedNodes};
 
 pub trait NodeTest: fmt::Debug {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>);
@@ -170,8 +170,8 @@ mod test {
     use sxd_document::dom::{self, Document};
     use sxd_document::{Package, QName};
 
-    use context::{self, Context};
-    use nodeset::OrderedNodes;
+    use crate::context::{self, Context};
+    use crate::nodeset::OrderedNodes;
 
     use super::*;
 

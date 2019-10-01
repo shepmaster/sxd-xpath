@@ -2,12 +2,12 @@ use std::iter::Peekable;
 
 use self::Error::*;
 
-use axis::{Axis, AxisLike, PrincipalNodeType};
-use expression::{self, SubExpression};
-use node_test::{self, SubNodeTest};
-use token::{AxisName, NodeTestName, Token};
-use tokenizer::{self, TokenResult};
-use Value;
+use crate::axis::{Axis, AxisLike, PrincipalNodeType};
+use crate::expression::{self, SubExpression};
+use crate::node_test::{self, SubNodeTest};
+use crate::token::{AxisName, NodeTestName, Token};
+use crate::tokenizer::{self, TokenResult};
+use crate::Value;
 
 #[allow(missing_copy_implementations)]
 pub struct Parser;
@@ -728,14 +728,14 @@ mod test {
     use sxd_document::dom::{self, Document, Element, Root, Text};
     use sxd_document::Package;
 
-    use context::{self, Context};
-    use expression::{Expression, SubExpression};
-    use node_test;
-    use nodeset::Node;
-    use token::{AxisName, NodeTestName, Token};
-    use tokenizer::{self, TokenResult};
-    use Value;
-    use Value::{Boolean, Number, String};
+    use crate::context::{self, Context};
+    use crate::expression::{Expression, SubExpression};
+    use crate::node_test;
+    use crate::nodeset::Node;
+    use crate::token::{AxisName, NodeTestName, Token};
+    use crate::tokenizer::{self, TokenResult};
+    use crate::Value;
+    use crate::Value::{Boolean, Number, String};
 
     use super::Error::*;
     use super::{ParseResult, Parser};

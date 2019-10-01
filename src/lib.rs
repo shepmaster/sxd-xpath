@@ -118,10 +118,10 @@ use std::string;
 use sxd_document::dom::Document;
 use sxd_document::{PrefixedName, QName};
 
-use parser::Parser;
-use tokenizer::{TokenDeabbreviator, Tokenizer};
+use crate::parser::Parser;
+use crate::tokenizer::{TokenDeabbreviator, Tokenizer};
 
-pub use context::Context;
+pub use crate::context::Context;
 
 #[macro_use]
 pub mod macros;
@@ -225,7 +225,7 @@ fn str_to_num(s: &str) -> f64 {
 
 impl<'d> Value<'d> {
     pub fn boolean(&self) -> bool {
-        use Value::*;
+        use crate::Value::*;
         match *self {
             Boolean(val) => val,
             Number(n) => n != 0.0 && !n.is_nan(),
@@ -239,7 +239,7 @@ impl<'d> Value<'d> {
     }
 
     pub fn number(&self) -> f64 {
-        use Value::*;
+        use crate::Value::*;
         match *self {
             Boolean(val) => {
                 if val {
@@ -259,7 +259,7 @@ impl<'d> Value<'d> {
     }
 
     pub fn string(&self) -> string::String {
-        use Value::*;
+        use crate::Value::*;
         match *self {
             Boolean(v) => v.to_string(),
             Number(n) => {
@@ -282,7 +282,7 @@ impl<'d> Value<'d> {
     }
 
     pub fn into_string(self) -> string::String {
-        use Value::*;
+        use crate::Value::*;
         match self {
             String(val) => val,
             other => other.string(),
@@ -663,8 +663,8 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use parser::Error::*;
-            use Error::*;
+            use crate::parser::Error::*;
+            use crate::Error::*;
 
             let result = evaluate_xpath(&doc, "/root/child/");
 
@@ -675,8 +675,8 @@ mod test {
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use expression::Error::*;
-            use Error::*;
+            use crate::expression::Error::*;
+            use crate::Error::*;
 
             let result = evaluate_xpath(&doc, "$foo");
 

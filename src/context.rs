@@ -6,9 +6,9 @@ use sxd_document::QName;
 use std::collections::HashMap;
 use std::iter;
 
-use function;
-use nodeset::{Node, OrderedNodes};
-use {OwnedQName, Value};
+use crate::function;
+use crate::nodeset::{Node, OrderedNodes};
+use crate::{OwnedQName, Value};
 
 /// A mapping of names to XPath functions.
 type Functions = HashMap<OwnedQName, Box<dyn function::Function + 'static>>;

@@ -5,8 +5,8 @@ use std::string;
 use peresil::{self, Identifier, ParseMaster, Recoverable, StringPoint};
 use sxd_document::parser::XmlParseExt;
 
-use node_test;
-use token::{AxisName, NodeTestName, Token};
+use crate::node_test;
+use crate::token::{AxisName, NodeTestName, Token};
 
 use self::Error::*;
 
@@ -505,8 +505,8 @@ where
 mod test {
     use std::borrow::ToOwned;
 
-    use node_test;
-    use token::{AxisName, NodeTestName, Token};
+    use crate::node_test;
+    use crate::token::{AxisName, NodeTestName, Token};
 
     use super::Error::*;
     use super::{Error, TokenDeabbreviator, TokenResult, Tokenizer};
