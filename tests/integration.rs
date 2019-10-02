@@ -1,11 +1,7 @@
-extern crate sxd_document;
-#[macro_use]
-extern crate sxd_xpath;
-
 use std::borrow::ToOwned;
 use sxd_document::{dom, parser};
-use sxd_xpath::{Value, Factory, Context, evaluate_xpath};
-use sxd_xpath::{context, function};
+use sxd_xpath::{context, function, nodeset};
+use sxd_xpath::{evaluate_xpath, Context, Factory, Value};
 
 #[test]
 fn functions_accept_arguments() {
@@ -68,7 +64,9 @@ fn variables_with_qualified_names() {
 fn functions_with_qualified_names() {
     with_document("<a/>", |doc| {
         let mut setup = Setup::new();
-        setup.context.set_function(("uri:namespace", "constant"), ConstantValueFunction(42.0));
+        setup
+            .context
+            .set_function(("uri:namespace", "constant"), ConstantValueFunction(42.0));
         setup.context.set_namespace("prefix", "uri:namespace");
 
         let result = setup.evaluate(&doc, "prefix:constant()");
@@ -87,7 +85,8 @@ fn nodesets_are_unique() {
 }
 
 fn with_document<F>(xml: &str, f: F)
-    where F: FnOnce(dom::Document),
+where
+    F: FnOnce(dom::Document<'_>),
 {
     let package = parser::parse(xml).expect("Unable to parse test XML");
     f(package.as_document());
@@ -105,10 +104,13 @@ impl<'d> Setup<'d> {
     }
 
     fn evaluate(&self, doc: &'d dom::Document<'d>, xpath: &str) -> Value<'d> {
-        let xpath = self.factory.build(xpath)
+        let xpath = self
+            .factory
+            .build(xpath)
             .expect("Unable to build XPath")
             .expect("No XPath was built");
-        xpath.evaluate(&self.context, doc.root())
+        xpath
+            .evaluate(&self.context, doc.root())
             .expect("Unable to evaluate XPath")
     }
 }
@@ -116,10 +118,11 @@ impl<'d> Setup<'d> {
 struct ConstantValueFunction(f64);
 
 impl function::Function for ConstantValueFunction {
-    fn evaluate<'c, 'd>(&self,
-                        _context: &context::Evaluation<'c, 'd>,
-                        _args: Vec<Value<'d>>) -> Result<Value<'d>, function::Error>
-    {
+    fn evaluate<'c, 'd>(
+        &self,
+        _context: &context::Evaluation<'c, 'd>,
+        _args: Vec<Value<'d>>,
+    ) -> Result<Value<'d>, function::Error> {
         Ok(Value::Number(self.0))
     }
 }

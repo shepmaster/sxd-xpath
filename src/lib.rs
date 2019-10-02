@@ -16,9 +16,6 @@
 //! to use [`evaluate_xpath`][evaluate_xpath].
 //!
 //! ```
-//! extern crate sxd_document;
-//! extern crate sxd_xpath;
-//!
 //! use sxd_document::parser;
 //! use sxd_xpath::{evaluate_xpath, Value};
 //!
@@ -45,9 +42,6 @@
 //! accomplished:
 //!
 //! ```
-//! extern crate sxd_document;
-//! extern crate sxd_xpath;
-//!
 //! use sxd_document::parser;
 //! use sxd_xpath::{Factory, Context, Value};
 //!
@@ -106,31 +100,25 @@
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
 
-#[macro_use]
-extern crate peresil;
-extern crate sxd_document;
-#[macro_use]
-extern crate quick_error;
-
+use snafu::{OptionExt, ResultExt, Snafu};
 use std::borrow::ToOwned;
 use std::string;
-
-use sxd_document::{PrefixedName, QName};
 use sxd_document::dom::Document;
+use sxd_document::{PrefixedName, QName};
 
-use parser::Parser;
-use tokenizer::{Tokenizer, TokenDeabbreviator};
+use crate::parser::Parser;
+use crate::tokenizer::{TokenDeabbreviator, Tokenizer};
 
-pub use context::Context;
+pub use crate::context::Context;
 
 #[macro_use]
 pub mod macros;
-pub mod nodeset;
-pub mod context;
 mod axis;
+pub mod context;
 mod expression;
 pub mod function;
 mod node_test;
+pub mod nodeset;
 mod parser;
 mod token;
 mod tokenizer;
@@ -166,6 +154,15 @@ impl<'a> From<PrefixedName<'a>> for OwnedPrefixedName {
         OwnedPrefixedName {
             prefix: name.prefix().map(Into::into),
             local_part: name.local_part().into(),
+        }
+    }
+}
+
+impl<'a> From<&'a OwnedPrefixedName> for OwnedPrefixedName {
+    fn from(name: &'a OwnedPrefixedName) -> Self {
+        OwnedPrefixedName {
+            prefix: name.prefix.to_owned(),
+            local_part: name.local_part.to_owned(),
         }
     }
 }
@@ -225,11 +222,11 @@ fn str_to_num(s: &str) -> f64 {
 
 impl<'d> Value<'d> {
     pub fn boolean(&self) -> bool {
-        use Value::*;
+        use crate::Value::*;
         match *self {
             Boolean(val) => val,
-            Number(n) => n != 0.0 && ! n.is_nan(),
-            String(ref s) => ! s.is_empty(),
+            Number(n) => n != 0.0 && !n.is_nan(),
+            String(ref s) => !s.is_empty(),
             Nodeset(ref nodeset) => nodeset.size() > 0,
         }
     }
@@ -239,9 +236,15 @@ impl<'d> Value<'d> {
     }
 
     pub fn number(&self) -> f64 {
-        use Value::*;
+        use crate::Value::*;
         match *self {
-            Boolean(val) => if val { 1.0 } else { 0.0 },
+            Boolean(val) => {
+                if val {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             Number(val) => val,
             String(ref s) => str_to_num(s),
             Nodeset(..) => str_to_num(&self.string()),
@@ -253,7 +256,7 @@ impl<'d> Value<'d> {
     }
 
     pub fn string(&self) -> string::String {
-        use Value::*;
+        use crate::Value::*;
         match *self {
             Boolean(v) => v.to_string(),
             Number(n) => {
@@ -266,7 +269,7 @@ impl<'d> Value<'d> {
                 } else {
                     n.to_string()
                 }
-            },
+            }
             String(ref val) => val.clone(),
             Nodeset(ref ns) => match ns.document_order_first() {
                 Some(n) => n.string_value(),
@@ -276,7 +279,7 @@ impl<'d> Value<'d> {
     }
 
     pub fn into_string(self) -> string::String {
-        use Value::*;
+        use crate::Value::*;
         match self {
             String(val) => val,
             other => other.string(),
@@ -291,7 +294,7 @@ macro_rules! from_impl {
                 $variant(other)
             }
         }
-    }
+    };
 }
 
 from_impl!(bool, Value::Boolean);
@@ -315,7 +318,7 @@ macro_rules! partial_eq_impl {
             }
         }
 
-        impl<'d> PartialEq<Value<'d>> for $raw  {
+        impl<'d> PartialEq<Value<'d>> for $raw {
             fn eq(&self, other: &Value<'d>) -> bool {
                 match *other {
                     $variant => $b == self,
@@ -323,7 +326,7 @@ macro_rules! partial_eq_impl {
                 }
             }
         }
-    }
+    };
 }
 
 partial_eq_impl!(bool, Value::Boolean(ref v) => v);
@@ -336,7 +339,7 @@ partial_eq_impl!(nodeset::Nodeset<'d>, Value::Nodeset(ref v) => v);
 ///
 /// [`Factory`]: struct.Factory.html
 #[derive(Debug)]
-pub struct XPath(Box<expression::Expression + 'static>);
+pub struct XPath(Box<dyn expression::Expression + 'static>);
 
 impl XPath {
     /// Evaluate this expression in the given context.
@@ -346,9 +349,6 @@ impl XPath {
     /// The most common case is to pass in a reference to a [`Context`][]:
     ///
     /// ```rust,no-run
-    /// extern crate sxd_document;
-    /// extern crate sxd_xpath;
-    ///
     /// use sxd_document::dom::Document;
     /// use sxd_xpath::{XPath, Context};
     ///
@@ -362,9 +362,13 @@ impl XPath {
     /// ```
     ///
     /// [`Context`]: context/struct.Context.html
-    pub fn evaluate<'d, N>(&self, context: &Context<'d>, node: N)
-                           -> Result<Value<'d>, ExecutionError>
-        where N: Into<nodeset::Node<'d>>,
+    pub fn evaluate<'d, N>(
+        &self,
+        context: &Context<'d>,
+        node: N,
+    ) -> Result<Value<'d>, ExecutionError>
+    where
+        N: Into<nodeset::Node<'d>>,
     {
         let context = context::Evaluation::new(context, node.into());
         self.0.evaluate(&context).map_err(ExecutionError)
@@ -379,7 +383,9 @@ pub struct Factory {
 
 impl Factory {
     pub fn new() -> Factory {
-        Factory { parser: Parser::new() }
+        Factory {
+            parser: Parser::new(),
+        }
     }
 
     /// Compiles the given string into an XPath structure.
@@ -387,7 +393,10 @@ impl Factory {
         let tokenizer = Tokenizer::new(xpath);
         let deabbreviator = TokenDeabbreviator::new(tokenizer);
 
-        self.parser.parse(deabbreviator).map(|x| x.map(XPath)).map_err(ParserError)
+        self.parser
+            .parse(deabbreviator)
+            .map(|x| x.map(XPath))
+            .map_err(ParserError)
     }
 }
 
@@ -397,72 +406,26 @@ impl Default for Factory {
     }
 }
 
-macro_rules! opaque_error {
-    (
-        $(#[$attr:meta])+
-        $name:ident($inner:ty)
-    ) => {
-        #[derive(Debug, Clone, PartialEq)]
-        $(#[$attr])+
-        pub struct $name($inner);
+/// Errors that may occur when parsing an XPath
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub struct ParserError(parser::Error);
 
-        impl std::error::Error for $name {
-            fn description(&self) -> &str {
-                self.0.description()
-            }
+/// Errors that may occur when executing an XPath
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub struct ExecutionError(expression::Error);
 
-            fn cause(&self) -> Option<&std::error::Error> {
-                self.0.cause()
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                self.0.fmt(f)
-            }
-        }
-
-        impl From<$inner> for $name {
-            fn from(other: $inner) -> $name {
-                $name(other)
-            }
-        }
-    }
-}
-
-opaque_error!(
-    /// Errors that may occur when parsing an XPath
-    ParserError(parser::Error)
-);
-
-opaque_error!(
-    /// Errors that may occur when executing an XPath
-    ExecutionError(expression::Error)
-);
-
-quick_error! {
-    /// The failure modes of executing an XPath.
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum Error {
-        /// The XPath was syntactically invalid
-        Parsing(err: ParserError) {
-            from()
-            cause(err)
-            description("Unable to parse XPath")
-            display("Unable to parse XPath: {}", err)
-        }
-        /// The XPath did not construct an expression
-        NoXPath {
-            description("XPath was empty")
-        }
-        /// The XPath could not be executed
-        Executing(err: ExecutionError) {
-            from()
-            cause(err)
-            description("Unable to execute XPath")
-            display("Unable to execute XPath: {}", err)
-        }
-    }
+/// The failure modes of executing an XPath.
+#[derive(Debug, Snafu, Clone, PartialEq)]
+pub enum Error {
+    /// The XPath was syntactically invalid
+    #[snafu(display("Unable to parse XPath: {}", source))]
+    Parsing { source: ParserError },
+    /// The XPath did not construct an expression
+    #[snafu(display("XPath was empty"))]
+    NoXPath,
+    /// The XPath could not be executed
+    #[snafu(display("Unable to execute XPath: {}", source))]
+    Executing { source: ExecutionError },
 }
 
 /// Easily evaluate an XPath expression
@@ -477,9 +440,6 @@ quick_error! {
 /// # Examples
 ///
 /// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
 /// use sxd_document::parser;
 /// use sxd_xpath::{evaluate_xpath, Value};
 ///
@@ -492,12 +452,14 @@ quick_error! {
 /// ```
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
-    let expression = factory.build(xpath)?;
-    let expression = expression.ok_or(Error::NoXPath)?;
+    let expression = factory.build(xpath).context(Parsing)?;
+    let expression = expression.context(NoXPath)?;
 
     let context = Context::new();
 
-    expression.evaluate(&context, document.root()).map_err(Into::into)
+    expression
+        .evaluate(&context, document.root())
+        .context(Executing)
 }
 
 #[cfg(test)]
@@ -627,7 +589,8 @@ mod test {
     }
 
     fn with_document<F>(xml: &str, f: F)
-        where F: FnOnce(dom::Document),
+    where
+        F: FnOnce(dom::Document<'_>),
     {
         let package = sxd_document::parser::parse(xml).expect("Unable to parse test XML");
         f(package.as_document());
@@ -645,24 +608,26 @@ mod test {
     #[test]
     fn xpath_evaluation_parsing_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use Error::*;
-            use parser::Error::*;
-
             let result = evaluate_xpath(&doc, "/root/child/");
 
-            assert_eq!(Err(Parsing(ParserError(TrailingSlash))), result);
+            let expected_error = crate::parser::TrailingSlash
+                .fail()
+                .map_err(ParserError::from)
+                .context(Parsing);
+            assert_eq!(expected_error, result);
         });
     }
 
     #[test]
     fn xpath_evaluation_execution_error() {
         with_document("<root><child>content</child></root>", |doc| {
-            use Error::*;
-            use expression::Error::*;
-
             let result = evaluate_xpath(&doc, "$foo");
 
-            assert_eq!(Err(Executing(ExecutionError(UnknownVariable("foo".into())))), result);
+            let expected_error = crate::expression::UnknownVariable { name: "foo" }
+                .fail()
+                .map_err(ExecutionError::from)
+                .context(Executing);
+            assert_eq!(expected_error, result);
         });
     }
 

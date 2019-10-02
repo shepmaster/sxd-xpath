@@ -1,13 +1,13 @@
 //! Support for collections of nodes.
 
 use std::borrow::ToOwned;
-use std::collections::{HashSet, HashMap};
 use std::collections::hash_set;
-use std::iter::{IntoIterator, FromIterator};
+use std::collections::{HashMap, HashSet};
+use std::iter::{FromIterator, IntoIterator};
 use std::usize;
 
-use sxd_document::QName;
 use sxd_document::dom;
+use sxd_document::QName;
 
 macro_rules! unpack(
     ($enum_name:ident, {
@@ -48,11 +48,21 @@ pub struct Namespace<'d> {
 }
 
 impl<'d> Namespace<'d> {
-    pub fn document(&self) -> dom::Document<'d> { self.parent.document() }
-    pub fn parent(&self) -> dom::Element<'d> { self.parent }
-    pub fn prefix(&self) -> &'d str { self.prefix }
-    pub fn uri(&self) -> &'d str { self.uri }
-    pub fn expanded_name(&self) -> QName<'d> { QName::new(self.prefix) }
+    pub fn document(&self) -> dom::Document<'d> {
+        self.parent.document()
+    }
+    pub fn parent(&self) -> dom::Element<'d> {
+        self.parent
+    }
+    pub fn prefix(&self) -> &'d str {
+        self.prefix
+    }
+    pub fn uri(&self) -> &'d str {
+        self.uri
+    }
+    pub fn expanded_name(&self) -> QName<'d> {
+        QName::new(self.prefix)
+    }
 }
 
 /// Any of the various types of nodes found in an XML document.
@@ -72,13 +82,13 @@ impl<'d> Node<'d> {
     pub fn document(&self) -> dom::Document<'d> {
         use self::Node::*;
         match *self {
-            Root(n)                  => n.document(),
-            Element(n)               => n.document(),
-            Attribute(n)             => n.document(),
-            Text(n)                  => n.document(),
-            Comment(n)               => n.document(),
+            Root(n) => n.document(),
+            Element(n) => n.document(),
+            Attribute(n) => n.document(),
+            Text(n) => n.document(),
+            Comment(n) => n.document(),
             ProcessingInstruction(n) => n.document(),
-            Namespace(n)             => n.document(),
+            Namespace(n) => n.document(),
         }
     }
 
@@ -86,7 +96,11 @@ impl<'d> Node<'d> {
     pub fn prefixed_name(&self) -> Option<String> {
         use self::Node::*;
 
-        fn qname_prefixed_name(element: dom::Element, name: QName, preferred_prefix: Option<&str>) -> String {
+        fn qname_prefixed_name(
+            element: dom::Element<'_>,
+            name: QName<'_>,
+            preferred_prefix: Option<&str>,
+        ) -> String {
             if let Some(ns_uri) = name.namespace_uri() {
                 if let Some(prefix) = element.prefix_for_namespace_uri(ns_uri, preferred_prefix) {
                     format!("{}:{}", prefix, name.local_part())
@@ -99,18 +113,16 @@ impl<'d> Node<'d> {
         };
 
         match *self {
-            Root(_)                  => None,
-            Element(n)               => {
-                Some(qname_prefixed_name(n, n.name(), n.preferred_prefix()))
-            },
-            Attribute(n)             => {
+            Root(_) => None,
+            Element(n) => Some(qname_prefixed_name(n, n.name(), n.preferred_prefix())),
+            Attribute(n) => {
                 let parent = n.parent().expect("Cannot process attribute without parent");
                 Some(qname_prefixed_name(parent, n.name(), n.preferred_prefix()))
-            },
-            Text(_)                  => None,
-            Comment(_)               => None,
+            }
+            Text(_) => None,
+            Comment(_) => None,
             ProcessingInstruction(n) => Some(n.target().to_owned()),
-            Namespace(n)             => Some(n.prefix().to_owned()),
+            Namespace(n) => Some(n.prefix().to_owned()),
         }
     }
 
@@ -120,13 +132,13 @@ impl<'d> Node<'d> {
     pub fn expanded_name(&self) -> Option<QName<'d>> {
         use self::Node::*;
         match *self {
-            Root(_)                  => None,
-            Element(n)               => Some(n.name()),
-            Attribute(n)             => Some(n.name()),
-            Text(_)                  => None,
-            Comment(_)               => None,
+            Root(_) => None,
+            Element(n) => Some(n.name()),
+            Attribute(n) => Some(n.name()),
+            Text(_) => None,
+            Comment(_) => None,
             ProcessingInstruction(n) => Some(QName::new(n.target())),
-            Namespace(n)             => Some(n.expanded_name())
+            Namespace(n) => Some(n.expanded_name()),
         }
     }
 
@@ -134,13 +146,13 @@ impl<'d> Node<'d> {
     pub fn parent(&self) -> Option<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(_)                  => None,
-            Element(n)               => n.parent().map(Into::into),
-            Attribute(n)             => n.parent().map(Into::into),
-            Text(n)                  => n.parent().map(Into::into),
-            Comment(n)               => n.parent().map(Into::into),
+            Root(_) => None,
+            Element(n) => n.parent().map(Into::into),
+            Attribute(n) => n.parent().map(Into::into),
+            Text(n) => n.parent().map(Into::into),
+            Comment(n) => n.parent().map(Into::into),
             ProcessingInstruction(n) => n.parent().map(Into::into),
-            Namespace(n)             => Some(n.parent().into()),
+            Namespace(n) => Some(n.parent().into()),
         }
     }
 
@@ -148,13 +160,13 @@ impl<'d> Node<'d> {
     pub fn children(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(n)                  => n.children().into_iter().map(Into::into).collect(),
-            Element(n)               => n.children().into_iter().map(Into::into).collect(),
-            Attribute(_)             => Vec::new(),
-            Text(_)                  => Vec::new(),
-            Comment(_)               => Vec::new(),
+            Root(n) => n.children().into_iter().map(Into::into).collect(),
+            Element(n) => n.children().into_iter().map(Into::into).collect(),
+            Attribute(_) => Vec::new(),
+            Text(_) => Vec::new(),
+            Comment(_) => Vec::new(),
             ProcessingInstruction(_) => Vec::new(),
-            Namespace(_)             => Vec::new(),
+            Namespace(_) => Vec::new(),
         }
     }
 
@@ -162,13 +174,33 @@ impl<'d> Node<'d> {
     pub fn preceding_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(_)                  => Vec::new(),
-            Element(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
-            Attribute(_)             => Vec::new(),
-            Text(n)                  => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
-            Comment(n)               => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
-            ProcessingInstruction(n) => n.preceding_siblings().into_iter().rev().map(Into::into).collect(),
-            Namespace(_)             => Vec::new(),
+            Root(_) => Vec::new(),
+            Element(n) => n
+                .preceding_siblings()
+                .into_iter()
+                .rev()
+                .map(Into::into)
+                .collect(),
+            Attribute(_) => Vec::new(),
+            Text(n) => n
+                .preceding_siblings()
+                .into_iter()
+                .rev()
+                .map(Into::into)
+                .collect(),
+            Comment(n) => n
+                .preceding_siblings()
+                .into_iter()
+                .rev()
+                .map(Into::into)
+                .collect(),
+            ProcessingInstruction(n) => n
+                .preceding_siblings()
+                .into_iter()
+                .rev()
+                .map(Into::into)
+                .collect(),
+            Namespace(_) => Vec::new(),
         }
     }
 
@@ -176,13 +208,15 @@ impl<'d> Node<'d> {
     pub fn following_siblings(&self) -> Vec<Node<'d>> {
         use self::Node::*;
         match *self {
-            Root(_)                  => Vec::new(),
-            Element(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
-            Attribute(_)             => Vec::new(),
-            Text(n)                  => n.following_siblings().into_iter().map(Into::into).collect(),
-            Comment(n)               => n.following_siblings().into_iter().map(Into::into).collect(),
-            ProcessingInstruction(n) => n.following_siblings().into_iter().map(Into::into).collect(),
-            Namespace(_)             => Vec::new(),
+            Root(_) => Vec::new(),
+            Element(n) => n.following_siblings().into_iter().map(Into::into).collect(),
+            Attribute(_) => Vec::new(),
+            Text(n) => n.following_siblings().into_iter().map(Into::into).collect(),
+            Comment(n) => n.following_siblings().into_iter().map(Into::into).collect(),
+            ProcessingInstruction(n) => {
+                n.following_siblings().into_iter().map(Into::into).collect()
+            }
+            Namespace(_) => Vec::new(),
         }
     }
 
@@ -192,30 +226,30 @@ impl<'d> Node<'d> {
     pub fn string_value(&self) -> String {
         use self::Node::*;
 
-        fn document_order_text_nodes(node: Node, result: &mut String) {
+        fn document_order_text_nodes(node: Node<'_>, result: &mut String) {
             for child in node.children() {
                 match child {
                     Node::Element(_) => document_order_text_nodes(child, result),
                     Node::Text(n) => result.push_str(n.text()),
-                    _ => {},
+                    _ => {}
                 }
             }
         };
 
-        fn text_descendants_string_value(node: Node) -> String {
+        fn text_descendants_string_value(node: Node<'_>) -> String {
             let mut result = String::new();
             document_order_text_nodes(node, &mut result);
             result
         }
 
         match *self {
-            Root(_)                  => text_descendants_string_value(*self),
-            Element(_)               => text_descendants_string_value(*self),
-            Attribute(n)             => n.value().to_owned(),
+            Root(_) => text_descendants_string_value(*self),
+            Element(_) => text_descendants_string_value(*self),
+            Attribute(n) => n.value().to_owned(),
             ProcessingInstruction(n) => n.value().unwrap_or("").to_owned(),
-            Comment(n)               => n.text().to_owned(),
-            Text(n)                  => n.text().to_owned(),
-            Namespace(n)             => n.uri().to_owned(),
+            Comment(n) => n.text().to_owned(),
+            Text(n) => n.text().to_owned(),
+            Namespace(n) => n.uri().to_owned(),
         }
     }
 
@@ -249,8 +283,8 @@ impl<'d> Into<Node<'d>> for dom::ChildOfRoot<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom::ChildOfRoot::Element(n)               => Element(n),
-            dom::ChildOfRoot::Comment(n)               => Comment(n),
+            dom::ChildOfRoot::Element(n) => Element(n),
+            dom::ChildOfRoot::Comment(n) => Comment(n),
             dom::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
@@ -260,9 +294,9 @@ impl<'d> Into<Node<'d>> for dom::ChildOfElement<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom::ChildOfElement::Element(n)               => Element(n),
-            dom::ChildOfElement::Text(n)                  => Text(n),
-            dom::ChildOfElement::Comment(n)               => Comment(n),
+            dom::ChildOfElement::Element(n) => Element(n),
+            dom::ChildOfElement::Text(n) => Text(n),
+            dom::ChildOfElement::Comment(n) => Comment(n),
             dom::ChildOfElement::ProcessingInstruction(n) => ProcessingInstruction(n),
         }
     }
@@ -272,7 +306,7 @@ impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
     fn into(self) -> Node<'d> {
         use self::Node::*;
         match self {
-            dom::ParentOfChild::Root(n)    => Root(n),
+            dom::ParentOfChild::Root(n) => Root(n),
             dom::ParentOfChild::Element(n) => Element(n),
         }
     }
@@ -291,14 +325,16 @@ impl<'d> Nodeset<'d> {
 
     /// Checks if the node is present in the set
     pub fn contains<N>(&self, node: N) -> bool
-        where N: Into<Node<'d>>,
+    where
+        N: Into<Node<'d>>,
     {
         self.nodes.contains(&node.into())
     }
 
     /// Add the given node to the set
     pub fn add<N>(&mut self, node: N)
-        where N: Into<Node<'d>>
+    where
+        N: Into<Node<'d>>,
     {
         self.nodes.insert(node.into());
     }
@@ -321,12 +357,15 @@ impl<'d> Nodeset<'d> {
         };
 
         if self.nodes.len() == 1 {
-            return Some(node.clone());
+            return Some(*node);
         }
 
         let order = DocOrder::new(node.document());
 
-        self.nodes.iter().min_by_key(|&&n| order.order_of(n)).cloned()
+        self.nodes
+            .iter()
+            .min_by_key(|&&n| order.order_of(n))
+            .cloned()
     }
 
     pub fn document_order(&self) -> Vec<Node<'d>> {
@@ -348,7 +387,8 @@ impl<'d> Nodeset<'d> {
 
 impl<'d> Extend<Node<'d>> for Nodeset<'d> {
     fn extend<I>(&mut self, iter: I)
-        where I: IntoIterator<Item = Node<'d>>
+    where
+        I: IntoIterator<Item = Node<'d>>,
     {
         self.nodes.extend(iter)
     }
@@ -362,7 +402,7 @@ struct DocOrder<'d>(HashMap<Node<'d>, usize>);
 impl<'d> DocOrder<'d> {
     fn new(doc: dom::Document<'d>) -> Self {
         let mut idx = 0;
-        let mut stack: Vec<Node> = vec![doc.root().into()];
+        let mut stack: Vec<Node<'_>> = vec![doc.root().into()];
         let mut order = HashMap::new();
 
         while let Some(n) = stack.pop() {
@@ -391,7 +431,9 @@ impl<'a, 'd: 'a> IntoIterator for &'a Nodeset<'d> {
     type IntoIter = Iter<'a, 'd>;
 
     fn into_iter(self) -> Iter<'a, 'd> {
-        Iter { iter: self.nodes.iter() }
+        Iter {
+            iter: self.nodes.iter(),
+        }
     }
 }
 
@@ -400,7 +442,9 @@ impl<'d> IntoIterator for Nodeset<'d> {
     type IntoIter = IntoIter<'d>;
 
     fn into_iter(self) -> IntoIter<'d> {
-        IntoIter { iter: self.nodes.into_iter() }
+        IntoIter {
+            iter: self.nodes.into_iter(),
+        }
     }
 }
 
@@ -412,19 +456,24 @@ impl<'d> From<OrderedNodes<'d>> for Nodeset<'d> {
 
 impl<'d> FromIterator<Node<'d>> for Nodeset<'d> {
     fn from_iter<I>(iterator: I) -> Nodeset<'d>
-        where I: IntoIterator<Item = Node<'d>>
+    where
+        I: IntoIterator<Item = Node<'d>>,
     {
-        Nodeset { nodes: iterator.into_iter().collect() }
+        Nodeset {
+            nodes: iterator.into_iter().collect(),
+        }
     }
 }
 
-pub struct Iter<'a, 'd: 'a> {
+pub struct Iter<'a, 'd> {
     iter: hash_set::Iter<'a, Node<'d>>,
 }
 
 impl<'a, 'd: 'a> Iterator for Iter<'a, 'd> {
     type Item = Node<'d>;
-    fn next(&mut self) -> Option<Node<'d>> { self.iter.next().cloned() }
+    fn next(&mut self) -> Option<Node<'d>> {
+        self.iter.next().cloned()
+    }
 }
 
 pub struct IntoIter<'d> {
@@ -433,18 +482,24 @@ pub struct IntoIter<'d> {
 
 impl<'d> Iterator for IntoIter<'d> {
     type Item = Node<'d>;
-    fn next(&mut self) -> Option<Node<'d>> { self.iter.next() }
+    fn next(&mut self) -> Option<Node<'d>> {
+        self.iter.next()
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct OrderedNodes<'d>(Vec<Node<'d>>);
 
 impl<'d> OrderedNodes<'d> {
-    pub fn new() -> Self { Default::default() }
-    pub fn size(&self) -> usize { self.0.len() }
+    pub fn new() -> Self {
+        Default::default()
+    }
+    pub fn size(&self) -> usize {
+        self.0.len()
+    }
 
     pub fn add(&mut self, node: Node<'d>) {
-        self.0.push(node.into())
+        self.0.push(node)
     }
 }
 
@@ -462,7 +517,8 @@ impl<'d> From<OrderedNodes<'d>> for Vec<Node<'d>> {
 
 impl<'d> FromIterator<Node<'d>> for OrderedNodes<'d> {
     fn from_iter<I>(iterator: I) -> OrderedNodes<'d>
-        where I: IntoIterator<Item = Node<'d>>
+    where
+        I: IntoIterator<Item = Node<'d>>,
     {
         OrderedNodes(iterator.into_iter().collect())
     }
@@ -474,10 +530,12 @@ mod test {
 
     use sxd_document::Package;
 
-    use super::{Node, Nodeset};
     use super::Node::*;
+    use super::{Node, Nodeset};
 
-    fn into_node<'d, T: Into<Node<'d>>>(n: T) -> Node<'d> { n.into() }
+    fn into_node<'d, T: Into<Node<'d>>>(n: T) -> Node<'d> {
+        n.into()
+    }
 
     #[test]
     fn nodeset_can_include_all_node_types() {
@@ -571,7 +629,7 @@ mod test {
         let e = doc.create_element(("uri", "wow"));
         e.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -583,7 +641,7 @@ mod test {
 
         let e = doc.create_element(("uri", "wow"));
         e.register_prefix("prefix", "uri");
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("prefix:wow".to_owned()), node.prefixed_name());
     }
@@ -595,7 +653,7 @@ mod test {
         let doc = package.as_document();
 
         let e = doc.create_element(("uri", "wow"));
-        let node: Node = e.into();
+        let node: Node<'_> = e.into();
 
         assert_eq!(Some("wow".to_owned()), node.prefixed_name());
     }
@@ -609,7 +667,7 @@ mod test {
         let a = e.set_attribute_value(("uri", "attr"), "value");
         a.set_preferred_prefix(Some("prefix"));
         e.register_prefix("prefix", "uri");
-        let node: Node = a.into();
+        let node: Node<'_> = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -622,7 +680,7 @@ mod test {
         let e = doc.create_element("element");
         let a = e.set_attribute_value(("uri", "attr"), "value");
         e.register_prefix("prefix", "uri");
-        let node: Node = a.into();
+        let node: Node<'_> = a.into();
 
         assert_eq!(Some("prefix:attr".to_owned()), node.prefixed_name());
     }
@@ -633,7 +691,7 @@ mod test {
         let doc = package.as_document();
 
         let pi = doc.create_processing_instruction("target", Some("value"));
-        let node: Node = pi.into();
+        let node: Node<'_> = pi.into();
 
         assert_eq!(Some("target".to_owned()), node.prefixed_name());
     }
@@ -662,7 +720,7 @@ mod test {
         let package = Package::new();
         let doc = package.as_document();
         let element = doc.create_element("hello");
-        let attribute: Node = element.set_attribute_value("world", "Earth").into();
+        let attribute: Node<'_> = element.set_attribute_value("world", "Earth").into();
         assert_eq!("Earth", attribute.string_value());
     }
 
@@ -670,7 +728,7 @@ mod test {
     fn string_value_of_pi_node_is_empty_when_no_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi: Node = doc.create_processing_instruction("hello", None).into();
+        let pi: Node<'_> = doc.create_processing_instruction("hello", None).into();
         assert_eq!("", pi.string_value());
     }
 
@@ -678,7 +736,9 @@ mod test {
     fn string_value_of_pi_node_is_the_value_when_value() {
         let package = Package::new();
         let doc = package.as_document();
-        let pi: Node = doc.create_processing_instruction("hello", Some("world")).into();
+        let pi: Node<'_> = doc
+            .create_processing_instruction("hello", Some("world"))
+            .into();
         assert_eq!("world", pi.string_value());
     }
 
@@ -686,7 +746,7 @@ mod test {
     fn string_value_of_comment_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let comment: Node = doc.create_comment("hello world").into();
+        let comment: Node<'_> = doc.create_comment("hello world").into();
         assert_eq!("hello world", comment.string_value());
     }
 
@@ -694,7 +754,7 @@ mod test {
     fn string_value_of_text_node_is_the_text() {
         let package = Package::new();
         let doc = package.as_document();
-        let text: Node = doc.create_text("hello world").into();
+        let text: Node<'_> = doc.create_text("hello world").into();
         assert_eq!("hello world", text.string_value());
     }
 }

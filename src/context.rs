@@ -6,12 +6,12 @@ use sxd_document::QName;
 use std::collections::HashMap;
 use std::iter;
 
-use ::{Value, OwnedQName};
-use ::nodeset::{Node, OrderedNodes};
-use ::function;
+use crate::function;
+use crate::nodeset::{Node, OrderedNodes};
+use crate::{OwnedQName, Value};
 
 /// A mapping of names to XPath functions.
-type Functions = HashMap<OwnedQName, Box<function::Function + 'static>>;
+type Functions = HashMap<OwnedQName, Box<dyn function::Function + 'static>>;
 /// A mapping of names to XPath variables.
 type Variables<'d> = HashMap<OwnedQName, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
@@ -25,9 +25,6 @@ type Namespaces = HashMap<String, String>;
 /// A complete example showing all optional settings.
 ///
 /// ```
-/// extern crate sxd_document;
-/// extern crate sxd_xpath;
-///
 /// use std::collections::HashMap;
 /// use sxd_document::parser;
 /// use sxd_xpath::{Factory, Context, Value};
@@ -103,16 +100,18 @@ impl<'d> Context<'d> {
 
     /// Register a function within the context
     pub fn set_function<N, F>(&mut self, name: N, function: F)
-        where N: Into<OwnedQName>,
-              F: function::Function + 'static,
+    where
+        N: Into<OwnedQName>,
+        F: function::Function + 'static,
     {
         self.functions.insert(name.into(), Box::new(function));
     }
 
     /// Register a variable within the context
     pub fn set_variable<N, V>(&mut self, name: N, value: V)
-        where N: Into<OwnedQName>,
-              V: Into<Value<'d>>,
+    where
+        N: Into<OwnedQName>,
+        V: Into<Value<'d>>,
     {
         self.variables.insert(name.into(), value.into());
     }
@@ -140,7 +139,7 @@ impl<'d> Default for Context<'d> {
 /// (`'c`) and that of the document (`'d`). This allows the
 /// user-provided context to live shorter than the document.
 #[derive(Copy, Clone)]
-pub struct Evaluation<'c, 'd: 'c> {
+pub struct Evaluation<'c, 'd> {
     /// The context node
     pub node: Node<'d>,
     /// The context position
@@ -156,7 +155,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     /// Prepares the context used while evaluating the XPath expression
     pub fn new(context: &'c Context<'d>, node: Node<'d>) -> Evaluation<'c, 'd> {
         Evaluation {
-            node: node,
+            node,
             functions: &context.functions,
             variables: &context.variables,
             namespaces: &context.namespaces,
@@ -167,23 +166,24 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 
     /// Creates a new context node using the provided node
     pub fn new_context_for<N>(&self, node: N) -> Evaluation<'c, 'd>
-        where N: Into<Node<'d>>
+    where
+        N: Into<Node<'d>>,
     {
         Evaluation {
             node: node.into(),
-            .. *self
+            ..*self
         }
     }
 
     /// Looks up the function with the given name
-    pub fn function_for_name(&self, name: QName) -> Option<&'c function::Function> {
+    pub fn function_for_name(&self, name: QName<'_>) -> Option<&'c dyn function::Function> {
         // FIXME: remove allocation
         let name = name.into();
         self.functions.get(&name).map(AsRef::as_ref)
     }
 
     /// Looks up the value of the variable
-    pub fn value_of(&self, name: QName) -> Option<&Value<'d>> {
+    pub fn value_of(&self, name: QName<'_>) -> Option<&Value<'d>> {
         // FIXME: remove allocation
         let name = name.into();
         self.variables.get(&name)
@@ -206,7 +206,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 }
 
 /// An iterator for the contexts of each node in a nodeset
-pub struct EvaluationNodesetIter<'c, 'd: 'c> {
+pub struct EvaluationNodesetIter<'c, 'd> {
     parent: Evaluation<'c, 'd>,
     nodes: iter::Enumerate<::std::vec::IntoIter<Node<'d>>>,
     size: usize,
@@ -216,13 +216,11 @@ impl<'c, 'd> Iterator for EvaluationNodesetIter<'c, 'd> {
     type Item = Evaluation<'c, 'd>;
 
     fn next(&mut self) -> Option<Evaluation<'c, 'd>> {
-        self.nodes.next().map(|(idx, node)| {
-            Evaluation {
-                node: node,
-                position: idx + 1,
-                size: self.size,
-                .. self.parent
-            }
+        self.nodes.next().map(|(idx, node)| Evaluation {
+            node,
+            position: idx + 1,
+            size: self.size,
+            ..self.parent
         })
     }
 }

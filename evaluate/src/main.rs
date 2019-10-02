@@ -1,6 +1,5 @@
-extern crate sxd_document;
-extern crate sxd_xpath;
-extern crate getopts;
+use getopts;
+use sxd_document;
 
 use std::env;
 use std::fs::File;
@@ -8,18 +7,13 @@ use std::io::{self, Read};
 
 use sxd_document::parser::parse;
 
-use sxd_xpath::{Factory, Context, XPath, Value};
+use sxd_xpath::{Context, Factory, Value, XPath};
 
 use getopts::Options;
 
 fn print_usage(program: &str, opts: &Options) {
     let brief = format!("Usage: {} [options] FILE...", program);
     print!("{}", opts.usage(&brief));
-}
-
-fn pretty_error(xml: &str, position: usize) -> String {
-    let s = &xml[position..];
-    s.chars().take(15).collect()
 }
 
 fn build_xpath(xpath_str: &str) -> XPath {
@@ -33,7 +27,8 @@ fn build_xpath(xpath_str: &str) -> XPath {
 }
 
 fn load_xml<R>(input: R) -> sxd_document::Package
-    where R: Read
+where
+    R: Read,
 {
     let mut input = input;
     let mut data = String::new();
@@ -44,12 +39,8 @@ fn load_xml<R>(input: R) -> sxd_document::Package
 
     match parse(&data) {
         Ok(d) => d,
-        Err((point, e)) => {
-            println!("Unable to parse input XML");
-            for e in e {
-                println!(" -> {:?}", e);
-            }
-            panic!("At:\n{}", pretty_error(&data, point));
+        Err(e) => {
+            panic!("Unable to parse input XML: {}", e);
         }
     }
 }
@@ -63,7 +54,7 @@ fn argument_name_value(s: &str, delim: char) -> Option<(&str, &str)> {
     }
 }
 
-fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
+fn build_variables(arguments: &getopts::Matches, context: &mut Context<'_>) {
     for boolean in arguments.opt_strs("boolean") {
         match argument_name_value(&boolean, '=') {
             Some((name, "true")) => context.set_variable(name, true),
@@ -75,11 +66,9 @@ fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
 
     for number in arguments.opt_strs("number") {
         match argument_name_value(&number, '=') {
-            Some((name, val)) => {
-                match val.parse() {
-                    Ok(val) => context.set_variable(name, Value::Number(val)),
-                    Err(e) => panic!("Unknown numeric value '{}': {}", val, e),
-                }
+            Some((name, val)) => match val.parse() {
+                Ok(val) => context.set_variable(name, Value::Number(val)),
+                Err(e) => panic!("Unknown numeric value '{}': {}", val, e),
             },
             None => panic!("number argument '{}' is malformed", number),
         }
@@ -93,7 +82,7 @@ fn build_variables(arguments: &getopts::Matches, context: &mut Context) {
     }
 }
 
-fn build_namespaces(arguments: &getopts::Matches, context: &mut Context) {
+fn build_namespaces(arguments: &getopts::Matches, context: &mut Context<'_>) {
     for ns_defn in arguments.opt_strs("namespace") {
         match argument_name_value(&ns_defn, ':') {
             Some((prefix, uri)) => context.set_namespace(prefix, uri),
@@ -121,7 +110,7 @@ fn main() {
             println!("{}", x);
             print_usage(program_name, &opts);
             return;
-        },
+        }
     };
 
     let xpath_str = arguments.opt_str("xpath").expect("No XPath provided");

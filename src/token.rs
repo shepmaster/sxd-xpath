@@ -1,7 +1,7 @@
 use std::string;
 
-use ::OwnedPrefixedName;
-use ::node_test;
+use crate::node_test;
+use crate::OwnedPrefixedName;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum AxisName {
@@ -66,40 +66,38 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn precedes_node_test(& self) -> bool {
+    pub fn precedes_node_test(&self) -> bool {
         match *self {
-            Token::AtSign |
-            Token::Axis(..) => true,
+            Token::AtSign | Token::Axis(..) => true,
             _ => false,
         }
     }
 
-    pub fn precedes_expression(& self) -> bool {
+    pub fn precedes_expression(&self) -> bool {
         match *self {
-            Token::LeftParen |
-            Token::LeftBracket => true,
+            Token::LeftParen | Token::LeftBracket => true,
             _ => false,
         }
     }
 
-    pub fn is_operator(& self) -> bool {
+    pub fn is_operator(&self) -> bool {
         match *self {
-            Token::Slash |
-            Token::DoubleSlash |
-            Token::PlusSign |
-            Token::MinusSign |
-            Token::Pipe |
-            Token::Equal |
-            Token::NotEqual |
-            Token::LessThan |
-            Token::LessThanOrEqual |
-            Token::GreaterThan |
-            Token::GreaterThanOrEqual |
-            Token::And |
-            Token::Or |
-            Token::Remainder |
-            Token::Divide |
-            Token::Multiply => true,
+            Token::Slash
+            | Token::DoubleSlash
+            | Token::PlusSign
+            | Token::MinusSign
+            | Token::Pipe
+            | Token::Equal
+            | Token::NotEqual
+            | Token::LessThan
+            | Token::LessThanOrEqual
+            | Token::GreaterThan
+            | Token::GreaterThanOrEqual
+            | Token::And
+            | Token::Or
+            | Token::Remainder
+            | Token::Divide
+            | Token::Multiply => true,
             _ => false,
         }
     }

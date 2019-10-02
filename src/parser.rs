@@ -1,13 +1,12 @@
+use snafu::{ensure, OptionExt, ResultExt, Snafu};
 use std::iter::Peekable;
 
-use self::Error::*;
-
-use ::Value;
-use ::token::{Token, AxisName, NodeTestName};
-use ::tokenizer::{self, TokenResult};
-use ::axis::{Axis, AxisLike, PrincipalNodeType};
-use ::expression::{self, SubExpression};
-use ::node_test::{self, SubNodeTest};
+use crate::axis::{Axis, AxisLike, PrincipalNodeType};
+use crate::expression::{self, SubExpression};
+use crate::node_test::{self, SubNodeTest};
+use crate::token::{AxisName, NodeTestName, Token};
+use crate::tokenizer::{self, TokenResult};
+use crate::Value;
 
 #[allow(missing_copy_implementations)]
 pub struct Parser;
@@ -18,39 +17,25 @@ impl Parser {
     }
 }
 
-quick_error! {
-    #[derive(Debug, Clone, PartialEq)]
-    pub enum Error {
-        EmptyPredicate {
-            description("empty predicate")
-        }
-        ExtraUnparsedTokens {
-            description("extra unparsed tokens")
-        }
-        RanOutOfInput {
-            description("ran out of input")
-        }
-        RightHandSideExpressionMissing {
-            description("right hand side of expression is missing")
-        }
-        ArgumentMissing {
-            description("function argument is missing")
-        }
-        Tokenizer(err: tokenizer::Error) {
-            from()
-            cause(err)
-            description(err.description())
-            display("tokenizer error: {}", err)
-        }
-        TrailingSlash {
-            description("trailing slash")
-        }
-        UnexpectedToken(token: Token) {
-            from()
-            description("unexpected token")
-            display("unexpected token: {:?}", token)
-        }
-    }
+#[derive(Debug, Snafu, Clone, PartialEq)]
+#[cfg_attr(test, snafu(visibility(pub(crate))))]
+pub enum Error {
+    /// empty predicate
+    EmptyPredicate,
+    /// extra unparsed tokens
+    ExtraUnparsedTokens,
+    /// ran out of input
+    RanOutOfInput,
+    /// right hand side of expression is missing
+    RightHandSideExpressionMissing,
+    /// function argument is missing
+    ArgumentMissing,
+    #[snafu(display("tokenizer error: {}", source))]
+    Tokenizer { source: tokenizer::Error },
+    /// trailing slash
+    TrailingSlash,
+    #[snafu(display("unexpected token: {:?}", token))]
+    UnexpectedToken { token: Token },
 }
 
 pub type ParseResult = Result<Option<SubExpression>, Error>;
@@ -75,7 +60,8 @@ trait XCompat {
 }
 
 impl<I> XCompat for Peekable<I>
-    where I: Iterator<Item = TokenResult>
+where
+    I: Iterator<Item = TokenResult>,
 {
     fn has_more_tokens(&mut self) -> bool {
         self.peek().is_some()
@@ -84,35 +70,28 @@ impl<I> XCompat for Peekable<I>
     fn next_token_is(&mut self, token: &Token) -> bool {
         match self.peek() {
             Some(&Ok(ref t)) => t == token,
-            _ => false
+            _ => false,
         }
     }
 
     fn consume(&mut self, token: &Token) -> Result<(), Error> {
-        match self.next() {
-            None => Err(RanOutOfInput),
-            Some(Err(x)) => Err(Tokenizer(x)),
-            Some(Ok(x)) =>
-                if &x == token {
-                    Ok(())
-                } else {
-                    Err(UnexpectedToken(x))
-                },
-        }
+        let x = self.next().context(RanOutOfInput)?.context(Tokenizer)?;
+        ensure!(&x == token, UnexpectedToken { token: x });
+        Ok(())
     }
 }
 
 /// Similar to `consume`, but can be used when the token carries a
 /// single value.
 macro_rules! consume_value(
-    ($source:expr, Token::$token:ident) => (
-        match $source.next() {
-            None => return Err(RanOutOfInput),
-            Some(Err(x)) => return Err(Tokenizer(x)),
-            Some(Ok(Token::$token(x))) => x,
-            Some(Ok(x)) => return Err(UnexpectedToken(x)),
+    ($source:expr, Token::$token:ident) => ({
+        let next = $source.next().context(RanOutOfInput)?.context(Tokenizer)?;
+
+        match next {
+            Token::$token(x) => x,
+            token => return UnexpectedToken { token }.fail(),
         }
-    );
+    });
 );
 
 /// Similar to `next_token_is`, but can be used when the token carries
@@ -128,16 +107,15 @@ macro_rules! next_token_is(
 
 impl LeftAssociativeBinaryParser {
     fn new(rules: Vec<BinaryRule>) -> LeftAssociativeBinaryParser {
-        LeftAssociativeBinaryParser {
-            rules: rules,
-        }
+        LeftAssociativeBinaryParser { rules }
     }
 
-    fn parse<F, I>(&self, source: TokenSource<I>, child_parse: F) -> ParseResult
-        where F: Fn(TokenSource<I>) -> ParseResult,
-              I: Iterator<Item = TokenResult>
+    fn parse<F, I>(&self, source: TokenSource<'_, I>, child_parse: F) -> ParseResult
+    where
+        F: Fn(TokenSource<'_, I>) -> ParseResult,
+        I: Iterator<Item = TokenResult>,
     {
-        let left = try!(child_parse(source));
+        let left = child_parse(source)?;
 
         let mut left = match left {
             None => return Ok(None),
@@ -149,14 +127,9 @@ impl LeftAssociativeBinaryParser {
 
             for rule in &self.rules {
                 if source.next_token_is(&rule.token) {
-                    try!(source.consume(&rule.token));
+                    source.consume(&rule.token)?;
 
-                    let right = try!(child_parse(source));
-
-                    let right = match right {
-                        None => return Err(RightHandSideExpressionMissing),
-                        Some(x) => x,
-                    };
+                    let right = child_parse(source)?.context(RightHandSideExpressionMissing)?;
 
                     left = (rule.builder)(left, right);
 
@@ -165,21 +138,22 @@ impl LeftAssociativeBinaryParser {
                 }
             }
 
-            if !found { break; }
+            if !found {
+                break;
+            }
         }
 
         Ok(Some(left))
     }
 }
 
-type Rule<'a, I> = Fn(TokenSource<I>) -> ParseResult + 'a;
-fn first_matching_rule<I>(child_parses: &[&Rule<I>],
-                          source: TokenSource<I>)
-                          -> ParseResult
-    where I: Iterator<Item = TokenResult>
+type Rule<'a, I> = dyn Fn(TokenSource<'_, I>) -> ParseResult + 'a;
+fn first_matching_rule<I>(child_parses: &[&Rule<'_, I>], source: TokenSource<'_, I>) -> ParseResult
+where
+    I: Iterator<Item = TokenResult>,
 {
     for child_parse in child_parses.iter() {
-        let expr = try!((*child_parse)(source));
+        let expr = (*child_parse)(source)?;
         if expr.is_some() {
             return Ok(expr);
         }
@@ -189,8 +163,9 @@ fn first_matching_rule<I>(child_parses: &[&Rule<I>],
 }
 
 impl Parser {
-    fn parse_axis<I>(&self, source: TokenSource<I>) -> Result<Axis, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_axis<I>(&self, source: TokenSource<'_, I>) -> Result<Axis, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::Axis) {
             let name = consume_value!(source, Token::Axis);
@@ -215,33 +190,40 @@ impl Parser {
         }
     }
 
-    fn parse_node_test<I>(&self, source: TokenSource<I>) -> Result<Option<SubNodeTest>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_node_test<I>(&self, source: TokenSource<'_, I>) -> Result<Option<SubNodeTest>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::NodeTest) {
             let name = consume_value!(source, Token::NodeTest);
 
             match name {
-                NodeTestName::Node    => Ok(Some(Box::new(node_test::Node))),
-                NodeTestName::Text    => Ok(Some(Box::new(node_test::Text))),
+                NodeTestName::Node => Ok(Some(Box::new(node_test::Node))),
+                NodeTestName::Text => Ok(Some(Box::new(node_test::Text))),
                 NodeTestName::Comment => Ok(Some(Box::new(node_test::Comment))),
-                NodeTestName::ProcessingInstruction(target) =>
-                    Ok(Some(Box::new(node_test::ProcessingInstruction::new(target)))),
+                NodeTestName::ProcessingInstruction(target) => Ok(Some(Box::new(
+                    node_test::ProcessingInstruction::new(target),
+                ))),
             }
         } else {
             Ok(None)
         }
     }
 
-    fn default_node_test<I>(&self, source: TokenSource<I>, axis: Axis) -> Result<Option<SubNodeTest>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn default_node_test<I>(
+        &self,
+        source: TokenSource<'_, I>,
+        axis: Axis,
+    ) -> Result<Option<SubNodeTest>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::NameTest) {
             let name = consume_value!(source, Token::NameTest);
 
             let test: SubNodeTest = match axis.principal_node_type() {
                 PrincipalNodeType::Attribute => Box::new(node_test::Attribute::new(name)),
-                PrincipalNodeType::Element   => Box::new(node_test::Element::new(name)),
+                PrincipalNodeType::Element => Box::new(node_test::Element::new(name)),
                 PrincipalNodeType::Namespace => Box::new(node_test::Namespace::new(name)),
             };
 
@@ -251,75 +233,88 @@ impl Parser {
         }
     }
 
-    fn parse_nested_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_nested_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::LeftParen) {
-            try!(source.consume(&Token::LeftParen));
-            let result = try!(self.parse_expression(source));
-            try!(source.consume(&Token::RightParen));
+            source.consume(&Token::LeftParen)?;
+            let result = self.parse_expression(source)?;
+            source.consume(&Token::RightParen)?;
             Ok(result)
         } else {
             Ok(None)
         }
     }
 
-    fn parse_variable_reference<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_variable_reference<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::Variable) {
             let name = consume_value!(source, Token::Variable);
-            Ok(Some(Box::new(expression::Variable { name: name })))
+            Ok(Some(Box::new(expression::Variable { name })))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_string_literal<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_string_literal<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::Literal) {
             let value = consume_value!(source, Token::Literal);
-            Ok(Some(Box::new(expression::Literal::from(Value::String(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::String(
+                value,
+            )))))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_numeric_literal<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_numeric_literal<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::Number) {
             let value = consume_value!(source, Token::Number);
-            Ok(Some(Box::new(expression::Literal::from(Value::Number(value)))))
+            Ok(Some(Box::new(expression::Literal::from(Value::Number(
+                value,
+            )))))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_function_args_tail<I>(&self, source: TokenSource<I>, mut arguments: Vec<SubExpression>)
-                                   -> Result<Vec<SubExpression>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_function_args_tail<I>(
+        &self,
+        source: TokenSource<'_, I>,
+        mut arguments: Vec<SubExpression>,
+    ) -> Result<Vec<SubExpression>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         while source.next_token_is(&Token::Comma) {
-            try!(source.consume(&Token::Comma));
+            source.consume(&Token::Comma)?;
 
-            match try!(self.parse_expression(source)) {
-                Some(arg) => arguments.push(arg),
-                None => return Err(ArgumentMissing),
-            }
+            let arg = self.parse_expression(source)?.context(ArgumentMissing)?;
+            arguments.push(arg);
         }
 
         Ok(arguments)
     }
 
-    fn parse_function_args<I>(&self, source: TokenSource<I>)
-                              -> Result<Vec<SubExpression>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_function_args<I>(
+        &self,
+        source: TokenSource<'_, I>,
+    ) -> Result<Vec<SubExpression>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let mut arguments = Vec::new();
 
-        match try!(self.parse_expression(source)) {
+        match self.parse_expression(source)? {
             Some(arg) => arguments.push(arg),
             None => return Ok(arguments),
         }
@@ -327,74 +322,75 @@ impl Parser {
         self.parse_function_args_tail(source, arguments)
     }
 
-    fn parse_function_call<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_function_call<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if next_token_is!(source, Token::Function) {
             let name = consume_value!(source, Token::Function);
 
-            try!(source.consume(&Token::LeftParen));
-            let arguments = try!(self.parse_function_args(source));
-            try!(source.consume(&Token::RightParen));
+            source.consume(&Token::LeftParen)?;
+            let arguments = self.parse_function_args(source)?;
+            source.consume(&Token::RightParen)?;
 
-            Ok(Some(Box::new(expression::Function{ name: name, arguments: arguments })))
+            Ok(Some(Box::new(expression::Function { name, arguments })))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_primary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_primary_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let rules: &[&Rule<I>] = &[
-            &|src: TokenSource<I>| self.parse_variable_reference(src),
-            &|src: TokenSource<I>| self.parse_nested_expression(src),
-            &|src: TokenSource<I>| self.parse_string_literal(src),
-            &|src: TokenSource<I>| self.parse_numeric_literal(src),
-            &|src: TokenSource<I>| self.parse_function_call(src),
+        let rules: &[&Rule<'_, I>] = &[
+            &|src: TokenSource<'_, I>| self.parse_variable_reference(src),
+            &|src: TokenSource<'_, I>| self.parse_nested_expression(src),
+            &|src: TokenSource<'_, I>| self.parse_string_literal(src),
+            &|src: TokenSource<'_, I>| self.parse_numeric_literal(src),
+            &|src: TokenSource<'_, I>| self.parse_function_call(src),
         ];
 
         first_matching_rule(rules, source)
     }
 
-    fn parse_predicate_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_predicate_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::LeftBracket) {
-            try!(source.consume(&Token::LeftBracket));
+            source.consume(&Token::LeftBracket)?;
 
-            match try!(self.parse_expression(source)) {
-                Some(predicate) => {
-                    try!(source.consume(&Token::RightBracket));
-                    Ok(Some(predicate))
-                },
-                None => Err(EmptyPredicate),
-            }
+            let predicate = self.parse_expression(source)?.context(EmptyPredicate)?;
+            source.consume(&Token::RightBracket)?;
+            Ok(Some(predicate))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_predicates<I>(&self, source: TokenSource<I>) -> Result<Vec<SubExpression>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_predicates<I>(&self, source: TokenSource<'_, I>) -> Result<Vec<SubExpression>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let mut predicates = Vec::new();
 
-        while let Some(predicate) = try!(self.parse_predicate_expression(source)) {
+        while let Some(predicate) = self.parse_predicate_expression(source)? {
             predicates.push(predicate)
         }
 
         Ok(predicates)
     }
 
-    fn parse_step<I>(&self, source: TokenSource<I>) -> Result<Option<expression::Step>, Error>
-        where I: Iterator<Item = TokenResult>
+    fn parse_step<I>(&self, source: TokenSource<'_, I>) -> Result<Option<expression::Step>, Error>
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let axis = try!(self.parse_axis(source));
+        let axis = self.parse_axis(source)?;
 
-        let node_test = match try!(self.parse_node_test(source)) {
+        let node_test = match self.parse_node_test(source)? {
             Some(test) => Some(test),
-            None => try!(self.default_node_test(source, axis)),
+            None => self.default_node_test(source, axis)?,
         };
 
         let node_test = match node_test {
@@ -402,50 +398,53 @@ impl Parser {
             None => return Ok(None),
         };
 
-        let predicates = try!(self.parse_predicates(source));
+        let predicates = self.parse_predicates(source)?;
 
         Ok(Some(expression::Step::new(axis, node_test, predicates)))
     }
 
-    fn parse_relative_location_path_raw<I>(&self,
-                                           source: TokenSource<I>,
-                                           start_point: SubExpression) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_relative_location_path_raw<I>(
+        &self,
+        source: TokenSource<'_, I>,
+        start_point: SubExpression,
+    ) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        match try!(self.parse_step(source)) {
+        match self.parse_step(source)? {
             Some(step) => {
                 let mut steps = vec![step];
 
                 while source.next_token_is(&Token::Slash) {
-                    try!(source.consume(&Token::Slash));
+                    source.consume(&Token::Slash)?;
 
-                    match try!(self.parse_step(source)) {
-                        Some(next) => steps.push(next),
-                        None => return Err(TrailingSlash),
-                    }
+                    let next = self.parse_step(source)?.context(TrailingSlash)?;
+                    steps.push(next);
                 }
 
                 Ok(Some(expression::Path::new(start_point, steps)))
-            },
+            }
             None => Ok(None),
         }
     }
 
-    fn parse_relative_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_relative_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let start_point = Box::new(expression::ContextNode);
         self.parse_relative_location_path_raw(source, start_point)
     }
 
-    fn parse_absolute_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_absolute_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         if source.next_token_is(&Token::Slash) {
-            try!(source.consume(&Token::Slash));
+            source.consume(&Token::Slash)?;
 
             let start_point = Box::new(expression::RootNode);
-            match try!(self.parse_relative_location_path_raw(source, start_point)) {
+            match self.parse_relative_location_path_raw(source, start_point)? {
                 Some(expr) => Ok(Some(expr)),
                 None => Ok(Some(Box::new(expression::RootNode))),
             }
@@ -454,185 +453,227 @@ impl Parser {
         }
     }
 
-    fn parse_location_path<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_location_path<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let rules: &[&Rule<I>] = &[
-            &|source: TokenSource<I>| self.parse_relative_location_path(source),
-            &|source: TokenSource<I>| self.parse_absolute_location_path(source),
+        let rules: &[&Rule<'_, I>] = &[
+            &|source: TokenSource<'_, I>| self.parse_relative_location_path(source),
+            &|source: TokenSource<'_, I>| self.parse_absolute_location_path(source),
         ];
 
         first_matching_rule(rules, source)
     }
 
-    fn parse_filter_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_filter_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        match try!(self.parse_primary_expression(source)) {
+        match self.parse_primary_expression(source)? {
             Some(expr) => {
-                let predicates = try!(self.parse_predicates(source));
+                let predicates = self.parse_predicates(source)?;
 
                 Ok(Some(predicates.into_iter().fold(expr, |expr, pred| {
                     expression::Filter::new(expr, pred)
                 })))
-            },
+            }
             None => Ok(None),
         }
     }
 
-    fn parse_path_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_path_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let expr = try!(self.parse_location_path(source));
+        let expr = self.parse_location_path(source)?;
         if expr.is_some() {
             return Ok(expr);
         } // TODO: investigate if this is a pattern
 
-        match try!(self.parse_filter_expression(source)) {
-            Some(expr) =>
+        match self.parse_filter_expression(source)? {
+            Some(expr) => {
                 if source.next_token_is(&Token::Slash) {
-                    try!(source.consume(&Token::Slash));
+                    source.consume(&Token::Slash)?;
 
-                    match try!(self.parse_relative_location_path_raw(source, expr)) {
-                        Some(expr) => Ok(Some(expr)),
-                        None => Err(TrailingSlash),
-                    }
+                    let expr = self
+                        .parse_relative_location_path_raw(source, expr)?
+                        .context(TrailingSlash)?;
+                    Ok(Some(expr))
                 } else {
                     Ok(Some(expr))
-                },
+                }
+            }
             None => Ok(None),
         }
     }
 
-    fn parse_union_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_union_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let rules = vec![
-            BinaryRule { token: Token::Pipe, builder: expression::Union::new }
-        ];
+        let rules = vec![BinaryRule {
+            token: Token::Pipe,
+            builder: expression::Union::new,
+        }];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_path_expression(source))
     }
 
-    fn parse_unary_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_unary_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let expr = try!(self.parse_union_expression(source));
+        let expr = self.parse_union_expression(source)?;
         if expr.is_some() {
             return Ok(expr);
         }
 
         if source.next_token_is(&Token::MinusSign) {
-            try!(source.consume(&Token::MinusSign));
+            source.consume(&Token::MinusSign)?;
 
-            let expr = try!(self.parse_unary_expression(source));
-
-            match expr {
-                Some(expr) => {
-                    let expr: SubExpression = Box::new(expression::Negation { expression: expr });
-                    Ok(Some(expr))
-                },
-                None => Err(RightHandSideExpressionMissing),
-            }
+            let expression = self
+                .parse_unary_expression(source)?
+                .context(RightHandSideExpressionMissing)?;
+            let expression: SubExpression = Box::new(expression::Negation { expression });
+            Ok(Some(expression))
         } else {
             Ok(None)
         }
     }
 
-    fn parse_multiplicative_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_multiplicative_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let rules = vec![
-            BinaryRule { token: Token::Multiply,  builder: expression::Math::multiplication },
-            BinaryRule { token: Token::Divide,    builder: expression::Math::division },
-            BinaryRule { token: Token::Remainder, builder: expression::Math::remainder }
+            BinaryRule {
+                token: Token::Multiply,
+                builder: expression::Math::multiplication,
+            },
+            BinaryRule {
+                token: Token::Divide,
+                builder: expression::Math::division,
+            },
+            BinaryRule {
+                token: Token::Remainder,
+                builder: expression::Math::remainder,
+            },
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_unary_expression(source))
     }
 
-    fn parse_additive_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_additive_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let rules = vec![
-            BinaryRule { token: Token::PlusSign,  builder: expression::Math::addition },
-            BinaryRule { token: Token::MinusSign, builder: expression::Math::subtraction }
+            BinaryRule {
+                token: Token::PlusSign,
+                builder: expression::Math::addition,
+            },
+            BinaryRule {
+                token: Token::MinusSign,
+                builder: expression::Math::subtraction,
+            },
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
-        parser.parse(source, |source| self.parse_multiplicative_expression(source))
+        parser.parse(source, |source| {
+            self.parse_multiplicative_expression(source)
+        })
     }
 
-    fn parse_relational_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_relational_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let rules = vec![
-            BinaryRule { token: Token::LessThan,
-                         builder: expression::Relational::less_than },
-            BinaryRule { token: Token::LessThanOrEqual,
-                         builder: expression::Relational::less_than_or_equal },
-            BinaryRule { token: Token::GreaterThan,
-                         builder: expression::Relational::greater_than },
-            BinaryRule { token: Token::GreaterThanOrEqual,
-                         builder: expression::Relational::greater_than_or_equal },
+            BinaryRule {
+                token: Token::LessThan,
+                builder: expression::Relational::less_than,
+            },
+            BinaryRule {
+                token: Token::LessThanOrEqual,
+                builder: expression::Relational::less_than_or_equal,
+            },
+            BinaryRule {
+                token: Token::GreaterThan,
+                builder: expression::Relational::greater_than,
+            },
+            BinaryRule {
+                token: Token::GreaterThanOrEqual,
+                builder: expression::Relational::greater_than_or_equal,
+            },
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_additive_expression(source))
     }
 
-    fn parse_equality_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_equality_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let rules = vec![
-            BinaryRule { token: Token::Equal,    builder: expression::Equal::new },
-            BinaryRule { token: Token::NotEqual, builder: expression::NotEqual::new },
+            BinaryRule {
+                token: Token::Equal,
+                builder: expression::Equal::new,
+            },
+            BinaryRule {
+                token: Token::NotEqual,
+                builder: expression::NotEqual::new,
+            },
         ];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_relational_expression(source))
     }
 
-    fn parse_and_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_and_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let rules = vec![
-            BinaryRule { token: Token::And, builder: expression::And::new }
-        ];
+        let rules = vec![BinaryRule {
+            token: Token::And,
+            builder: expression::And::new,
+        }];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_equality_expression(source))
     }
 
-    fn parse_or_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_or_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
-        let rules = vec![
-            BinaryRule { token: Token::Or, builder: expression::Or::new }
-        ];
+        let rules = vec![BinaryRule {
+            token: Token::Or,
+            builder: expression::Or::new,
+        }];
 
         let parser = LeftAssociativeBinaryParser::new(rules);
         parser.parse(source, |source| self.parse_and_expression(source))
     }
 
-    fn parse_expression<I>(&self, source: TokenSource<I>) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    fn parse_expression<I>(&self, source: TokenSource<'_, I>) -> ParseResult
+    where
+        I: Iterator<Item = TokenResult>,
     {
         self.parse_or_expression(source)
     }
 
     pub fn parse<I>(&self, source: I) -> ParseResult
-        where I: Iterator<Item = TokenResult>
+    where
+        I: Iterator<Item = TokenResult>,
     {
         let mut source = source.peekable();
 
-        let expr = try!(self.parse_or_expression(&mut source));
+        let expr = self.parse_or_expression(&mut source)?;
 
-        if source.has_more_tokens() {
-            return Err(ExtraUnparsedTokens);
-        }
+        ensure!(!source.has_more_tokens(), ExtraUnparsedTokens);
 
         Ok(expr)
     }
@@ -640,22 +681,21 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use snafu::ResultExt;
     use std::borrow::ToOwned;
-
+    use sxd_document::dom::{self, Document, Element, Root, Text};
     use sxd_document::Package;
-    use sxd_document::dom::{self, Document, Root, Element, Text};
 
-    use ::Value;
-    use ::Value::{Boolean, Number, String};
-    use ::context::{self, Context};
-    use ::expression::{Expression, SubExpression};
-    use ::node_test;
-    use ::nodeset::Node;
-    use ::token::{Token, AxisName, NodeTestName};
-    use ::tokenizer::{self, TokenResult};
+    use crate::context::{self, Context};
+    use crate::expression::{Expression, SubExpression};
+    use crate::node_test;
+    use crate::nodeset::Node;
+    use crate::token::{AxisName, NodeTestName, Token};
+    use crate::tokenizer::{self, TokenResult};
+    use crate::Value;
+    use crate::Value::{Boolean, Number, String};
 
-    use super::{Parser, ParseResult};
-    use super::Error::*;
+    use super::*;
 
     macro_rules! tokens(
         ($($e:expr),*) => ({
@@ -670,7 +710,7 @@ mod test {
     fn name_test(local_part: &str) -> Token {
         Token::NameTest(node_test::NameTest {
             prefix: None,
-            local_part: local_part.to_owned()
+            local_part: local_part.to_owned(),
         })
     }
 
@@ -718,10 +758,8 @@ mod test {
                     let n = doc.create_element("the-top-node");
                     doc.root().append_child(n);
                     n
-                },
-                1 => {
-                    kids[0].element().expect("not an element")
-                },
+                }
+                1 => kids[0].element().expect("not an element"),
                 _ => panic!("Too many top nodes"),
             }
         }
@@ -752,7 +790,12 @@ mod test {
             cn
         }
 
-        fn add_processing_instruction(&'d self, parent: Element<'d>, name: &str, value: Option<&str>) -> dom::ProcessingInstruction<'d> {
+        fn add_processing_instruction(
+            &'d self,
+            parent: Element<'d>,
+            name: &str,
+            value: Option<&str>,
+        ) -> dom::ProcessingInstruction<'d> {
             let pi = self.0.create_processing_instruction(name, value);
             parent.append_child(pi);
             pi
@@ -768,7 +811,7 @@ mod test {
     impl<'d> Exercise<'d> {
         fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
             Exercise {
-                doc: doc,
+                doc,
                 context: Context::new(),
                 parser: Parser::new(),
             }
@@ -785,17 +828,20 @@ mod test {
         }
 
         fn evaluate<E>(&self, expr: E) -> Value<'d>
-            where E: Expression,
+        where
+            E: Expression,
         {
             self.evaluate_on(expr, self.doc.top_node())
         }
 
         fn evaluate_on<E, N>(&self, expr: E, node: N) -> Value<'d>
-            where E: Expression,
-                  N: Into<Node<'d>>,
+        where
+            E: Expression,
+            N: Into<Node<'d>>,
         {
             let context = context::Evaluation::new(&self.context, node.into());
-            expr.evaluate(&context).expect("Unable to evaluate expression")
+            expr.evaluate(&context)
+                .expect("Unable to evaluate expression")
         }
     }
 
@@ -815,11 +861,7 @@ mod test {
 
     #[test]
     fn parses_two_strings_as_grandchild() {
-        let tokens = tokens![
-            name_test("hello"),
-            Token::Slash,
-            name_test("world")
-        ];
+        let tokens = tokens![name_test("hello"), Token::Slash, name_test("world")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -834,10 +876,7 @@ mod test {
 
     #[test]
     fn parses_self_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::SelfAxis),
-            name_test("the-top-node")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::SelfAxis), name_test("the-top-node")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -845,15 +884,15 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![doc.top_node()], ex.evaluate_on(expr, doc.top_node()));
+        assert_eq!(
+            nodeset![doc.top_node()],
+            ex.evaluate_on(expr, doc.top_node())
+        );
     }
 
     #[test]
     fn parses_parent_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::Parent),
-            name_test("the-top-node")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::Parent), name_test("the-top-node")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -867,10 +906,7 @@ mod test {
 
     #[test]
     fn parses_child_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::Child),
-            name_test("*")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::Child), name_test("*")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -885,10 +921,7 @@ mod test {
 
     #[test]
     fn parses_descendant_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::Descendant),
-            name_test("two")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::Descendant), name_test("two")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -903,10 +936,7 @@ mod test {
 
     #[test]
     fn parses_descendant_or_self_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::DescendantOrSelf),
-            name_test("*")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::DescendantOrSelf), name_test("*")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -921,10 +951,7 @@ mod test {
 
     #[test]
     fn parses_attribute_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::Attribute),
-            name_test("*")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::Attribute), name_test("*")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -939,10 +966,7 @@ mod test {
 
     #[test]
     fn parses_namespace_axis() {
-        let tokens = tokens![
-            Token::Axis(AxisName::Namespace),
-            name_test("prefix")
-        ];
+        let tokens = tokens![Token::Axis(AxisName::Namespace), name_test("prefix")];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -959,10 +983,10 @@ mod test {
                     Some(Node::Namespace(ns)) => {
                         assert_eq!("prefix", ns.prefix());
                         assert_eq!("uri", ns.uri());
-                    },
+                    }
                     _ => panic!("Not a namespace node"),
                 }
-            },
+            }
             _ => panic!("Did not get the namespace node"),
         }
     }
@@ -1028,7 +1052,9 @@ mod test {
 
     #[test]
     fn parses_processing_instruction_node_test() {
-        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("name".to_owned())))];
+        let tokens = tokens![Token::NodeTest(NodeTestName::ProcessingInstruction(Some(
+            "name".to_owned()
+        )))];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1115,7 +1141,10 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![first, second], ex.evaluate_on(expr, doc.top_node()));
+        assert_eq!(
+            nodeset![first, second],
+            ex.evaluate_on(expr, doc.top_node())
+        );
     }
 
     #[test]
@@ -1137,7 +1166,10 @@ mod test {
         let ex = Exercise::new(&doc);
         let expr = ex.parse(tokens);
 
-        assert_eq!(nodeset![first, second], ex.evaluate_on(expr, doc.top_node()));
+        assert_eq!(
+            nodeset![first, second],
+            ex.evaluate_on(expr, doc.top_node())
+        );
     }
 
     #[test]
@@ -1244,11 +1276,7 @@ mod test {
 
     #[test]
     fn addition_of_two_numbers() {
-        let tokens = tokens![
-            Token::Number(1.1),
-            Token::PlusSign,
-            Token::Number(2.2)
-        ];
+        let tokens = tokens![Token::Number(1.1), Token::PlusSign, Token::Number(2.2)];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1280,11 +1308,7 @@ mod test {
 
     #[test]
     fn subtraction_of_two_numbers() {
-        let tokens = tokens![
-            Token::Number(1.1),
-            Token::MinusSign,
-            Token::Number(2.2),
-        ];
+        let tokens = tokens![Token::Number(1.1), Token::MinusSign, Token::Number(2.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1316,11 +1340,7 @@ mod test {
 
     #[test]
     fn multiplication_of_two_numbers() {
-        let tokens = tokens![
-            Token::Number(1.1),
-            Token::Multiply,
-            Token::Number(2.2),
-        ];
+        let tokens = tokens![Token::Number(1.1), Token::Multiply, Token::Number(2.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1333,11 +1353,7 @@ mod test {
 
     #[test]
     fn division_of_two_numbers() {
-        let tokens = tokens![
-            Token::Number(7.1),
-            Token::Divide,
-            Token::Number(0.1),
-        ];
+        let tokens = tokens![Token::Number(7.1), Token::Divide, Token::Number(0.1),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1350,11 +1366,7 @@ mod test {
 
     #[test]
     fn remainder_of_two_numbers() {
-        let tokens = tokens![
-            Token::Number(7.1),
-            Token::Remainder,
-            Token::Number(3.0),
-        ];
+        let tokens = tokens![Token::Number(7.1), Token::Remainder, Token::Number(3.0),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1367,10 +1379,7 @@ mod test {
 
     #[test]
     fn unary_negation() {
-        let tokens = tokens![
-            Token::MinusSign,
-            Token::Number(7.2),
-        ];
+        let tokens = tokens![Token::MinusSign, Token::Number(7.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1439,11 +1448,7 @@ mod test {
 
     #[test]
     fn and_expression() {
-        let tokens = tokens![
-            Token::Number(1.2),
-            Token::And,
-            Token::Number(0.0),
-        ];
+        let tokens = tokens![Token::Number(1.2), Token::And, Token::Number(0.0),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1456,11 +1461,7 @@ mod test {
 
     #[test]
     fn equality_expression() {
-        let tokens = tokens![
-            Token::Number(1.2),
-            Token::Equal,
-            Token::Number(1.1),
-        ];
+        let tokens = tokens![Token::Number(1.2), Token::Equal, Token::Number(1.1),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1473,11 +1474,7 @@ mod test {
 
     #[test]
     fn inequality_expression() {
-        let tokens = tokens![
-            Token::Number(1.2),
-            Token::NotEqual,
-            Token::Number(1.2),
-        ];
+        let tokens = tokens![Token::Number(1.2), Token::NotEqual, Token::Number(1.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1490,11 +1487,7 @@ mod test {
 
     #[test]
     fn less_than_expression() {
-        let tokens = tokens![
-            Token::Number(1.2),
-            Token::LessThan,
-            Token::Number(1.2),
-        ];
+        let tokens = tokens![Token::Number(1.2), Token::LessThan, Token::Number(1.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1524,11 +1517,7 @@ mod test {
 
     #[test]
     fn greater_than_expression() {
-        let tokens = tokens![
-            Token::Number(1.2),
-            Token::GreaterThan,
-            Token::Number(1.2),
-        ];
+        let tokens = tokens![Token::Number(1.2), Token::GreaterThan, Token::Number(1.2),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1558,11 +1547,7 @@ mod test {
 
     #[test]
     fn nested_expression() {
-        let tokens = tokens![
-            Token::LeftParen,
-            Token::Number(1.1),
-            Token::RightParen,
-        ];
+        let tokens = tokens![Token::LeftParen, Token::Number(1.1), Token::RightParen,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1673,9 +1658,7 @@ mod test {
 
     #[test]
     fn absolute_path_expression() {
-        let tokens = tokens![
-            Token::Slash,
-        ];
+        let tokens = tokens![Token::Slash,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1690,10 +1673,7 @@ mod test {
 
     #[test]
     fn absolute_path_with_child_expression() {
-        let tokens = tokens![
-            Token::Slash,
-            name_test("*"),
-        ];
+        let tokens = tokens![Token::Slash, name_test("*"),];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
@@ -1708,92 +1688,79 @@ mod test {
 
     #[test]
     fn unexpected_token_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::Function("does-not-matter".into()),
-            Token::RightParen
-        ];
+        let tokens = tokens![Token::Function("does-not-matter".into()), Token::RightParen];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parser.parse(tokens.into_iter());
-        assert_eq!(Some(UnexpectedToken(Token::RightParen)), res.err());
+        assert_eq!(
+            Some(Error::UnexpectedToken {
+                token: Token::RightParen
+            }),
+            res.err()
+        );
     }
 
     #[test]
     fn binary_operator_without_right_hand_side_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::Literal("left".to_owned()),
-            Token::And
-        ];
+        let tokens = tokens![Token::Literal("left".to_owned()), Token::And];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(RightHandSideExpressionMissing), res.err());
+        assert_eq!(Some(Error::RightHandSideExpressionMissing), res.err());
     }
 
     #[test]
     fn unary_operator_without_right_hand_side_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::MinusSign,
-        ];
+        let tokens = tokens![Token::MinusSign,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parser.parse(tokens.into_iter());
-        assert_eq!(Some(RightHandSideExpressionMissing), res.err());
+        assert_eq!(Some(Error::RightHandSideExpressionMissing), res.err());
     }
 
     #[test]
     fn empty_predicate_is_reported_as_an_error() {
-        let tokens = tokens![
-            name_test("*"),
-            Token::LeftBracket,
-            Token::RightBracket,
-        ];
+        let tokens = tokens![name_test("*"), Token::LeftBracket, Token::RightBracket,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(EmptyPredicate), res.err());
+        assert_eq!(Some(Error::EmptyPredicate), res.err());
     }
 
     #[test]
     fn relative_path_with_trailing_slash_is_reported_as_an_error() {
-        let tokens = tokens![
-            name_test("*"),
-            Token::Slash,
-        ];
+        let tokens = tokens![name_test("*"), Token::Slash,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TrailingSlash), res.err());
+        assert_eq!(Some(Error::TrailingSlash), res.err());
     }
 
     #[test]
     fn filter_expression_with_trailing_slash_is_reported_as_an_error() {
-        let tokens = tokens![
-            Token::Variable("variable".into()),
-            Token::Slash,
-        ];
+        let tokens = tokens![Token::Variable("variable".into()), Token::Slash,];
 
         let package = Package::new();
         let doc = TestDoc(package.as_document());
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(TrailingSlash), res.err());
+        assert_eq!(Some(Error::TrailingSlash), res.err());
     }
 
     #[test]
@@ -1805,7 +1772,7 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(RanOutOfInput), res.err());
+        assert_eq!(Some(Error::RanOutOfInput), res.err());
     }
 
     #[test]
@@ -1817,14 +1784,14 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(ExtraUnparsedTokens), res.err());
+        assert_eq!(Some(Error::ExtraUnparsedTokens), res.err());
     }
 
     #[test]
     fn a_tokenizer_error_is_reported_as_an_error() {
         let tokens = vec![
             Ok(Token::Function("func".into())),
-            Err(tokenizer::Error::UnableToCreateToken)
+            Err(tokenizer::Error::UnableToCreateToken),
         ];
 
         let package = Package::new();
@@ -1832,6 +1799,12 @@ mod test {
 
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
-        assert_eq!(Some(Tokenizer(tokenizer::Error::UnableToCreateToken)), res.err());
+        assert_eq!(
+            tokenizer::UnableToCreateToken
+                .fail::<()>()
+                .context(Tokenizer)
+                .err(),
+            res.err()
+        );
     }
 }

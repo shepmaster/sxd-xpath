@@ -1,14 +1,12 @@
+use peresil::{self, try_parse, Identifier, ParseMaster, Recoverable, StringPoint};
+use snafu::Snafu;
 use std::borrow::ToOwned;
 use std::collections::VecDeque;
 use std::string;
-
-use peresil::{self, StringPoint, ParseMaster, Identifier, Recoverable};
 use sxd_document::parser::XmlParseExt;
 
-use ::node_test;
-use ::token::{Token, AxisName, NodeTestName};
-
-use self::Error::*;
+use crate::node_test;
+use crate::token::{AxisName, NodeTestName, Token};
 
 pub struct Tokenizer {
     xpath: string::String,
@@ -21,65 +19,65 @@ type XPathProgress<'a, T, E> = peresil::Progress<StringPoint<'a>, T, E>;
 
 pub type TokenResult = Result<Token, Error>;
 
-quick_error! {
-    #[derive(Debug, Copy, Clone, PartialEq)]
-    pub enum Error {
-        ExpectedQuote {
-            description("expected a single or double quote")
-        }
-        ExpectedNumber {
-            description("expected a number")
-        }
-        ExpectedCurrentNode {
-            description("Expected the current node token")
-        }
-        ExpectedNamedOperator {
-            description("expected a named operator")
-        }
-        ExpectedAxis {
-            description("expected an axis name")
-        }
-        ExpectedAxisSeparator {
-            description("expected an axis separator")
-        }
-        ExpectedNodeTest {
-            description("expected a node test")
-        }
-        ExpectedPrefixedName {
-            description("expected an optionally prefixed name")
-        }
-        ExpectedNameTest {
-            description("expected a name test")
-        }
-        ExpectedVariableReference {
-            description("expected a variable reference")
-        }
-        ExpectedToken {
-            description("expected a token")
-        }
-        ExpectedLeftParenthesis {
-            description("expected a left parenthesis")
-        }
-        NotTokenizingNamedOperators {
-            description("internal error")
-        }
-        MismatchedQuoteCharacters {
-            description("mismatched quote character")
-        }
-        UnableToCreateToken {
-            description("unable to create token")
-        }
-    }
+#[derive(Debug, Snafu, Copy, Clone, PartialEq)]
+#[cfg_attr(test, snafu(visibility(pub(crate))))]
+pub enum Error {
+    /// expected a single or double quote
+    ExpectedQuote,
+    /// expected a number
+    ExpectedNumber,
+    /// Expected the current node token
+    ExpectedCurrentNode,
+    /// expected a named operator
+    ExpectedNamedOperator,
+    /// expected an axis name
+    ExpectedAxis,
+    /// expected an axis separator
+    ExpectedAxisSeparator,
+    /// expected a node test
+    ExpectedNodeTest,
+    /// expected an optionally prefixed name
+    ExpectedPrefixedName,
+    /// expected a name test
+    ExpectedNameTest,
+    /// expected a variable reference
+    ExpectedVariableReference,
+    /// expected a token
+    ExpectedToken,
+    /// expected a left parenthesis
+    ExpectedLeftParenthesis,
+    /// internal error
+    NotTokenizingNamedOperators,
+    /// mismatched quote character
+    MismatchedQuoteCharacters,
+    /// unable to create token
+    UnableToCreateToken,
 }
 
 impl Recoverable for Error {
     fn recoverable(&self) -> bool {
         use self::Error::*;
         match *self {
-            MismatchedQuoteCharacters |
-            UnableToCreateToken       => false,
+            MismatchedQuoteCharacters | UnableToCreateToken => false,
             _ => true,
         }
+    }
+}
+
+trait ProgressExt<P, T, E>: Sized {
+    fn context<C, E2>(self, context: C) -> peresil::Progress<P, T, E2>
+    where
+        C: snafu::IntoError<E2, Source = snafu::NoneError>,
+        E2: std::error::Error + snafu::ErrorCompat;
+}
+
+impl<P, T, E> ProgressExt<P, T, E> for peresil::Progress<P, T, E> {
+    fn context<C, E2>(self, context: C) -> peresil::Progress<P, T, E2>
+    where
+        C: snafu::IntoError<E2, Source = snafu::NoneError>,
+        E2: std::error::Error + snafu::ErrorCompat,
+    {
+        self.map_err(|_| context.into_error(snafu::NoneError))
     }
 }
 
@@ -120,10 +118,10 @@ static TWO_CHAR_TOKENS: [Identifier<'static, Token>; 5] = [
 
 static NAMED_OPERATORS: [Identifier<'static, Token>; 5] = [
     ("and", Token::And),
-    ("or",  Token::Or),
+    ("or", Token::Or),
     ("mod", Token::Remainder),
     ("div", Token::Divide),
-    ("*",   Token::Multiply),
+    ("*", Token::Multiply),
 ];
 
 // These will be matched in order, so substrings should come later.
@@ -143,19 +141,24 @@ static AXES: [Identifier<'static, AxisName>; 13] = [
     ("self", AxisName::SelfAxis),
 ];
 
-
 static NODE_TESTS: [Identifier<'static, NodeTestName>; 4] = [
     ("comment", NodeTestName::Comment),
     ("text", NodeTestName::Text),
-    ("processing-instruction", NodeTestName::ProcessingInstruction(None)),
+    (
+        "processing-instruction",
+        NodeTestName::ProcessingInstruction(None),
+    ),
     ("node", NodeTestName::Node),
 ];
 
-fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, &'a str, Error> {
+fn parse_literal<'a>(
+    pm: &mut XPathMaster<'a>,
+    p: StringPoint<'a>,
+) -> XPathProgress<'a, &'a str, Error> {
     fn with_quote<'a>(p: StringPoint<'a>, quote: &str) -> XPathProgress<'a, &'a str, Error> {
-        let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| ExpectedQuote));
+        let (p, _) = try_parse!(p.consume_literal(quote).context(ExpectedQuote));
         let (p, v) = try_parse!(p.consume_quoted_string(quote).map_err(|_| unreachable!()));
-        let (p, _) = try_parse!(p.consume_literal(quote).map_err(|_| MismatchedQuoteCharacters));
+        let (p, _) = try_parse!(p.consume_literal(quote).context(MismatchedQuoteCharacters));
 
         peresil::Progress::success(p, v)
     }
@@ -166,26 +169,32 @@ fn parse_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgr
         .finish()
 }
 
-fn parse_quoted_literal<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
+fn parse_quoted_literal<'a>(
+    pm: &mut XPathMaster<'a>,
+    p: StringPoint<'a>,
+) -> XPathProgress<'a, Token, Error> {
     parse_literal(pm, p).map(|v| Token::Literal(v.to_owned()))
 }
 
-fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
-    fn fractional_part(p: StringPoint) -> XPathProgress<(), ()> {
+fn parse_number<'a>(
+    pm: &mut XPathMaster<'a>,
+    p: StringPoint<'a>,
+) -> XPathProgress<'a, Token, Error> {
+    fn fractional_part(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_literal("."));
         let (p, _) = p.consume_decimal_chars().optional(p);
 
         peresil::Progress::success(p, ())
     }
 
-    fn with_integer(p: StringPoint) -> XPathProgress<(), ()> {
+    fn with_integer(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_decimal_chars());
         let (p, _) = fractional_part(p).optional(p);
 
         peresil::Progress::success(p, ())
     }
 
-    fn without_integer(p: StringPoint) -> XPathProgress<(), ()> {
+    fn without_integer(p: StringPoint<'_>) -> XPathProgress<'_, (), ()> {
         let (p, _) = try_parse!(p.consume_literal("."));
         let (p, _) = try_parse!(p.consume_decimal_chars());
 
@@ -196,8 +205,8 @@ fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgre
 
     let (p, _) = try_parse!({
         pm.alternate()
-            .one(|_| with_integer(p).map_err(|_| ExpectedNumber))
-            .one(|_| without_integer(p).map_err(|_| ExpectedNumber))
+            .one(|_| with_integer(p).context(ExpectedNumber))
+            .one(|_| without_integer(p).context(ExpectedNumber))
             .finish()
     });
 
@@ -208,32 +217,39 @@ fn parse_number<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgre
     peresil::Progress::success(p, Token::Number(num))
 }
 
-fn parse_current_node(p: StringPoint) -> XPathProgress<Token, Error> {
-    let (p, _) = try_parse!(p.consume_literal(".").map_err(|_| ExpectedCurrentNode));
+fn parse_current_node(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
+    let (p, _) = try_parse!(p.consume_literal(".").context(ExpectedCurrentNode));
 
     peresil::Progress::success(p, Token::CurrentNode)
 }
 
-fn parse_named_operators(p: StringPoint, prefer_named_ops: bool) -> XPathProgress<Token, Error> {
+fn parse_named_operators(
+    p: StringPoint<'_>,
+    prefer_named_ops: bool,
+) -> XPathProgress<'_, Token, Error> {
     if prefer_named_ops {
-        p.consume_identifier(&NAMED_OPERATORS).map_err(|_| ExpectedNamedOperator)
+        p.consume_identifier(&NAMED_OPERATORS)
+            .context(ExpectedNamedOperator)
     } else {
         // This is ugly, but we have to return some error
-        peresil::Progress::failure(p, NotTokenizingNamedOperators)
+        peresil::Progress::failure(p, Error::NotTokenizingNamedOperators)
     }
 }
 
-fn parse_axis_specifier(p: StringPoint) -> XPathProgress<Token, Error> {
+fn parse_axis_specifier(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
-    let (p, axis) = try_parse!(p.consume_identifier(&AXES).map_err(|_| ExpectedAxis));
-    let (p, _) = try_parse!(p.consume_literal("::").map_err(|_| ExpectedAxisSeparator));
+    let (p, axis) = try_parse!(p.consume_identifier(&AXES).context(ExpectedAxis));
+    let (p, _) = try_parse!(p.consume_literal("::").context(ExpectedAxisSeparator));
 
     peresil::Progress::success(p, Token::Axis(axis))
 }
 
-fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
-    fn without_arg(p: StringPoint) -> XPathProgress<Token, ()> {
+fn parse_node_type<'a>(
+    pm: &mut XPathMaster<'a>,
+    p: StringPoint<'a>,
+) -> XPathProgress<'a, Token, Error> {
+    fn without_arg(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, node_type) = try_parse!(p.consume_identifier(&NODE_TESTS));
         let (p, _) = try_parse!(p.consume_literal("()"));
 
@@ -250,22 +266,25 @@ fn parse_node_type<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
     }
 
     pm.alternate()
-        .one(|_| without_arg(p).map_err(|_| ExpectedNodeTest))
-        .one(|pm| with_arg(pm, p).map_err(|_| ExpectedNodeTest))
+        .one(|_| without_arg(p).context(ExpectedNodeTest))
+        .one(|pm| with_arg(pm, p).context(ExpectedNodeTest))
         .finish()
 }
 
-fn parse_function_call(p: StringPoint) -> XPathProgress<Token, Error> {
-    let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
+fn parse_function_call(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
+    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedName));
     // Do not advance the point here. We want to know if there *is* a
     // left-paren, but do not want to actually consume it here.
-    try_parse!(p.consume_literal("(").map_err(|_| ExpectedLeftParenthesis));
+    try_parse!(p.consume_literal("(").context(ExpectedLeftParenthesis));
 
     peresil::Progress::success(p, Token::Function(name.into()))
 }
 
-fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
-    fn wildcard(p: StringPoint) -> XPathProgress<Token, ()> {
+fn parse_name_test<'a>(
+    pm: &mut XPathMaster<'a>,
+    p: StringPoint<'a>,
+) -> XPathProgress<'a, Token, Error> {
+    fn wildcard(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, wc) = try_parse!(p.consume_literal("*"));
 
         let name = node_test::NameTest {
@@ -275,7 +294,7 @@ fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
         peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_wildcard(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn prefixed_wildcard(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         let (p, prefix) = try_parse!(p.consume_ncname());
         let (p, _) = try_parse!(p.consume_literal(":"));
         let (p, wc) = try_parse!(p.consume_literal("*"));
@@ -287,7 +306,7 @@ fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
         peresil::Progress::success(p, Token::NameTest(name))
     }
 
-    fn prefixed_name(p: StringPoint) -> XPathProgress<Token, ()> {
+    fn prefixed_name(p: StringPoint<'_>) -> XPathProgress<'_, Token, ()> {
         p.consume_prefixed_name().map(|name| {
             Token::NameTest(node_test::NameTest {
                 prefix: name.prefix().map(|p| p.to_owned()),
@@ -297,15 +316,15 @@ fn parse_name_test<'a>(pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathPro
     }
 
     pm.alternate()
-        .one(|_| wildcard(p).map_err(|_| ExpectedNameTest))
-        .one(|_| prefixed_wildcard(p).map_err(|_| ExpectedNameTest))
-        .one(|_| prefixed_name(p).map_err(|_| ExpectedNameTest))
+        .one(|_| wildcard(p).context(ExpectedNameTest))
+        .one(|_| prefixed_wildcard(p).context(ExpectedNameTest))
+        .one(|_| prefixed_name(p).context(ExpectedNameTest))
         .finish()
 }
 
-fn parse_variable_reference(p: StringPoint) -> XPathProgress<Token, Error> {
-    let (p, _) = try_parse!(p.consume_literal("$").map_err(|_| ExpectedVariableReference));
-    let (p, name) = try_parse!(p.consume_prefixed_name().map_err(|_| ExpectedPrefixedName));
+fn parse_variable_reference(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
+    let (p, _) = try_parse!(p.consume_literal("$").context(ExpectedVariableReference));
+    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedName));
 
     peresil::Progress::success(p, Token::Variable(name.into()))
 }
@@ -323,13 +342,23 @@ impl Tokenizer {
         self.xpath.len() > self.start
     }
 
-    fn parse_token<'a>(&self, pm: &mut XPathMaster<'a>, p: StringPoint<'a>) -> XPathProgress<'a, Token, Error> {
+    fn parse_token<'a>(
+        &self,
+        pm: &mut XPathMaster<'a>,
+        p: StringPoint<'a>,
+    ) -> XPathProgress<'a, Token, Error> {
         let (p, _) = p.consume_space().optional(p);
 
         let (p, tok) = try_parse!({
             pm.alternate()
-                .one(|_| p.consume_identifier(&TWO_CHAR_TOKENS).map_err(|_| ExpectedToken))
-                .one(|_| p.consume_identifier(&SINGLE_CHAR_TOKENS).map_err(|_| ExpectedToken))
+                .one(|_| {
+                    p.consume_identifier(&TWO_CHAR_TOKENS)
+                        .context(ExpectedToken)
+                })
+                .one(|_| {
+                    p.consume_identifier(&SINGLE_CHAR_TOKENS)
+                        .context(ExpectedToken)
+                })
                 .one(|pm| parse_quoted_literal(pm, p))
                 .one(|pm| parse_number(pm, p))
                 .one(|_| parse_current_node(p))
@@ -349,31 +378,38 @@ impl Tokenizer {
 
     fn raw_next_token(&mut self) -> TokenResult {
         let mut pm = ParseMaster::new();
-        let p = StringPoint { s: &self.xpath[self.start..], offset: self.start };
+        let p = StringPoint {
+            s: &self.xpath[self.start..],
+            offset: self.start,
+        };
 
         let r = self.parse_token(&mut pm, p);
         match pm.finish(r) {
-            peresil::Progress { status: peresil::Status::Success(data), point } => {
+            peresil::Progress {
+                status: peresil::Status::Success(data),
+                point,
+            } => {
                 self.start = point.offset;
                 Ok(data)
-            },
-            peresil::Progress { status: peresil::Status::Failure(mut e), point } => {
+            }
+            peresil::Progress {
+                status: peresil::Status::Failure(mut e),
+                point,
+            } => {
                 if point.offset == self.start {
-                    Err(UnableToCreateToken)
+                    UnableToCreateToken.fail()
                 } else {
                     // Should always have one error, otherwise we wouldn't be here!
                     Err(e.pop().expect("Unknown error while parsing"))
                 }
-            },
+            }
         }
     }
 
     fn next_token(&mut self) -> TokenResult {
-        let token = try!(self.raw_next_token());
+        let token = self.raw_next_token()?;
 
-        if ! (token.precedes_node_test() ||
-              token.precedes_expression() ||
-              token.is_operator()) {
+        if !(token.precedes_node_test() || token.precedes_expression() || token.is_operator()) {
             // See http://www.w3.org/TR/xpath/#exprlex
             self.prefer_recognition_of_operator_names = true;
         } else {
@@ -413,41 +449,39 @@ macro_rules! deabbrev {
 impl<I> TokenDeabbreviator<I> {
     pub fn new(source: I) -> TokenDeabbreviator<I> {
         TokenDeabbreviator {
-            source: source,
+            source,
             buffer: Default::default(),
         }
     }
 
     fn expand_token(&mut self, token: Token) -> Token {
         match token {
-            Token::AtSign => {
-                deabbrev!(self,
-                          Token::Axis(AxisName::Attribute))
-            },
-            Token::DoubleSlash => {
-                deabbrev!(self,
-                          Token::Slash,
-                          Token::Axis(AxisName::DescendantOrSelf),
-                          Token::NodeTest(NodeTestName::Node),
-                          Token::Slash)
-            },
-            Token::CurrentNode => {
-                deabbrev!(self,
-                          Token::Axis(AxisName::SelfAxis),
-                          Token::NodeTest(NodeTestName::Node))
-            },
-            Token::ParentNode => {
-                deabbrev!(self,
-                          Token::Axis(AxisName::Parent),
-                          Token::NodeTest(NodeTestName::Node))
-            },
+            Token::AtSign => deabbrev!(self, Token::Axis(AxisName::Attribute)),
+            Token::DoubleSlash => deabbrev!(
+                self,
+                Token::Slash,
+                Token::Axis(AxisName::DescendantOrSelf),
+                Token::NodeTest(NodeTestName::Node),
+                Token::Slash
+            ),
+            Token::CurrentNode => deabbrev!(
+                self,
+                Token::Axis(AxisName::SelfAxis),
+                Token::NodeTest(NodeTestName::Node)
+            ),
+            Token::ParentNode => deabbrev!(
+                self,
+                Token::Axis(AxisName::Parent),
+                Token::NodeTest(NodeTestName::Node)
+            ),
             _ => token,
         }
     }
 }
 
 impl<I> Iterator for TokenDeabbreviator<I>
-    where I: Iterator<Item = TokenResult>,
+where
+    I: Iterator<Item = TokenResult>,
 {
     type Item = TokenResult;
 
@@ -469,24 +503,26 @@ impl<I> Iterator for TokenDeabbreviator<I>
 mod test {
     use std::borrow::ToOwned;
 
-    use ::node_test;
-    use ::token::{Token, AxisName, NodeTestName};
+    use crate::node_test;
+    use crate::token::{AxisName, NodeTestName, Token};
 
-    use super::{Tokenizer, TokenDeabbreviator, Error, TokenResult};
     use super::Error::*;
+    use super::{Error, TokenDeabbreviator, TokenResult, Tokenizer};
 
     fn is_finished(tokenizer: &Tokenizer) -> bool {
-        ! tokenizer.has_more_tokens()
+        !tokenizer.has_more_tokens()
     }
 
     fn all_tokens_raw<I>(tokenizer: I) -> Result<Vec<Token>, Error>
-        where I: Iterator<Item = TokenResult>,
+    where
+        I: Iterator<Item = TokenResult>,
     {
         tokenizer.collect()
     }
 
     fn all_tokens<I>(tokenizer: I) -> Vec<Token>
-        where I: Iterator<Item = TokenResult>,
+    where
+        I: Iterator<Item = TokenResult>,
     {
         match all_tokens_raw(tokenizer) {
             Ok(toks) => toks,
@@ -497,7 +533,7 @@ mod test {
     fn name_test(local_part: &str) -> Token {
         Token::NameTest(node_test::NameTest {
             prefix: None,
-            local_part: local_part.to_owned()
+            local_part: local_part.to_owned(),
         })
     }
 
@@ -518,20 +554,26 @@ mod test {
     fn tokenizes_grandchild_selector() {
         let tokenizer = Tokenizer::new("hello/world");
 
-        assert_eq!(all_tokens(tokenizer), vec![name_test("hello"),
-                                               Token::Slash,
-                                               name_test("world")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![name_test("hello"), Token::Slash, name_test("world")]
+        );
     }
 
     #[test]
     fn tokenizes_great_grandchild_selector() {
         let tokenizer = Tokenizer::new("hello/there/world");
 
-        assert_eq!(all_tokens(tokenizer), vec![name_test("hello"),
-                                               Token::Slash,
-                                               name_test("there"),
-                                               Token::Slash,
-                                               name_test("world")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![
+                name_test("hello"),
+                Token::Slash,
+                name_test("there"),
+                Token::Slash,
+                name_test("world")
+            ]
+        );
     }
 
     #[test]
@@ -540,7 +582,7 @@ mod test {
 
         let name = node_test::NameTest {
             prefix: Some("ns".to_owned()),
-            local_part: "foo".to_owned()
+            local_part: "foo".to_owned(),
         };
         assert_eq!(all_tokens(tokenizer), vec![Token::NameTest(name)]);
     }
@@ -549,9 +591,10 @@ mod test {
     fn ignores_whitespace_around_tokens() {
         let tokenizer = Tokenizer::new(" @\t@\n@\r");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::AtSign,
-                                               Token::AtSign,
-                                               Token::AtSign]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::AtSign, Token::AtSign, Token::AtSign]
+        );
     }
 
     #[test]
@@ -565,16 +608,20 @@ mod test {
     fn tokenizes_axis_selector() {
         let tokenizer = Tokenizer::new("ancestor::world");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Axis(AxisName::Ancestor),
-                                               name_test("world")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Axis(AxisName::Ancestor), name_test("world")]
+        );
     }
 
     #[test]
     fn tokenizes_axis_selector_that_contains_another_axis() {
         let tokenizer = Tokenizer::new("ancestor-or-self::world");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Axis(AxisName::AncestorOrSelf),
-                                               name_test("world")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Axis(AxisName::AncestorOrSelf), name_test("world")]
+        );
     }
 
     #[test]
@@ -595,9 +642,10 @@ mod test {
     fn tokenizes_double_slash_separator() {
         let tokenizer = Tokenizer::new("hello//world");
 
-        assert_eq!(all_tokens(tokenizer), vec![name_test("hello"),
-                                               Token::DoubleSlash,
-                                               name_test("world")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![name_test("hello"), Token::DoubleSlash, name_test("world")]
+        );
     }
 
     #[test]
@@ -674,14 +722,20 @@ mod test {
     fn tokenizes_apostrophe_literal() {
         let tokenizer = Tokenizer::new("'hello!'");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Literal("hello!".to_owned())]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Literal("hello!".to_owned())]
+        );
     }
 
     #[test]
     fn tokenizes_double_quote_literal() {
         let tokenizer = Tokenizer::new("\"1.23\"");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Literal("1.23".to_owned())]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Literal("1.23".to_owned())]
+        );
     }
 
     #[test]
@@ -695,7 +749,10 @@ mod test {
     fn tokenizes_variable_reference_prefixed_name() {
         let tokenizer = Tokenizer::new("$yo:dawg");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Variable(("yo", "dawg").into())]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Variable(("yo", "dawg").into())]
+        );
     }
 
     #[test]
@@ -765,52 +822,60 @@ mod test {
     fn special_preceding_token_forces_named_operator_and() {
         let tokenizer = Tokenizer::new("1andz2");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Number(1.0),
-                                               Token::And,
-                                               name_test("z2")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Number(1.0), Token::And, name_test("z2")]
+        );
     }
 
     #[test]
     fn special_preceding_token_forces_named_operator_or() {
         let tokenizer = Tokenizer::new("2oror");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Number(2.0),
-                                               Token::Or,
-                                               name_test("or")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Number(2.0), Token::Or, name_test("or")]
+        );
     }
 
     #[test]
     fn special_preceding_token_forces_named_operator_mod() {
         let tokenizer = Tokenizer::new("3moddiv");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Number(3.0),
-                                               Token::Remainder,
-                                               name_test("div")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Number(3.0), Token::Remainder, name_test("div")]
+        );
     }
 
     #[test]
     fn special_preceding_token_forces_named_operator_div() {
         let tokenizer = Tokenizer::new("1divz2");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Number(1.0),
-                                               Token::Divide,
-                                               name_test("z2")]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Number(1.0), Token::Divide, name_test("z2")]
+        );
     }
 
     #[test]
     fn special_preceding_token_forces_named_operator_multiply() {
         let tokenizer = Tokenizer::new("1*2");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Number(1.0),
-                                               Token::Multiply,
-                                               Token::Number(2.0)]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::Number(1.0), Token::Multiply, Token::Number(2.0)]
+        );
     }
 
     #[test]
     fn tokenizes_node_test_without_args() {
         let tokenizer = Tokenizer::new("text()");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::NodeTest(NodeTestName::Text)]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![Token::NodeTest(NodeTestName::Text)]
+        );
     }
 
     #[test]
@@ -829,7 +894,9 @@ mod test {
 
         assert_eq!(
             all_tokens(tokenizer),
-            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(Some("hi".to_owned())))]
+            vec![Token::NodeTest(NodeTestName::ProcessingInstruction(Some(
+                "hi".to_owned()
+            )))]
         );
     }
 
@@ -837,40 +904,60 @@ mod test {
     fn tokenizes_function_call() {
         let tokenizer = Tokenizer::new("hello()");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
-                                               Token::LeftParen,
-                                               Token::RightParen]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![
+                Token::Function("hello".into()),
+                Token::LeftParen,
+                Token::RightParen
+            ]
+        );
     }
 
     #[test]
     fn tokenizes_function_call_with_argument() {
         let tokenizer = Tokenizer::new("hello(1)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
-                                               Token::LeftParen,
-                                               Token::Number(1.0),
-                                               Token::RightParen]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![
+                Token::Function("hello".into()),
+                Token::LeftParen,
+                Token::Number(1.0),
+                Token::RightParen
+            ]
+        );
     }
 
     #[test]
     fn tokenizes_function_call_with_multiple_arguments() {
         let tokenizer = Tokenizer::new("hello(1, 2)");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function("hello".into()),
-                                               Token::LeftParen,
-                                               Token::Number(1.0),
-                                               Token::Comma,
-                                               Token::Number(2.0),
-                                               Token::RightParen]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![
+                Token::Function("hello".into()),
+                Token::LeftParen,
+                Token::Number(1.0),
+                Token::Comma,
+                Token::Number(2.0),
+                Token::RightParen
+            ]
+        );
     }
 
     #[test]
     fn tokenizes_function_call_with_prefixed_name() {
         let tokenizer = Tokenizer::new("ns:hello()");
 
-        assert_eq!(all_tokens(tokenizer), vec![Token::Function(("ns", "hello").into()),
-                                               Token::LeftParen,
-                                               Token::RightParen]);
+        assert_eq!(
+            all_tokens(tokenizer),
+            vec![
+                Token::Function(("ns", "hello").into()),
+                Token::LeftParen,
+                Token::RightParen
+            ]
+        );
     }
 
     #[test]
@@ -912,10 +999,15 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec![Token::Slash,
-                                             Token::Axis(AxisName::DescendantOrSelf),
-                                             Token::NodeTest(NodeTestName::Node),
-                                             Token::Slash]);
+        assert_eq!(
+            all_tokens(deabbrv),
+            vec![
+                Token::Slash,
+                Token::Axis(AxisName::DescendantOrSelf),
+                Token::NodeTest(NodeTestName::Node),
+                Token::Slash
+            ]
+        );
     }
 
     #[test]
@@ -924,8 +1016,13 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec![Token::Axis(AxisName::SelfAxis),
-                                             Token::NodeTest(NodeTestName::Node)]);
+        assert_eq!(
+            all_tokens(deabbrv),
+            vec![
+                Token::Axis(AxisName::SelfAxis),
+                Token::NodeTest(NodeTestName::Node)
+            ]
+        );
     }
 
     #[test]
@@ -934,7 +1031,12 @@ mod test {
 
         let deabbrv = TokenDeabbreviator::new(input_tokens.into_iter());
 
-        assert_eq!(all_tokens(deabbrv), vec![Token::Axis(AxisName::Parent),
-                                             Token::NodeTest(NodeTestName::Node)]);
+        assert_eq!(
+            all_tokens(deabbrv),
+            vec![
+                Token::Axis(AxisName::Parent),
+                Token::NodeTest(NodeTestName::Node)
+            ]
+        );
     }
 }

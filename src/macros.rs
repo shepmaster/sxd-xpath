@@ -10,7 +10,6 @@ macro_rules! nodeset(
     ($($e:expr),+,) => (nodeset!($($e),+))
 );
 
-
 /// Convenience constructor for an OrderedNodes
 #[cfg(test)]
 macro_rules! ordered_nodes {
