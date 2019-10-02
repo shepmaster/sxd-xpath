@@ -19,11 +19,9 @@ fn print_usage(program: &str, opts: &Options) {
 fn build_xpath(xpath_str: &str) -> XPath {
     let factory = Factory::new();
 
-    match factory.build(xpath_str) {
-        Err(x) => panic!("Unable to compile XPath {}: {}", xpath_str, x),
-        Ok(None) => panic!("Unable to compile XPath"),
-        Ok(Some(x)) => x,
-    }
+    factory
+        .build(xpath_str)
+        .unwrap_or_else(|e| panic!("Unable to compile XPath {}: {}", xpath_str, e))
 }
 
 fn load_xml<R>(input: R) -> sxd_document::Package
