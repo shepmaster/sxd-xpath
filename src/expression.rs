@@ -578,9 +578,9 @@ fn resolve_prefixed_name<'a>(
     name: &'a OwnedPrefixedName,
 ) -> Result<QName<'a>, Error> {
     // What about a "default" namespace?
-    let ns_uri = match name.prefix {
+    let ns_uri = match name.prefix.as_ref().map(|p| &**p) {
         None => None,
-        Some(ref prefix) => match context.namespace_for(prefix) {
+        Some(prefix) => match context.namespace_for(prefix) {
             None => return UnknownNamespace { prefix }.fail(),
             Some(uri) => Some(uri),
         },
