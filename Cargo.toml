@@ -13,10 +13,6 @@ documentation = "https://docs.rs/sxd-xpath/"
 
 license = "MIT/Apache-2.0"
 
-[badges]
-travis-ci = { repository = "shepmaster/sxd-xpath", branch = "master" }
-appveyor = { repository = "shepmaster/sxd-xpath", branch = "master", service = "github" }
-
 [features]
 # Unused -- remove on next semver-imcompatible release
 unstable = []
