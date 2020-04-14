@@ -2,8 +2,7 @@
 
 An XML XPath library in Rust.
 
-[![Linux Build Status](https://travis-ci.org/shepmaster/sxd-xpath.svg?branch=master)](https://travis-ci.org/shepmaster/sxd-xpath)
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/2hrixanb82kcaci1/branch/master?svg=true)](https://ci.appveyor.com/project/shepmaster/sxd-xpath/branch/master)
+[![Build Status](https://github.com/shepmaster/sxd-xpath/workflows/Continuous%20integration/badge.svg)](https://github.com/shepmaster/sxd-xpath/actions?query=branch%3Amaster)
 [![Current Version](http://meritbadge.herokuapp.com/sxd-xpath)](https://crates.io/crates/sxd-xpath)
 [![Documentation](https://docs.rs/sxd-xpath/badge.svg)](https://docs.rs/sxd-xpath/)
 
