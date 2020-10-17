@@ -8,6 +8,7 @@ use crate::context;
 use crate::function;
 use crate::node_test::NodeTest;
 use crate::nodeset::{Nodeset, OrderedNodes};
+use crate::visitor::{Visitable, Visitor};
 use crate::Value::{Boolean, Number};
 use crate::{LiteralValue, OwnedPrefixedName, Value};
 
@@ -46,7 +47,7 @@ fn value_into_ordered_nodes(v: Value<'_>) -> Result<OrderedNodes<'_>, Error> {
     }
 }
 
-pub trait Expression: fmt::Debug {
+pub trait Expression: fmt::Debug + Visitable {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error>;
 }
 
@@ -79,6 +80,12 @@ pub struct And {
 
 binary_constructor!(And);
 
+impl Visitable for And {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_and(&self.left, &self.right);
+    }
+}
+
 impl Expression for And {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left = self.left.evaluate(context)?.boolean();
@@ -90,6 +97,12 @@ impl Expression for And {
 #[allow(missing_copy_implementations)]
 #[derive(Debug)]
 pub struct ContextNode;
+
+impl Visitable for ContextNode {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_context_node();
+    }
+}
 
 impl Expression for ContextNode {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
@@ -150,6 +163,12 @@ impl Equal {
     }
 }
 
+impl Visitable for Equal {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_equal(&self.left, &self.right);
+    }
+}
+
 impl Expression for Equal {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.boolean_evaluate(context).map(Boolean)
@@ -169,6 +188,12 @@ impl NotEqual {
     }
 }
 
+impl Visitable for NotEqual {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_not_equal(&self.equal.left, &self.equal.right);
+    }
+}
+
 impl Expression for NotEqual {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.equal.boolean_evaluate(context).map(|v| Boolean(!v))
@@ -179,6 +204,12 @@ impl Expression for NotEqual {
 pub struct Function {
     pub name: OwnedPrefixedName,
     pub arguments: Vec<SubExpression>,
+}
+
+impl Visitable for Function {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_function(&self.name, &self.arguments);
+    }
 }
 
 impl Expression for Function {
@@ -206,6 +237,12 @@ pub struct Literal {
 impl From<LiteralValue> for Literal {
     fn from(other: LiteralValue) -> Literal {
         Literal { value: other }
+    }
+}
+
+impl Visitable for Literal {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_literal(&self.value);
     }
 }
 
@@ -279,6 +316,12 @@ impl Math {
     }
 }
 
+impl Visitable for Math {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_math(&self.left, &self.right, &self.operation);
+    }
+}
+
 impl Expression for Math {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left = self.left.evaluate(context)?;
@@ -303,6 +346,12 @@ pub struct Negation {
     pub expression: SubExpression,
 }
 
+impl Visitable for Negation {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_negation(&self.expression);
+    }
+}
+
 impl Expression for Negation {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         self.expression
@@ -318,6 +367,12 @@ pub struct Or {
 }
 
 binary_constructor!(Or);
+
+impl Visitable for Or {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_or(&self.left, &self.right);
+    }
+}
 
 impl Expression for Or {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
@@ -336,6 +391,12 @@ pub struct Path {
 impl Path {
     pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
         Box::new(Path { start_point, steps })
+    }
+}
+
+impl Visitable for Path {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_path(&self.start_point, &self.steps);
     }
 }
 
@@ -367,6 +428,12 @@ impl Filter {
             node_selector,
             predicate,
         })
+    }
+}
+
+impl Visitable for Filter {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_filter(&self.node_selector, &self.predicate);
     }
 }
 
@@ -433,6 +500,12 @@ impl Relational {
     }
 }
 
+impl Visitable for Relational {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_relational(&self.left, &self.right, &self.operation);
+    }
+}
+
 impl Expression for Relational {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let left_val = self.left.evaluate(context)?;
@@ -456,6 +529,12 @@ impl fmt::Debug for Relational {
 #[derive(Debug)]
 pub struct RootNode;
 
+impl Visitable for RootNode {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_root_node();
+    }
+}
+
 impl Expression for RootNode {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         Ok(Value::Nodeset(nodeset![context.node.document().root()]))
@@ -463,7 +542,7 @@ impl Expression for RootNode {
 }
 
 #[derive(Debug)]
-struct Predicate {
+pub struct Predicate {
     pub expression: SubExpression,
 }
 
@@ -503,6 +582,12 @@ pub struct ParameterizedStep<A> {
     axis: A,
     node_test: StepTest,
     predicates: Vec<Predicate>,
+}
+
+impl Visitable for Step {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+	visitor.visit_step(&self.axis, &self.node_test, &self.predicates);
+    }
 }
 
 impl<A> ParameterizedStep<A>
@@ -561,6 +646,12 @@ pub struct Union {
 
 binary_constructor!(Union);
 
+impl Visitable for Union {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_union(&self.left, &self.right);
+    }
+}
+
 impl Expression for Union {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let as_nodes = |e: &SubExpression| e.evaluate(context).and_then(value_into_nodeset);
@@ -594,6 +685,12 @@ pub struct Variable {
     pub name: OwnedPrefixedName,
 }
 
+impl Visitable for Variable {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_variable(&self.name);
+    }
+}
+
 impl Expression for Variable {
     fn evaluate<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
         let name = resolve_prefixed_name(context, &self.name)?;
@@ -625,6 +722,11 @@ mod test {
 
     #[derive(Debug)]
     struct FailExpression;
+    impl Visitable for FailExpression {
+        fn visit(&self, _visitor: &mut dyn Visitor) {
+            panic!("Should never be called");
+        }
+    }
     impl Expression for FailExpression {
         fn evaluate<'c, 'd>(&self, _: &context::Evaluation<'c, 'd>) -> Result<Value<'d>, Error> {
             panic!("Should never be called");
@@ -1048,10 +1150,16 @@ mod test {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
         fn test(&self, _context: &context::Evaluation<'_, '_>, _result: &mut OrderedNodes<'_>) {}
+	fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	    Box::new(self.clone())
+	}
+    }
+    impl Visitable for DummyNodeTest {
+	fn visit(&self, _visitor: &mut dyn Visitor) {}
     }
 
     #[test]
