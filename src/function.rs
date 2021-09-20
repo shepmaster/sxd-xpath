@@ -614,7 +614,7 @@ fn ceiling() -> NumberConvert {
     NumberConvert(f64::ceil)
 }
 
-// http://stackoverflow.com/a/28124775/155423
+// https://stackoverflow.com/a/28124775/155423
 fn round_ties_to_positive_infinity(x: f64) -> f64 {
     let y = x.floor();
     if x == y {
