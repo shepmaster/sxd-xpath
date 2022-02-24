@@ -265,6 +265,9 @@ impl<'d> Value<'d> {
                     } else {
                         "Infinity".to_owned()
                     }
+                } else if n == 0.0 {
+                    // Covers both negative and positive zero
+                    "0".to_owned()
                 } else {
                     n.to_string()
                 }
