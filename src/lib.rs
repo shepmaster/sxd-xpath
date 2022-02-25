@@ -266,7 +266,13 @@ impl<'d> Value<'d> {
                         "Infinity".to_owned()
                     }
                 } else {
-                    n.to_string()
+                    // fix the behavior of negative zero
+                    // see https://en.wikipedia.org/wiki/Signed_zero
+                    if n == 0.0 {
+                        0.0.to_string()
+                    } else {
+                        n.to_string()
+                    }
                 }
             }
             String(ref val) => val.clone(),
