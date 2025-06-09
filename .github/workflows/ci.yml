@@ -1,7 +1,4 @@
-on:
-  push:
-  schedule:
-    - cron:  '21 1 * * FRI'
+on: [push, pull_request]
 
 name: Continuous integration
 
