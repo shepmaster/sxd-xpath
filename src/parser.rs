@@ -19,6 +19,7 @@ impl Parser {
 
 #[derive(Debug, Snafu, Clone, PartialEq)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// XPath was empty
     NoXPath,
@@ -77,8 +78,11 @@ where
     }
 
     fn consume(&mut self, token: &Token) -> Result<(), Error> {
-        let x = self.next().context(RanOutOfInput)?.context(Tokenizer)?;
-        ensure!(&x == token, UnexpectedToken { token: x });
+        let x = self
+            .next()
+            .context(RanOutOfInputSnafu)?
+            .context(TokenizerSnafu)?;
+        ensure!(&x == token, UnexpectedTokenSnafu { token: x });
         Ok(())
     }
 }
@@ -87,11 +91,11 @@ where
 /// single value.
 macro_rules! consume_value(
     ($source:expr, Token::$token:ident) => ({
-        let next = $source.next().context(RanOutOfInput)?.context(Tokenizer)?;
+        let next = $source.next().context(RanOutOfInputSnafu)?.context(TokenizerSnafu)?;
 
         match next {
             Token::$token(x) => x,
-            token => return UnexpectedToken { token }.fail(),
+            token => return UnexpectedTokenSnafu { token }.fail(),
         }
     });
 );
@@ -131,7 +135,8 @@ impl LeftAssociativeBinaryParser {
                 if source.next_token_is(&rule.token) {
                     source.consume(&rule.token)?;
 
-                    let right = child_parse(source)?.context(RightHandSideExpressionMissing)?;
+                    let right =
+                        child_parse(source)?.context(RightHandSideExpressionMissingSnafu)?;
 
                     left = (rule.builder)(left, right);
 
@@ -300,7 +305,9 @@ impl Parser {
         while source.next_token_is(&Token::Comma) {
             source.consume(&Token::Comma)?;
 
-            let arg = self.parse_expression(source)?.context(ArgumentMissing)?;
+            let arg = self
+                .parse_expression(source)?
+                .context(ArgumentMissingSnafu)?;
             arguments.push(arg);
         }
 
@@ -363,7 +370,9 @@ impl Parser {
         if source.next_token_is(&Token::LeftBracket) {
             source.consume(&Token::LeftBracket)?;
 
-            let predicate = self.parse_expression(source)?.context(EmptyPredicate)?;
+            let predicate = self
+                .parse_expression(source)?
+                .context(EmptyPredicateSnafu)?;
             source.consume(&Token::RightBracket)?;
             Ok(Some(predicate))
         } else {
@@ -420,7 +429,7 @@ impl Parser {
                 while source.next_token_is(&Token::Slash) {
                     source.consume(&Token::Slash)?;
 
-                    let next = self.parse_step(source)?.context(TrailingSlash)?;
+                    let next = self.parse_step(source)?.context(TrailingSlashSnafu)?;
                     steps.push(next);
                 }
 
@@ -499,7 +508,7 @@ impl Parser {
 
                     let expr = self
                         .parse_relative_location_path_raw(source, expr)?
-                        .context(TrailingSlash)?;
+                        .context(TrailingSlashSnafu)?;
                     Ok(Some(expr))
                 } else {
                     Ok(Some(expr))
@@ -536,7 +545,7 @@ impl Parser {
 
             let expression = self
                 .parse_unary_expression(source)?
-                .context(RightHandSideExpressionMissing)?;
+                .context(RightHandSideExpressionMissingSnafu)?;
             let expression: SubExpression = Box::new(expression::Negation { expression });
             Ok(Some(expression))
         } else {
@@ -675,9 +684,9 @@ impl Parser {
 
         let expr = self.parse_or_expression(&mut source)?;
 
-        ensure!(!source.has_more_tokens(), ExtraUnparsedTokens);
+        ensure!(!source.has_more_tokens(), ExtraUnparsedTokensSnafu);
 
-        let expr = expr.context(NoXPath)?;
+        let expr = expr.context(NoXPathSnafu)?;
 
         Ok(expr)
     }
@@ -1808,9 +1817,9 @@ mod test {
         let ex = Exercise::new(&doc);
         let res = ex.parse_raw(tokens);
         assert_eq!(
-            tokenizer::UnableToCreateToken
+            tokenizer::UnableToCreateTokenSnafu
                 .fail::<()>()
-                .context(Tokenizer)
+                .context(TokenizerSnafu)
                 .err(),
             res.err()
         );

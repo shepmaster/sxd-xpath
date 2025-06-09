@@ -21,6 +21,7 @@ pub type TokenResult = Result<Token, Error>;
 
 #[derive(Debug, Snafu, Copy, Clone, PartialEq)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// expected a single or double quote
     ExpectedQuote,
@@ -57,10 +58,7 @@ pub enum Error {
 impl Recoverable for Error {
     fn recoverable(&self) -> bool {
         use self::Error::*;
-        match *self {
-            MismatchedQuoteCharacters | UnableToCreateToken => false,
-            _ => true,
-        }
+        !matches!(self, MismatchedQuoteCharacters | UnableToCreateToken)
     }
 }
 
@@ -156,9 +154,11 @@ fn parse_literal<'a>(
     p: StringPoint<'a>,
 ) -> XPathProgress<'a, &'a str, Error> {
     fn with_quote<'a>(p: StringPoint<'a>, quote: &str) -> XPathProgress<'a, &'a str, Error> {
-        let (p, _) = try_parse!(p.consume_literal(quote).context(ExpectedQuote));
+        let (p, _) = try_parse!(p.consume_literal(quote).context(ExpectedQuoteSnafu));
         let (p, v) = try_parse!(p.consume_quoted_string(quote).map_err(|_| unreachable!()));
-        let (p, _) = try_parse!(p.consume_literal(quote).context(MismatchedQuoteCharacters));
+        let (p, _) = try_parse!(p
+            .consume_literal(quote)
+            .context(MismatchedQuoteCharactersSnafu));
 
         peresil::Progress::success(p, v)
     }
@@ -205,8 +205,8 @@ fn parse_number<'a>(
 
     let (p, _) = try_parse!({
         pm.alternate()
-            .one(|_| with_integer(p).context(ExpectedNumber))
-            .one(|_| without_integer(p).context(ExpectedNumber))
+            .one(|_| with_integer(p).context(ExpectedNumberSnafu))
+            .one(|_| without_integer(p).context(ExpectedNumberSnafu))
             .finish()
     });
 
@@ -218,7 +218,7 @@ fn parse_number<'a>(
 }
 
 fn parse_current_node(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
-    let (p, _) = try_parse!(p.consume_literal(".").context(ExpectedCurrentNode));
+    let (p, _) = try_parse!(p.consume_literal(".").context(ExpectedCurrentNodeSnafu));
 
     peresil::Progress::success(p, Token::CurrentNode)
 }
@@ -229,7 +229,7 @@ fn parse_named_operators(
 ) -> XPathProgress<'_, Token, Error> {
     if prefer_named_ops {
         p.consume_identifier(&NAMED_OPERATORS)
-            .context(ExpectedNamedOperator)
+            .context(ExpectedNamedOperatorSnafu)
     } else {
         // This is ugly, but we have to return some error
         peresil::Progress::failure(p, Error::NotTokenizingNamedOperators)
@@ -239,8 +239,8 @@ fn parse_named_operators(
 fn parse_axis_specifier(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
     // Ideally, we would check for the pair of the name and the ::,
     // then loop. This would prevent us from having to order AXES.
-    let (p, axis) = try_parse!(p.consume_identifier(&AXES).context(ExpectedAxis));
-    let (p, _) = try_parse!(p.consume_literal("::").context(ExpectedAxisSeparator));
+    let (p, axis) = try_parse!(p.consume_identifier(&AXES).context(ExpectedAxisSnafu));
+    let (p, _) = try_parse!(p.consume_literal("::").context(ExpectedAxisSeparatorSnafu));
 
     peresil::Progress::success(p, Token::Axis(axis))
 }
@@ -266,16 +266,16 @@ fn parse_node_type<'a>(
     }
 
     pm.alternate()
-        .one(|_| without_arg(p).context(ExpectedNodeTest))
-        .one(|pm| with_arg(pm, p).context(ExpectedNodeTest))
+        .one(|_| without_arg(p).context(ExpectedNodeTestSnafu))
+        .one(|pm| with_arg(pm, p).context(ExpectedNodeTestSnafu))
         .finish()
 }
 
 fn parse_function_call(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
-    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedName));
+    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedNameSnafu));
     // Do not advance the point here. We want to know if there *is* a
     // left-paren, but do not want to actually consume it here.
-    try_parse!(p.consume_literal("(").context(ExpectedLeftParenthesis));
+    try_parse!(p.consume_literal("(").context(ExpectedLeftParenthesisSnafu));
 
     peresil::Progress::success(p, Token::Function(name.into()))
 }
@@ -316,15 +316,17 @@ fn parse_name_test<'a>(
     }
 
     pm.alternate()
-        .one(|_| wildcard(p).context(ExpectedNameTest))
-        .one(|_| prefixed_wildcard(p).context(ExpectedNameTest))
-        .one(|_| prefixed_name(p).context(ExpectedNameTest))
+        .one(|_| wildcard(p).context(ExpectedNameTestSnafu))
+        .one(|_| prefixed_wildcard(p).context(ExpectedNameTestSnafu))
+        .one(|_| prefixed_name(p).context(ExpectedNameTestSnafu))
         .finish()
 }
 
 fn parse_variable_reference(p: StringPoint<'_>) -> XPathProgress<'_, Token, Error> {
-    let (p, _) = try_parse!(p.consume_literal("$").context(ExpectedVariableReference));
-    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedName));
+    let (p, _) = try_parse!(p
+        .consume_literal("$")
+        .context(ExpectedVariableReferenceSnafu));
+    let (p, name) = try_parse!(p.consume_prefixed_name().context(ExpectedPrefixedNameSnafu));
 
     peresil::Progress::success(p, Token::Variable(name.into()))
 }
@@ -353,11 +355,11 @@ impl Tokenizer {
             pm.alternate()
                 .one(|_| {
                     p.consume_identifier(&TWO_CHAR_TOKENS)
-                        .context(ExpectedToken)
+                        .context(ExpectedTokenSnafu)
                 })
                 .one(|_| {
                     p.consume_identifier(&SINGLE_CHAR_TOKENS)
-                        .context(ExpectedToken)
+                        .context(ExpectedTokenSnafu)
                 })
                 .one(|pm| parse_quoted_literal(pm, p))
                 .one(|pm| parse_number(pm, p))
@@ -397,7 +399,7 @@ impl Tokenizer {
                 point,
             } => {
                 if point.offset == self.start {
-                    UnableToCreateToken.fail()
+                    UnableToCreateTokenSnafu.fail()
                 } else {
                     // Should always have one error, otherwise we wouldn't be here!
                     Err(e.pop().expect("Unknown error while parsing"))

@@ -4,7 +4,6 @@ use std::borrow::ToOwned;
 use std::collections::hash_set;
 use std::collections::{HashMap, HashSet};
 use std::iter::{FromIterator, IntoIterator};
-use std::usize;
 
 use sxd_document::dom;
 use sxd_document::QName;

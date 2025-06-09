@@ -95,13 +95,6 @@
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
 
-// Ignoring these as our MSRV predates the suggestions
-#![allow(
-    clippy::legacy_numeric_constants,
-    clippy::match_like_matches_macro,
-    clippy::option_as_ref_deref
-)]
-
 use snafu::{ResultExt, Snafu};
 use std::borrow::ToOwned;
 use std::string;
@@ -219,7 +212,7 @@ pub enum Value<'d> {
 }
 
 fn str_to_num(s: &str) -> f64 {
-    s.trim().parse().unwrap_or(::std::f64::NAN)
+    s.trim().parse().unwrap_or(f64::NAN)
 }
 
 impl<'d> Value<'d> {
@@ -421,6 +414,7 @@ pub struct ExecutionError(expression::Error);
 
 /// The failure modes of executing an XPath.
 #[derive(Debug, Snafu, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Error {
     /// The XPath was syntactically invalid
     #[snafu(display("Unable to parse XPath: {}", source))]
@@ -452,13 +446,13 @@ pub enum Error {
 /// ```
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
-    let expression = factory.build(xpath).context(Parsing)?;
+    let expression = factory.build(xpath).context(ParsingSnafu)?;
 
     let context = Context::new();
 
     expression
         .evaluate(&context, document.root())
-        .context(Executing)
+        .context(ExecutingSnafu)
 }
 
 #[cfg(test)]
@@ -533,7 +527,7 @@ mod test {
 
     #[test]
     fn string_of_nan_is_nan() {
-        let v = Value::Number(::std::f64::NAN);
+        let v = Value::Number(f64::NAN);
         assert_eq!("NaN", v.string());
     }
 
@@ -551,13 +545,13 @@ mod test {
 
     #[test]
     fn string_of_positive_infinity_is_infinity() {
-        let v = Value::Number(::std::f64::INFINITY);
+        let v = Value::Number(f64::INFINITY);
         assert_eq!("Infinity", v.string());
     }
 
     #[test]
     fn string_of_negative_infinity_is_minus_infinity() {
-        let v = Value::Number(::std::f64::NEG_INFINITY);
+        let v = Value::Number(f64::NEG_INFINITY);
         assert_eq!("-Infinity", v.string());
     }
 
@@ -609,10 +603,10 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "/root/child/");
 
-            let expected_error = crate::parser::TrailingSlash
+            let expected_error = crate::parser::TrailingSlashSnafu
                 .fail()
                 .map_err(ParserError::from)
-                .context(Parsing);
+                .context(ParsingSnafu);
             assert_eq!(expected_error, result);
         });
     }
@@ -622,10 +616,10 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "$foo");
 
-            let expected_error = crate::expression::UnknownVariable { name: "foo" }
+            let expected_error = crate::expression::UnknownVariableSnafu { name: "foo" }
                 .fail()
                 .map_err(ExecutionError::from)
-                .context(Executing);
+                .context(ExecutingSnafu);
             assert_eq!(expected_error, result);
         });
     }

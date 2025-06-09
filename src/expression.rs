@@ -13,6 +13,7 @@ use crate::{LiteralValue, OwnedPrefixedName, Value};
 
 #[derive(Debug, Snafu, Clone, PartialEq, Hash)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// expression did not evaluate to a nodeset
     NotANodeset,
@@ -188,14 +189,14 @@ impl Expression for Function {
         let name = resolve_prefixed_name(context, &self.name)?;
         context
             .function_for_name(name)
-            .context(UnknownFunction { name: &self.name })
+            .context(UnknownFunctionSnafu { name: &self.name })
             .and_then(|fun| {
                 let args = self
                     .arguments
                     .iter()
                     .map(|arg| arg.evaluate(context))
                     .collect::<Result<_, _>>()?;
-                fun.evaluate(context, args).context(FunctionEvaluation)
+                fun.evaluate(context, args).context(FunctionEvaluationSnafu)
             })
     }
 }
@@ -582,10 +583,10 @@ fn resolve_prefixed_name<'a>(
     name: &'a OwnedPrefixedName,
 ) -> Result<QName<'a>, Error> {
     // What about a "default" namespace?
-    let ns_uri = match name.prefix.as_ref().map(|p| &**p) {
+    let ns_uri = match name.prefix.as_deref() {
         None => None,
         Some(prefix) => match context.namespace_for(prefix) {
-            None => return UnknownNamespace { prefix }.fail(),
+            None => return UnknownNamespaceSnafu { prefix }.fail(),
             Some(uri) => Some(uri),
         },
     };
@@ -605,7 +606,7 @@ impl Expression for Variable {
         context
             .value_of(name)
             .cloned()
-            .context(UnknownVariable { name: &self.name })
+            .context(UnknownVariableSnafu { name: &self.name })
     }
 }
 
@@ -911,7 +912,7 @@ mod test {
         let context = setup.context();
         let res = expr.evaluate(&context);
 
-        assert_eq!(res, UnknownFunction { name: "unknown-fn" }.fail());
+        assert_eq!(res, UnknownFunctionSnafu { name: "unknown-fn" }.fail());
     }
 
     #[test]
