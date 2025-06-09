@@ -453,13 +453,13 @@ pub enum Error {
 /// ```
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();
-    let expression = factory.build(xpath).context(Parsing)?;
+    let expression = factory.build(xpath).context(ParsingSnafu)?;
 
     let context = Context::new();
 
     expression
         .evaluate(&context, document.root())
-        .context(Executing)
+        .context(ExecutingSnafu)
 }
 
 #[cfg(test)]
@@ -610,10 +610,10 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "/root/child/");
 
-            let expected_error = crate::parser::TrailingSlash
+            let expected_error = crate::parser::TrailingSlashSnafu
                 .fail()
                 .map_err(ParserError::from)
-                .context(Parsing);
+                .context(ParsingSnafu);
             assert_eq!(expected_error, result);
         });
     }
@@ -623,10 +623,10 @@ mod test {
         with_document("<root><child>content</child></root>", |doc| {
             let result = evaluate_xpath(&doc, "$foo");
 
-            let expected_error = crate::expression::UnknownVariable { name: "foo" }
+            let expected_error = crate::expression::UnknownVariableSnafu { name: "foo" }
                 .fail()
                 .map_err(ExecutionError::from)
-                .context(Executing);
+                .context(ExecutingSnafu);
             assert_eq!(expected_error, result);
         });
     }
