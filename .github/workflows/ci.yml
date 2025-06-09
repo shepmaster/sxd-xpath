@@ -45,7 +45,11 @@ jobs:
       - run: cargo update
 
       # This is the version last compatible with 1.31
-      - run: cargo update -p backtrace --precise 0.3.35
+      - run: |-
+          cargo update -p backtrace --precise 0.3.35
+          cargo update -p cc --precise 1.0.37
+          cargo update -p libc --precise 0.2.45
+          cargo update -p rustc-demangle --precise 0.1.4
         if: matrix.rust == '1.31.0'
 
       - run: cargo build
