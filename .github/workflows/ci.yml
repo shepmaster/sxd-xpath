@@ -1,7 +1,4 @@
-on:
-  push:
-  schedule:
-    - cron:  '21 1 * * FRI'
+on: [push, pull_request]
 
 name: Continuous integration
 
@@ -14,33 +11,20 @@ jobs:
           - stable
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
+      - run: cargo build
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - run: cargo test
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-        continue-on-error: true # Currently not clean
+      - run: cargo clippy -- -D warnings
 
   secondary:
     runs-on: ubuntu-latest
@@ -52,34 +36,23 @@ jobs:
           - 1.31.0
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: update
+      - run: cargo update
 
       # This is the version last compatible with 1.31
-      - uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -p backtrace --precise 0.3.35
+      - run: cargo update -p backtrace --precise 0.3.35
         if: matrix.rust == '1.31.0'
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
+      - run: cargo build
 
       # It's not worth making the tests run on 1.31 -- building the
       # code is enough.
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - run: cargo test
         if: matrix.rust != '1.31.0'
 
   windows:
@@ -90,18 +63,12 @@ jobs:
           - stable
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
+      - run: cargo build
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - run: cargo test
