@@ -47,26 +47,24 @@ type Namespaces = HashMap<String, String>;
 ///     }
 /// }
 ///
-/// fn main() {
-///     let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
-///         .expect("failed to parse XML");
-///     let document = package.as_document();
-///     let node = document.root().children()[0];
+/// let package = parser::parse("<thing xmlns:ns0='net:brain' ns0:bonus='1' />")
+///     .expect("failed to parse XML");
+/// let document = package.as_document();
+/// let node = document.root().children()[0];
 ///
-///     let mut context = Context::new();
-///     context.set_function("sigmoid", Sigmoid);
-///     context.set_variable("t", 2.0);
-///     context.set_namespace("neural", "net:brain");
+/// let mut context = Context::new();
+/// context.set_function("sigmoid", Sigmoid);
+/// context.set_variable("t", 2.0);
+/// context.set_namespace("neural", "net:brain");
 ///
-///     let xpath = "sigmoid(@neural:bonus + $t)";
+/// let xpath = "sigmoid(@neural:bonus + $t)";
 ///
-///     let factory = Factory::new();
-///     let xpath = factory.build(xpath).expect("Could not compile XPath");
+/// let factory = Factory::new();
+/// let xpath = factory.build(xpath).expect("Could not compile XPath");
 ///
-///     let value = xpath.evaluate(&context, node).expect("XPath evaluation failed");
+/// let value = xpath.evaluate(&context, node).expect("XPath evaluation failed");
 ///
-///     assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
-/// }
+/// assert_eq!(0.952, (value.number() * 1000.0).trunc() / 1000.0);
 /// ```
 ///
 /// Note that we are using a custom function (`sigmoid`), a variable

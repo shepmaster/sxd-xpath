@@ -353,13 +353,13 @@ impl Function for TwoStringPredicate {
 fn starts_with() -> TwoStringPredicate {
     fn imp(a: &str, b: &str) -> bool {
         str::starts_with(a, b)
-    };
+    }
     TwoStringPredicate(imp)
 }
 fn contains() -> TwoStringPredicate {
     fn imp(a: &str, b: &str) -> bool {
         str::contains(a, b)
-    };
+    }
     TwoStringPredicate(imp)
 }
 
@@ -501,7 +501,7 @@ impl Function for Translate {
 
         let s = s
             .chars()
-            .filter_map(|c| replacements.get(&c).cloned().unwrap_or_else(|| Some(c)))
+            .filter_map(|c| replacements.get(&c).cloned().unwrap_or(Some(c)))
             .collect();
 
         Ok(Value::String(s))
@@ -1031,7 +1031,7 @@ mod test {
     fn assert_number(expected: f64, actual: Result<Value<'_>, Error>) {
         match actual {
             Ok(Value::Number(n)) => assert_eq!(PedanticNumber(n), PedanticNumber(expected)),
-            _ => assert!(false, "{:?} did not evaluate correctly", actual),
+            _ => panic!("{:?} did not evaluate correctly", actual),
         }
     }
 

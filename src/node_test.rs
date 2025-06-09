@@ -181,7 +181,7 @@ mod test {
     }
 
     impl<'d> Setup<'d> {
-        fn new(package: &'d Package) -> Setup<'_> {
+        fn new(package: &'d Package) -> Setup<'d> {
             Setup {
                 doc: package.as_document(),
                 context: Context::without_core_functions(),

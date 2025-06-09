@@ -87,7 +87,7 @@ trait XPathParseExt<'a> {
 
 impl<'a> XPathParseExt<'a> for StringPoint<'a> {
     fn consume_quoted_string(&self, quote: &str) -> XPathProgress<'a, &'a str, ()> {
-        let end_of_str = self.s.find(quote).or_else(|| Some(self.s.len()));
+        let end_of_str = self.s.find(quote).or(Some(self.s.len()));
         self.consume_to(end_of_str)
     }
 }
