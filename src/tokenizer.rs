@@ -21,6 +21,7 @@ pub type TokenResult = Result<Token, Error>;
 
 #[derive(Debug, Snafu, Copy, Clone, PartialEq)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// expected a single or double quote
     ExpectedQuote,

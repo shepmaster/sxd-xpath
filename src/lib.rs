@@ -421,6 +421,7 @@ pub struct ExecutionError(expression::Error);
 
 /// The failure modes of executing an XPath.
 #[derive(Debug, Snafu, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Error {
     /// The XPath was syntactically invalid
     #[snafu(display("Unable to parse XPath: {}", source))]

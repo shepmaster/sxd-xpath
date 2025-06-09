@@ -13,6 +13,7 @@ use crate::{LiteralValue, OwnedPrefixedName, Value};
 
 #[derive(Debug, Snafu, Clone, PartialEq, Hash)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// expression did not evaluate to a nodeset
     NotANodeset,

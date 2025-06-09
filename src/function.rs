@@ -45,6 +45,7 @@ impl<'a> From<&'a Value<'a>> for ArgumentType {
 
 /// The errors that may occur while evaluating a function
 #[derive(Debug, Snafu, Clone, PartialEq, Hash)]
+#[non_exhaustive]
 pub enum Error {
     #[snafu(display("too many arguments, expected {} but had {}", expected, actual))]
     TooManyArguments { expected: usize, actual: usize },

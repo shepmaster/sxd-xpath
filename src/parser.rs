@@ -19,6 +19,7 @@ impl Parser {
 
 #[derive(Debug, Snafu, Clone, PartialEq)]
 #[cfg_attr(test, snafu(visibility(pub(crate))))]
+#[non_exhaustive]
 pub enum Error {
     /// XPath was empty
     NoXPath,
