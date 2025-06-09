@@ -416,7 +416,7 @@ impl Function for Substring {
             let len = args.pop_number()?;
             round_ties_to_positive_infinity(len)
         } else {
-            ::std::f64::INFINITY
+            f64::INFINITY
         };
 
         let start = args.pop_number()?;

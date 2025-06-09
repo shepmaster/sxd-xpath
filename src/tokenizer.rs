@@ -58,10 +58,7 @@ pub enum Error {
 impl Recoverable for Error {
     fn recoverable(&self) -> bool {
         use self::Error::*;
-        match *self {
-            MismatchedQuoteCharacters | UnableToCreateToken => false,
-            _ => true,
-        }
+        !matches!(self, MismatchedQuoteCharacters | UnableToCreateToken)
     }
 }
 
