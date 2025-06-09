@@ -110,7 +110,7 @@ impl<'d> Node<'d> {
             } else {
                 name.local_part().to_owned()
             }
-        };
+        }
 
         match *self {
             Root(_) => None,
@@ -234,7 +234,7 @@ impl<'d> Node<'d> {
                     _ => {}
                 }
             }
-        };
+        }
 
         fn text_descendants_string_value(node: Node<'_>) -> String {
             let mut result = String::new();
@@ -279,10 +279,10 @@ conversion_trait!(Node, {
     dom::ProcessingInstruction => Node::ProcessingInstruction
 });
 
-impl<'d> Into<Node<'d>> for dom::ChildOfRoot<'d> {
-    fn into(self) -> Node<'d> {
+impl<'d> From<dom::ChildOfRoot<'d>> for Node<'d> {
+    fn from(other: dom::ChildOfRoot<'d>) -> Node<'d> {
         use self::Node::*;
-        match self {
+        match other {
             dom::ChildOfRoot::Element(n) => Element(n),
             dom::ChildOfRoot::Comment(n) => Comment(n),
             dom::ChildOfRoot::ProcessingInstruction(n) => ProcessingInstruction(n),
@@ -290,10 +290,10 @@ impl<'d> Into<Node<'d>> for dom::ChildOfRoot<'d> {
     }
 }
 
-impl<'d> Into<Node<'d>> for dom::ChildOfElement<'d> {
-    fn into(self) -> Node<'d> {
+impl<'d> From<dom::ChildOfElement<'d>> for Node<'d> {
+    fn from(other: dom::ChildOfElement<'d>) -> Node<'d> {
         use self::Node::*;
-        match self {
+        match other {
             dom::ChildOfElement::Element(n) => Element(n),
             dom::ChildOfElement::Text(n) => Text(n),
             dom::ChildOfElement::Comment(n) => Comment(n),
@@ -302,10 +302,10 @@ impl<'d> Into<Node<'d>> for dom::ChildOfElement<'d> {
     }
 }
 
-impl<'d> Into<Node<'d>> for dom::ParentOfChild<'d> {
-    fn into(self) -> Node<'d> {
+impl<'d> From<dom::ParentOfChild<'d>> for Node<'d> {
+    fn from(other: dom::ParentOfChild<'d>) -> Self {
         use self::Node::*;
-        match self {
+        match other {
             dom::ParentOfChild::Root(n) => Root(n),
             dom::ParentOfChild::Element(n) => Element(n),
         }
@@ -351,10 +351,7 @@ impl<'d> Nodeset<'d> {
     ///
     /// [document order]: https://www.w3.org/TR/xpath/#dt-document-order
     pub fn document_order_first(&self) -> Option<Node<'d>> {
-        let node = match self.nodes.iter().next() {
-            Some(n) => n,
-            None => return None,
-        };
+        let node = self.nodes.iter().next()?;
 
         if self.nodes.len() == 1 {
             return Some(*node);
@@ -403,6 +400,7 @@ impl<'d> DocOrder<'d> {
     fn new(doc: dom::Document<'d>) -> Self {
         let mut idx = 0;
         let mut stack: Vec<Node<'_>> = vec![doc.root().into()];
+        #[allow(clippy::mutable_key_type)]
         let mut order = HashMap::new();
 
         while let Some(n) = stack.pop() {

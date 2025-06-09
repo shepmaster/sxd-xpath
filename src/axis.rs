@@ -41,6 +41,7 @@ pub enum Axis {
     FollowingSibling,
     Preceding,
     Following,
+    #[allow(clippy::enum_variant_names)]
     SelfAxis,
 }
 

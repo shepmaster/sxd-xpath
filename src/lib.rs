@@ -19,14 +19,12 @@
 //! use sxd_document::parser;
 //! use sxd_xpath::{evaluate_xpath, Value};
 //!
-//! fn main() {
-//!     let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
-//!     let document = package.as_document();
+//! let package = parser::parse("<root>hello</root>").expect("failed to parse XML");
+//! let document = package.as_document();
 //!
-//!     let value = evaluate_xpath(&document, "/root").expect("XPath evaluation failed");
+//! let value = evaluate_xpath(&document, "/root").expect("XPath evaluation failed");
 //!
-//!     assert_eq!("hello", value.string());
-//! }
+//! assert_eq!("hello", value.string());
 //! ```
 //!
 //! Evaluating an XPath returns a [`Value`][], representing the
@@ -45,21 +43,19 @@
 //! use sxd_document::parser;
 //! use sxd_xpath::{Factory, Context, Value};
 //!
-//! fn main() {
-//!     let package = parser::parse("<root>hello</root>")
-//!         .expect("failed to parse XML");
-//!     let document = package.as_document();
+//! let package = parser::parse("<root>hello</root>")
+//!     .expect("failed to parse XML");
+//! let document = package.as_document();
 //!
-//!     let factory = Factory::new();
-//!     let xpath = factory.build("/root").expect("Could not compile XPath");
+//! let factory = Factory::new();
+//! let xpath = factory.build("/root").expect("Could not compile XPath");
 //!
-//!     let context = Context::new();
+//! let context = Context::new();
 //!
-//!     let value = xpath.evaluate(&context, document.root())
-//!         .expect("XPath evaluation failed");
+//! let value = xpath.evaluate(&context, document.root())
+//!     .expect("XPath evaluation failed");
 //!
-//!     assert_eq!("hello", value.string());
-//! }
+//! assert_eq!("hello", value.string());
 //! ```
 //!
 //! See [`Context`][] for details on how to customize the
@@ -83,9 +79,9 @@
 //! defined prefixes, some XPath behavior may be confusing:
 //!
 //! 1. The `name` method will not include a prefix, even if the
-//! element or attribute has a namespace.
+//!    element or attribute has a namespace.
 //! 2. The `namespace` axis will not include namespaces without
-//! prefixes.
+//!    prefixes.
 //!
 //! #### Document order
 //!
@@ -93,11 +89,18 @@
 //! nodes to the document, some XPath behavior may be confusing:
 //!
 //! 1. These nodes have no [*document order*]. If you create a
-//! variable containing these nodes and apply a predicate to them,
-//! these nodes will appear after any nodes that are present in the
-//! document, but the relative order of the nodes is undefined.
+//!    variable containing these nodes and apply a predicate to them,
+//!    these nodes will appear after any nodes that are present in the
+//!    document, but the relative order of the nodes is undefined.
 //!
 //! [*document order*]: https://www.w3.org/TR/xpath/#dt-document-order
+
+// Ignoring these as our MSRV predates the suggestions
+#![allow(
+    clippy::legacy_numeric_constants,
+    clippy::match_like_matches_macro,
+    clippy::option_as_ref_deref
+)]
 
 use snafu::{ResultExt, Snafu};
 use std::borrow::ToOwned;
@@ -350,7 +353,7 @@ impl XPath {
     ///
     /// The most common case is to pass in a reference to a [`Context`][]:
     ///
-    /// ```rust,no-run
+    /// ```rust,no_run
     /// use sxd_document::dom::Document;
     /// use sxd_xpath::{XPath, Context};
     ///
@@ -442,12 +445,10 @@ pub enum Error {
 /// use sxd_document::parser;
 /// use sxd_xpath::{evaluate_xpath, Value};
 ///
-/// fn main() {
-///     let package = parser::parse("<root><a>1</a><b>2</b></root>").expect("failed to parse the XML");
-///     let document = package.as_document();
+/// let package = parser::parse("<root><a>1</a><b>2</b></root>").expect("failed to parse the XML");
+/// let document = package.as_document();
 ///
-///     assert_eq!(Ok(Value::Number(3.0)), evaluate_xpath(&document, "/*/a + /*/b"));
-/// }
+/// assert_eq!(Ok(Value::Number(3.0)), evaluate_xpath(&document, "/*/a + /*/b"));
 /// ```
 pub fn evaluate_xpath<'d>(document: &'d Document<'d>, xpath: &str) -> Result<Value<'d>, Error> {
     let factory = Factory::new();

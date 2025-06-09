@@ -64,8 +64,9 @@ pub type SubExpression = Box<dyn Expression + 'static>;
 macro_rules! binary_constructor(
     ($t:ident) => (
         impl $t {
+            #[allow(clippy::new_ret_no_self)]
             pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
-                Box::new($t{left: left, right: right})
+                Box::new($t{ left, right })
             }
         }
     );
@@ -126,7 +127,7 @@ impl Equal {
         }
 
         let v = match (&left_val, &right_val) {
-            (&Value::Nodeset(ref left_nodes), &Value::Nodeset(ref right_nodes)) => {
+            (Value::Nodeset(left_nodes), Value::Nodeset(right_nodes)) => {
                 let left_strings = str_vals(left_nodes);
                 let right_strings = str_vals(right_nodes);
                 !left_strings.is_disjoint(&right_strings)
@@ -134,7 +135,7 @@ impl Equal {
             (&Value::Nodeset(ref nodes), &Number(val))
             | (&Number(val), &Value::Nodeset(ref nodes)) => {
                 let numbers = num_vals(nodes);
-                numbers.iter().any(|n| *n == val)
+                numbers.contains(&val)
             }
             (&Value::Nodeset(ref nodes), &Value::String(ref val))
             | (&Value::String(ref val), &Value::Nodeset(ref nodes)) => {
@@ -162,6 +163,7 @@ pub struct NotEqual {
 }
 
 impl NotEqual {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(left: SubExpression, right: SubExpression) -> SubExpression {
         Box::new(NotEqual {
             equal: Equal { left, right },
@@ -334,6 +336,7 @@ pub struct Path {
 }
 
 impl Path {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(start_point: SubExpression, steps: Vec<Step>) -> SubExpression {
         Box::new(Path { start_point, steps })
     }
@@ -359,6 +362,7 @@ pub struct Filter {
 }
 
 impl Filter {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(node_selector: SubExpression, predicate: SubExpression) -> SubExpression {
         let predicate = Predicate {
             expression: predicate,
@@ -728,7 +732,7 @@ mod test {
             name: "left".into(),
         });
         let right = Box::new(Literal {
-            value: Value::Number(6.28),
+            value: Value::Number(6.3),
         });
 
         let expr = Equal { left, right };
