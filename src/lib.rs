@@ -112,6 +112,7 @@ use crate::parser::Parser;
 use crate::tokenizer::{TokenDeabbreviator, Tokenizer};
 
 pub use crate::context::Context;
+pub use crate::visitor::{Visitable, Visitor};
 
 #[macro_use]
 pub mod macros;
@@ -124,6 +125,7 @@ pub mod nodeset;
 mod parser;
 mod token;
 mod tokenizer;
+pub mod visitor;
 
 // These belong in the the document
 
@@ -377,6 +379,12 @@ impl XPath {
     {
         let context = context::Evaluation::new(context, node.into());
         self.0.evaluate(&context).map_err(ExecutionError)
+    }
+}
+
+impl Visitable for XPath {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_xpath(&self.0);
     }
 }
 

@@ -213,11 +213,12 @@ mod test {
     use crate::context::{self, Context};
     use crate::node_test::NodeTest;
     use crate::nodeset::{Node, OrderedNodes};
+    use crate::visitor::{Visitable, Visitor};
 
     use super::Axis::*;
     use super::*;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
         fn test<'c, 'd>(
@@ -227,6 +228,13 @@ mod test {
         ) {
             result.add(context.node)
         }
+
+	fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	    Box::new(self.clone())
+	}
+    }
+    impl Visitable for DummyNodeTest {
+	fn visit(&self, _visitor: &mut dyn Visitor) {}
     }
 
     fn execute<'n, N>(axis: Axis, node: N) -> OrderedNodes<'n>

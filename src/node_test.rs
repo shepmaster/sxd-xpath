@@ -4,9 +4,12 @@ use sxd_document::QName;
 
 use crate::context;
 use crate::nodeset::{self, OrderedNodes};
+use crate::visitor::{Visitable, Visitor};
 
-pub trait NodeTest: fmt::Debug {
+pub trait NodeTest: fmt::Debug + Visitable {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>);
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static>;
 }
 
 impl<T: ?Sized> NodeTest for Box<T>
@@ -15,6 +18,10 @@ where
 {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         (**self).test(context, result)
+    }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	(**self).clone_box()
     }
 }
 
@@ -43,7 +50,7 @@ impl NameTest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Attribute {
     name_test: NameTest,
 }
@@ -62,9 +69,19 @@ impl NodeTest for Attribute {
             }
         }
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+impl Visitable for Attribute {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_attribute(self.name_test.prefix.as_ref().map(|s| s.as_str()), &self.name_test.local_part);
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Namespace {
     name_test: NameTest,
 }
@@ -83,9 +100,19 @@ impl NodeTest for Namespace {
             }
         }
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+impl Visitable for Namespace {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_namespace(self.name_test.prefix.as_ref().map(|s| s.as_str()), &self.name_test.local_part);
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Element {
     name_test: NameTest,
 }
@@ -104,20 +131,40 @@ impl NodeTest for Element {
             }
         }
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
+}
+
+impl Visitable for Element {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_element(self.name_test.prefix.as_ref().map(|s| s.as_str()), &self.name_test.local_part);
+    }
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node;
 
 impl NodeTest for Node {
     fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
         result.add(context.node);
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
+}
+
+impl Visitable for Node {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_node();
+    }
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Text;
 
 impl NodeTest for Text {
@@ -126,10 +173,20 @@ impl NodeTest for Text {
             result.add(context.node);
         }
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
+}
+
+impl Visitable for Text {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_text();
+    }
 }
 
 #[allow(missing_copy_implementations)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Comment;
 
 impl NodeTest for Comment {
@@ -138,9 +195,19 @@ impl NodeTest for Comment {
             result.add(context.node);
         }
     }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
 }
 
-#[derive(Debug)]
+impl Visitable for Comment {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_comment();
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ProcessingInstruction {
     target: Option<String>,
 }
@@ -160,6 +227,16 @@ impl NodeTest for ProcessingInstruction {
                 None => result.add(context.node),
             }
         }
+    }
+
+    fn clone_box(&self) -> Box<dyn NodeTest + 'static> {
+	Box::new(self.clone())
+    }
+}
+
+impl Visitable for ProcessingInstruction {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_processing_instruction(self.target.as_ref().map(|s| s.as_str()));
     }
 }
 
