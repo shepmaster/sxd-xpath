@@ -33,7 +33,7 @@ jobs:
         rust:
           - beta
           - nightly
-          - 1.31.0
+          - 1.56.0
 
     steps:
       - uses: actions/checkout@v4
@@ -42,22 +42,9 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
-      - run: cargo update
-
-      # This is the version last compatible with 1.31
-      - run: |-
-          cargo update -p backtrace --precise 0.3.35
-          cargo update -p cc --precise 1.0.37
-          cargo update -p libc --precise 0.2.45
-          cargo update -p rustc-demangle --precise 0.1.4
-        if: matrix.rust == '1.31.0'
-
       - run: cargo build
 
-      # It's not worth making the tests run on 1.31 -- building the
-      # code is enough.
       - run: cargo test
-        if: matrix.rust != '1.31.0'
 
   windows:
     runs-on: windows-latest
