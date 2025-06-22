@@ -16,9 +16,9 @@ use crate::{str_to_num, Value};
 pub trait Function {
     /// Evaluate this function in a specific context with a specific
     /// set of arguments.
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error>;
 }
@@ -155,9 +155,9 @@ impl<'d> Args<'d> {
 
     /// Removes the **last** argument. If no argument is present, the
     /// context node is returned as a nodeset.
-    fn pop_value_or_context_node<'c>(
+    fn pop_value_or_context_node<'c, 'f>(
         &mut self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
     ) -> Value<'d> {
         self.0
             .pop()
@@ -170,7 +170,7 @@ impl<'d> Args<'d> {
     /// it is converted to one.
     fn pop_string_value_or_context_node(
         &mut self,
-        context: &context::Evaluation<'_, '_>,
+        context: &context::Evaluation<'_, '_, '_>,
     ) -> String {
         self.0
             .pop()
@@ -182,9 +182,9 @@ impl<'d> Args<'d> {
     /// argument is present, the context node is added to a nodeset
     /// and returned. If there is an argument but it is not a nodeset,
     /// a type mismatch error is returned.
-    fn pop_nodeset_or_context_node<'c>(
+    fn pop_nodeset_or_context_node<'c, 'f>(
         &mut self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
     ) -> Result<Nodeset<'d>, Error> {
         match self.0.pop() {
             Some(Value::Nodeset(ns)) => Ok(ns),
@@ -205,9 +205,9 @@ impl<'d> Index<usize> for Args<'d> {
 struct Last;
 
 impl Function for Last {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -219,9 +219,9 @@ impl Function for Last {
 struct Position;
 
 impl Function for Position {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -233,9 +233,9 @@ impl Function for Position {
 struct Count;
 
 impl Function for Count {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -248,9 +248,9 @@ impl Function for Count {
 struct LocalName;
 
 impl Function for LocalName {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -268,9 +268,9 @@ impl Function for LocalName {
 struct NamespaceUri;
 
 impl Function for NamespaceUri {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -288,9 +288,9 @@ impl Function for NamespaceUri {
 struct Name;
 
 impl Function for Name {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -307,9 +307,9 @@ impl Function for Name {
 struct StringFn;
 
 impl Function for StringFn {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -322,9 +322,9 @@ impl Function for StringFn {
 struct Concat;
 
 impl Function for Concat {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -337,9 +337,9 @@ impl Function for Concat {
 struct TwoStringPredicate(fn(&str, &str) -> bool);
 
 impl Function for TwoStringPredicate {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -366,9 +366,9 @@ fn contains() -> TwoStringPredicate {
 struct SubstringCommon(for<'s> fn(&'s str, &'s str) -> &'s str);
 
 impl Function for SubstringCommon {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -402,9 +402,9 @@ fn substring_after() -> SubstringCommon {
 struct Substring;
 
 impl Function for Substring {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -441,9 +441,9 @@ impl Function for Substring {
 struct StringLength;
 
 impl Function for StringLength {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -456,9 +456,9 @@ impl Function for StringLength {
 struct NormalizeSpace;
 
 impl Function for NormalizeSpace {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -477,9 +477,9 @@ impl Function for NormalizeSpace {
 struct Translate;
 
 impl Function for Translate {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -511,9 +511,9 @@ impl Function for Translate {
 struct BooleanFn;
 
 impl Function for BooleanFn {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -525,9 +525,9 @@ impl Function for BooleanFn {
 struct Not;
 
 impl Function for Not {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -540,9 +540,9 @@ impl Function for Not {
 struct BooleanLiteral(bool);
 
 impl Function for BooleanLiteral {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let args = Args(args);
@@ -561,9 +561,9 @@ fn false_fn() -> BooleanLiteral {
 struct NumberFn;
 
 impl Function for NumberFn {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -576,9 +576,9 @@ impl Function for NumberFn {
 struct Sum;
 
 impl Function for Sum {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -595,9 +595,9 @@ impl Function for Sum {
 struct NumberConvert(fn(f64) -> f64);
 
 impl Function for NumberConvert {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, Error> {
         let mut args = Args(args);
@@ -637,7 +637,7 @@ fn round() -> NumberConvert {
 /// Adds the [XPath 1.0 core function library][corelib].
 ///
 /// [corelib]: https://www.w3.org/TR/xpath/#corelib
-pub fn register_core_functions(context: &mut context::Context<'_>) {
+pub fn register_core_functions(context: &mut context::Context<'_, '_>) {
     context.set_function("last", Last);
     context.set_function("position", Position);
     context.set_function("count", Count);
@@ -695,12 +695,12 @@ mod test {
         };
     }
 
-    struct Setup<'d> {
-        context: context::Context<'d>,
+    struct Setup<'d, 'f> {
+        context: context::Context<'d, 'f>,
     }
 
-    impl<'d> Setup<'d> {
-        fn new() -> Setup<'d> {
+    impl<'d, 'f> Setup<'d, 'f> {
+        fn new() -> Setup<'d, 'f> {
             Setup {
                 context: context::Context::without_core_functions(),
             }

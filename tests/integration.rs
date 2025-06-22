@@ -93,13 +93,13 @@ where
 }
 
 #[derive(Default)]
-struct Setup<'d> {
-    context: Context<'d>,
+struct Setup<'d, 'f> {
+    context: Context<'d, 'f>,
     factory: Factory,
 }
 
-impl<'d> Setup<'d> {
-    fn new() -> Setup<'d> {
+impl<'d, 'f> Setup<'d, 'f> {
+    fn new() -> Setup<'d, 'f> {
         Default::default()
     }
 
@@ -114,9 +114,9 @@ impl<'d> Setup<'d> {
 struct ConstantValueFunction(f64);
 
 impl function::Function for ConstantValueFunction {
-    fn evaluate<'c, 'd>(
+    fn evaluate<'c, 'd, 'f>(
         &self,
-        _context: &context::Evaluation<'c, 'd>,
+        _context: &context::Evaluation<'c, 'd, 'f>,
         _args: Vec<Value<'d>>,
     ) -> Result<Value<'d>, function::Error> {
         Ok(Value::Number(self.0))

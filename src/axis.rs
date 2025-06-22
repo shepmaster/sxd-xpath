@@ -15,9 +15,9 @@ pub enum PrincipalNodeType {
 pub trait AxisLike: fmt::Debug {
     /// Applies the given node test to the nodes selected by this axis,
     /// adding matching nodes to the nodeset.
-    fn select_nodes<'c, 'd>(
+    fn select_nodes<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         node_test: &dyn NodeTest,
     ) -> OrderedNodes<'d>;
 
@@ -45,14 +45,14 @@ pub enum Axis {
     SelfAxis,
 }
 
-struct CompleteNodeTest<'c, 'd> {
-    context: &'c context::Evaluation<'c, 'd>,
+struct CompleteNodeTest<'c, 'd, 'f> {
+    context: &'c context::Evaluation<'c, 'd, 'f>,
     node_test: &'c dyn NodeTest,
     result: OrderedNodes<'d>,
 }
 
-impl<'c, 'd> CompleteNodeTest<'c, 'd> {
-    fn new(context: &'c context::Evaluation<'c, 'd>, node_test: &'c dyn NodeTest) -> Self {
+impl<'c, 'd, 'f> CompleteNodeTest<'c, 'd, 'f> {
+    fn new(context: &'c context::Evaluation<'c, 'd, 'f>, node_test: &'c dyn NodeTest) -> Self {
         CompleteNodeTest {
             context,
             node_test,
@@ -67,9 +67,9 @@ impl<'c, 'd> CompleteNodeTest<'c, 'd> {
 }
 
 impl AxisLike for Axis {
-    fn select_nodes<'c, 'd>(
+    fn select_nodes<'c, 'd, 'f>(
         &self,
-        context: &context::Evaluation<'c, 'd>,
+        context: &context::Evaluation<'c, 'd, 'f>,
         node_test: &dyn NodeTest,
     ) -> OrderedNodes<'d> {
         use self::Axis::*;
@@ -220,9 +220,9 @@ mod test {
     #[derive(Debug)]
     struct DummyNodeTest;
     impl NodeTest for DummyNodeTest {
-        fn test<'c, 'd>(
+        fn test<'c, 'd, 'f>(
             &self,
-            context: &context::Evaluation<'c, 'd>,
+            context: &context::Evaluation<'c, 'd, 'f>,
             result: &mut OrderedNodes<'d>,
         ) {
             result.add(context.node)

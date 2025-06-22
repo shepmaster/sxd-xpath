@@ -6,14 +6,14 @@ use crate::context;
 use crate::nodeset::{self, OrderedNodes};
 
 pub trait NodeTest: fmt::Debug {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>);
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>);
 }
 
 impl<T: ?Sized> NodeTest for Box<T>
 where
     T: NodeTest,
 {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         (**self).test(context, result)
     }
 }
@@ -27,7 +27,7 @@ pub struct NameTest {
 }
 
 impl NameTest {
-    fn matches(&self, context: &context::Evaluation<'_, '_>, node_name: QName<'_>) -> bool {
+    fn matches(&self, context: &context::Evaluation<'_, '_, '_>, node_name: QName<'_>) -> bool {
         let is_wildcard = self.local_part == "*";
 
         let test_uri = self.prefix.as_ref().map(|p| {
@@ -55,7 +55,7 @@ impl Attribute {
 }
 
 impl NodeTest for Attribute {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Attribute(ref a) = context.node {
             if self.name_test.matches(context, a.name()) {
                 result.add(context.node);
@@ -76,7 +76,7 @@ impl Namespace {
 }
 
 impl NodeTest for Namespace {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Namespace(ref ns) = context.node {
             if self.name_test.matches(context, QName::new(ns.prefix())) {
                 result.add(context.node);
@@ -97,7 +97,7 @@ impl Element {
 }
 
 impl NodeTest for Element {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Element(ref e) = context.node {
             if self.name_test.matches(context, e.name()) {
                 result.add(context.node);
@@ -111,7 +111,7 @@ impl NodeTest for Element {
 pub struct Node;
 
 impl NodeTest for Node {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         result.add(context.node);
     }
 }
@@ -121,7 +121,7 @@ impl NodeTest for Node {
 pub struct Text;
 
 impl NodeTest for Text {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Text(_) = context.node {
             result.add(context.node);
         }
@@ -133,7 +133,7 @@ impl NodeTest for Text {
 pub struct Comment;
 
 impl NodeTest for Comment {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::Comment(_) = context.node {
             result.add(context.node);
         }
@@ -152,7 +152,7 @@ impl ProcessingInstruction {
 }
 
 impl NodeTest for ProcessingInstruction {
-    fn test<'c, 'd>(&self, context: &context::Evaluation<'c, 'd>, result: &mut OrderedNodes<'d>) {
+    fn test<'c, 'd, 'f>(&self, context: &context::Evaluation<'c, 'd, 'f>, result: &mut OrderedNodes<'d>) {
         if let nodeset::Node::ProcessingInstruction(pi) = context.node {
             match self.target {
                 Some(ref name) if name == pi.target() => result.add(context.node),
@@ -175,13 +175,13 @@ mod test {
 
     use super::*;
 
-    struct Setup<'d> {
+    struct Setup<'d, 'f> {
         doc: Document<'d>,
-        context: Context<'d>,
+        context: Context<'d, 'f>,
     }
 
-    impl<'d> Setup<'d> {
-        fn new(package: &'d Package) -> Setup<'d> {
+    impl<'d, 'f> Setup<'d, 'f> {
+        fn new(package: &'d Package) -> Setup<'d, 'f> {
             Setup {
                 doc: package.as_document(),
                 context: Context::without_core_functions(),
@@ -196,7 +196,7 @@ mod test {
             &'d self,
             name: N,
             val: &str,
-        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>)
+        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd, 'd>)
         where
             N: Into<QName<'n>>,
         {
@@ -212,7 +212,7 @@ mod test {
             nsuri: &str,
             local: &str,
             value: &str,
-        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd>) {
+        ) -> (dom::Attribute<'d>, context::Evaluation<'d, 'd, 'd>) {
             self.register_prefix(prefix, nsuri);
             self.context_for_attribute((nsuri, local), value)
         }
@@ -220,7 +220,7 @@ mod test {
         fn context_for_element<'n, N>(
             &'d self,
             name: N,
-        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd>)
+        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd, 'd>)
         where
             N: Into<QName<'n>>,
         {
@@ -234,14 +234,14 @@ mod test {
             prefix: &str,
             nsuri: &str,
             local: &str,
-        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd>) {
+        ) -> (dom::Element<'d>, context::Evaluation<'d, 'd, 'd>) {
             self.register_prefix(prefix, nsuri);
             self.context_for_element((nsuri, local))
         }
     }
 
     fn run_attribute<'d>(
-        context: &context::Evaluation<'d, 'd>,
+        context: &context::Evaluation<'d, 'd, 'd>,
         prefix: Option<&str>,
         local: &str,
     ) -> OrderedNodes<'d> {
@@ -340,7 +340,7 @@ mod test {
     }
 
     fn run_element<'d>(
-        context: &context::Evaluation<'d, 'd>,
+        context: &context::Evaluation<'d, 'd, 'd>,
         prefix: Option<&str>,
         local: &str,
     ) -> OrderedNodes<'d> {
