@@ -367,9 +367,9 @@ impl XPath {
     /// ```
     ///
     /// [`Context`]: context/struct.Context.html
-    pub fn evaluate<'d, N>(
+    pub fn evaluate<'d, 'f, N>(
         &self,
-        context: &Context<'d>,
+        context: &Context<'d, 'f>,
         node: N,
     ) -> Result<Value<'d>, ExecutionError>
     where

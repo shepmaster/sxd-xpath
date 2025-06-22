@@ -800,14 +800,14 @@ mod test {
         }
     }
 
-    struct Exercise<'d> {
+    struct Exercise<'d, 'f> {
         doc: &'d TestDoc<'d>,
-        context: Context<'d>,
+        context: Context<'d, 'f>,
         parser: Parser,
     }
 
-    impl<'d> Exercise<'d> {
-        fn new(doc: &'d TestDoc<'d>) -> Exercise<'d> {
+    impl<'d, 'f> Exercise<'d, 'f> {
+        fn new(doc: &'d TestDoc<'d>) -> Exercise<'d, 'f> {
             Exercise {
                 doc,
                 context: Context::new(),

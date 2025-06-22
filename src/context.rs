@@ -11,7 +11,7 @@ use crate::nodeset::{Node, OrderedNodes};
 use crate::{OwnedQName, Value};
 
 /// A mapping of names to XPath functions.
-type Functions = HashMap<OwnedQName, Box<dyn function::Function + 'static>>;
+type Functions<'f> = HashMap<OwnedQName, Box<dyn function::Function + 'f>>;
 /// A mapping of names to XPath variables.
 type Variables<'d> = HashMap<OwnedQName, Value<'d>>;
 /// A mapping of namespace prefixes to namespace URIs.
@@ -32,8 +32,8 @@ type Namespaces = HashMap<String, String>;
 ///
 /// struct Sigmoid;
 /// impl function::Function for Sigmoid {
-///     fn evaluate<'c, 'd>(&self,
-///                         _context: &context::Evaluation<'c, 'd>,
+///     fn evaluate<'c, 'd, 'f>(&self,
+///                         _context: &context::Evaluation<'c, 'd, 'f>,
 ///                         args: Vec<Value<'d>>)
 ///                         -> Result<Value<'d>, function::Error>
 ///     {
@@ -72,13 +72,13 @@ type Namespaces = HashMap<String, String>;
 /// the `evaluate` method and is not the root of the tree but the
 /// top-most element.
 ///
-pub struct Context<'d> {
-    functions: Functions,
+pub struct Context<'d, 'f> {
+    functions: Functions<'f>,
     variables: Variables<'d>,
     namespaces: Namespaces,
 }
 
-impl<'d> Context<'d> {
+impl<'d, 'f> Context<'d, 'f> {
     /// Registers the core XPath 1.0 functions.
     pub fn new() -> Self {
         let mut context = Self::without_core_functions();
@@ -99,7 +99,7 @@ impl<'d> Context<'d> {
     pub fn set_function<N, F>(&mut self, name: N, function: F)
     where
         N: Into<OwnedQName>,
-        F: function::Function + 'static,
+        F: function::Function + 'f,
     {
         self.functions.insert(name.into(), Box::new(function));
     }
@@ -119,7 +119,7 @@ impl<'d> Context<'d> {
     }
 }
 
-impl<'d> Default for Context<'d> {
+impl<'d, 'f> Default for Context<'d, 'f> {
     fn default() -> Self {
         Context::new()
     }
@@ -136,21 +136,21 @@ impl<'d> Default for Context<'d> {
 /// (`'c`) and that of the document (`'d`). This allows the
 /// user-provided context to live shorter than the document.
 #[derive(Copy, Clone)]
-pub struct Evaluation<'c, 'd> {
+pub struct Evaluation<'c, 'd, 'f> {
     /// The context node
     pub node: Node<'d>,
     /// The context position
     pub position: usize,
     /// The context size
     pub size: usize,
-    functions: &'c Functions,
+    functions: &'c Functions<'f>,
     variables: &'c Variables<'d>,
     namespaces: &'c Namespaces,
 }
 
-impl<'c, 'd> Evaluation<'c, 'd> {
+impl<'c, 'd, 'f> Evaluation<'c, 'd, 'f> {
     /// Prepares the context used while evaluating the XPath expression
-    pub fn new(context: &'c Context<'d>, node: Node<'d>) -> Evaluation<'c, 'd> {
+    pub fn new(context: &'c Context<'d, 'f>, node: Node<'d>) -> Evaluation<'c, 'd, 'f> {
         Evaluation {
             node,
             functions: &context.functions,
@@ -162,7 +162,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     }
 
     /// Creates a new context node using the provided node
-    pub fn new_context_for<N>(&self, node: N) -> Evaluation<'c, 'd>
+    pub fn new_context_for<N>(&self, node: N) -> Evaluation<'c, 'd, 'f>
     where
         N: Into<Node<'d>>,
     {
@@ -192,7 +192,7 @@ impl<'c, 'd> Evaluation<'c, 'd> {
     }
 
     /// Yields a new `Evaluation` context for each node in the nodeset.
-    pub fn new_contexts_for(self, nodes: OrderedNodes<'d>) -> EvaluationNodesetIter<'c, 'd> {
+    pub fn new_contexts_for(self, nodes: OrderedNodes<'d>) -> EvaluationNodesetIter<'c, 'd, 'f> {
         let sz = nodes.size();
         EvaluationNodesetIter {
             parent: self,
@@ -203,16 +203,16 @@ impl<'c, 'd> Evaluation<'c, 'd> {
 }
 
 /// An iterator for the contexts of each node in a nodeset
-pub struct EvaluationNodesetIter<'c, 'd> {
-    parent: Evaluation<'c, 'd>,
+pub struct EvaluationNodesetIter<'c, 'd, 'f> {
+    parent: Evaluation<'c, 'd, 'f>,
     nodes: iter::Enumerate<::std::vec::IntoIter<Node<'d>>>,
     size: usize,
 }
 
-impl<'c, 'd> Iterator for EvaluationNodesetIter<'c, 'd> {
-    type Item = Evaluation<'c, 'd>;
+impl<'c, 'd, 'f> Iterator for EvaluationNodesetIter<'c, 'd, 'f> {
+    type Item = Evaluation<'c, 'd, 'f>;
 
-    fn next(&mut self) -> Option<Evaluation<'c, 'd>> {
+    fn next(&mut self) -> Option<Evaluation<'c, 'd, 'f>> {
         self.nodes.next().map(|(idx, node)| Evaluation {
             node,
             position: idx + 1,
